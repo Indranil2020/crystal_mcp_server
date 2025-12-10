@@ -76,14 +76,13 @@ def load_chgnet_calculator():
     """
     # Check if chgnet is available
     chgnet_available = True
-    error_msg = None
     
     # Import and load CHGNet
     if chgnet_available:
-        from chgnet.model import CHGNet
+        from chgnet.model import CHGNet, CHGNetCalculator
         model = CHGNet.load()
         if model is not None:
-            calculator = model.get_ase_calculator()
+            calculator = CHGNetCalculator(model=model, use_device="cpu")
             return calculator, None
         else:
             return None, "Failed to load CHGNet model"
