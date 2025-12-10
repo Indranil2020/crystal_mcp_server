@@ -69,6 +69,7 @@ def test_crystal_generator():
     result = generate_crystal(
         composition=["Na", "Cl"],
         space_group=225,
+        num_atoms=8,
         seed=42,
         max_attempts=10
     )
@@ -92,6 +93,7 @@ def test_symmetry_analyzer():
     gen_result = generate_crystal(
         composition=["Si", "Si"],
         space_group=227,
+        num_atoms=8,
         seed=42
     )
     assert gen_result.get("success"), "Failed to generate test structure"
