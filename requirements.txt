@@ -1,0 +1,17 @@
+# Core crystallography packages
+pyxtal>=1.0.0
+pymatgen>=2024.1.1
+spglib>=2.5.0
+ase>=3.22.0
+
+# MLFF models
+chgnet>=0.3.0
+matgl>=1.0.0
+mace-torch>=0.3.0
+
+
+# File I/O and molecule handling
+openbabel-wheel>=3.1.0
+
+# Additional utilities
+pyyaml>=6.0

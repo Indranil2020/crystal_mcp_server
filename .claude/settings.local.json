@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build:*)",
+      "Bash(python3:*)",
+      "Bash(pip install:*)",
+      "Bash(npm start)",
+      "Bash(node --version:*)",
+      "Bash(test:*)"
+    ],
+    "deny": [],
+    "ask": []
+  },
+  "enableAllProjectMcpServers": true
+}

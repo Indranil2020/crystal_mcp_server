@@ -1,0 +1,111 @@
+{
+  "models": {
+    "chgnet": {
+      "name": "CHGNet",
+      "version": "0.3.0",
+      "description": "Crystal Hamiltonian Graph Neural Network",
+      "training_data": "Materials Project",
+      "accuracy": "High",
+      "speed": "Fast",
+      "supports_stress": true,
+      "supports_magmom": true,
+      "best_for": ["general materials", "magnetic materials", "high-throughput"],
+      "package": "chgnet",
+      "model_path": "pretrained",
+      "device_support": ["cpu", "cuda"]
+    },
+    "m3gnet": {
+      "name": "M3GNet",
+      "version": "1.0.0",
+      "description": "Materials 3-body Graph Network",
+      "training_data": "Materials Project",
+      "accuracy": "High",
+      "speed": "Medium",
+      "supports_stress": true,
+      "supports_magmom": false,
+      "best_for": ["general materials", "thermodynamics", "phonons"],
+      "package": "matgl",
+      "model_path": "M3GNet-MP-2021.2.8-PES",
+      "device_support": ["cpu", "cuda"]
+    },
+    "mace": {
+      "name": "MACE",
+      "version": "0.3.0",
+      "description": "Multi-Atomic Cluster Expansion",
+      "training_data": "Custom/MPtrj",
+      "accuracy": "Very High",
+      "speed": "Slow",
+      "supports_stress": true,
+      "supports_magmom": false,
+      "best_for": ["high accuracy", "small systems", "dynamics"],
+      "package": "mace-torch",
+      "model_path": "medium",
+      "device_support": ["cpu", "cuda"]
+    }
+  },
+  "optimizers": {
+    "BFGS": {
+      "name": "Broyden-Fletcher-Goldfarb-Shanno",
+      "type": "quasi-Newton",
+      "memory_efficient": true,
+      "best_for": ["general optimization", "medium systems"],
+      "typical_convergence": "10-100 steps"
+    },
+    "FIRE": {
+      "name": "Fast Inertial Relaxation Engine",
+      "type": "molecular dynamics based",
+      "memory_efficient": true,
+      "best_for": ["rough landscapes", "large systems"],
+      "typical_convergence": "50-200 steps"
+    },
+    "LBFGS": {
+      "name": "Limited-memory BFGS",
+      "type": "quasi-Newton",
+      "memory_efficient": true,
+      "best_for": ["large systems", "constrained optimization"],
+      "typical_convergence": "10-100 steps"
+    },
+    "GPMin": {
+      "name": "Gaussian Process Minimizer",
+      "type": "Bayesian optimization",
+      "memory_efficient": false,
+      "best_for": ["expensive calculations", "small systems"],
+      "typical_convergence": "20-50 steps"
+    }
+  },
+  "convergence_criteria": {
+    "fmax": {
+      "tight": 0.001,
+      "normal": 0.01,
+      "loose": 0.05,
+      "very_loose": 0.1,
+      "unit": "eV/Angstrom"
+    },
+    "max_steps": {
+      "quick": 100,
+      "normal": 500,
+      "thorough": 1000,
+      "exhaustive": 5000
+    }
+  },
+  "recommendations": {
+    "quick_screening": {
+      "model": "chgnet",
+      "optimizer": "FIRE",
+      "fmax": 0.05,
+      "steps": 100
+    },
+    "production_quality": {
+      "model": "m3gnet",
+      "optimizer": "BFGS",
+      "fmax": 0.01,
+      "steps": 500
+    },
+    "high_accuracy": {
+      "model": "mace",
+      "optimizer": "LBFGS",
+      "fmax": 0.001,
+      "steps": 1000
+    }
+  }
+}

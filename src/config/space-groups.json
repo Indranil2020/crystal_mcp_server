@@ -1,0 +1,150 @@
+{
+  "crystal_systems": {
+    "triclinic": {
+      "space_group_range": [1, 2],
+      "lattice_constraints": {
+        "a": "any",
+        "b": "any",
+        "c": "any",
+        "alpha": "any",
+        "beta": "any",
+        "gamma": "any"
+      }
+    },
+    "monoclinic": {
+      "space_group_range": [3, 15],
+      "lattice_constraints": {
+        "a": "any",
+        "b": "any",
+        "c": "any",
+        "alpha": 90,
+        "beta": "any",
+        "gamma": 90
+      }
+    },
+    "orthorhombic": {
+      "space_group_range": [16, 74],
+      "lattice_constraints": {
+        "a": "any",
+        "b": "any",
+        "c": "any",
+        "alpha": 90,
+        "beta": 90,
+        "gamma": 90
+      }
+    },
+    "tetragonal": {
+      "space_group_range": [75, 142],
+      "lattice_constraints": {
+        "a": "equal_ab",
+        "b": "equal_ab",
+        "c": "any",
+        "alpha": 90,
+        "beta": 90,
+        "gamma": 90
+      }
+    },
+    "trigonal": {
+      "space_group_range": [143, 167],
+      "lattice_constraints": {
+        "a": "equal_abc",
+        "b": "equal_abc",
+        "c": "equal_abc",
+        "alpha": "equal_angles",
+        "beta": "equal_angles",
+        "gamma": "equal_angles",
+        "note": "OR hexagonal axes: a=b!=c, alpha=beta=90, gamma=120"
+      }
+    },
+    "hexagonal": {
+      "space_group_range": [168, 194],
+      "lattice_constraints": {
+        "a": "equal_ab",
+        "b": "equal_ab",
+        "c": "any",
+        "alpha": 90,
+        "beta": 90,
+        "gamma": 120
+      }
+    },
+    "cubic": {
+      "space_group_range": [195, 230],
+      "lattice_constraints": {
+        "a": "equal_abc",
+        "b": "equal_abc",
+        "c": "equal_abc",
+        "alpha": 90,
+        "beta": 90,
+        "gamma": 90
+      }
+    }
+  },
+  "common_structures": [
+    {
+      "name": "Diamond",
+      "space_group": 227,
+      "symbol": "Fd-3m",
+      "examples": ["C", "Si", "Ge"],
+      "description": "Face-centered cubic with basis"
+    },
+    {
+      "name": "Rock Salt (NaCl)",
+      "space_group": 225,
+      "symbol": "Fm-3m",
+      "examples": ["NaCl", "MgO", "TiN"],
+      "description": "Two interpenetrating FCC lattices"
+    },
+    {
+      "name": "Zinc Blende (Sphalerite)",
+      "space_group": 216,
+      "symbol": "F-43m",
+      "examples": ["ZnS", "GaAs", "InP"],
+      "description": "Like diamond but with two different atoms"
+    },
+    {
+      "name": "Wurtzite",
+      "space_group": 186,
+      "symbol": "P63mc",
+      "examples": ["ZnO", "GaN", "SiC"],
+      "description": "Hexagonal structure"
+    },
+    {
+      "name": "Perovskite",
+      "space_group": 221,
+      "symbol": "Pm-3m",
+      "examples": ["CaTiO3", "SrTiO3", "BaTiO3"],
+      "description": "ABO3 cubic perovskite"
+    },
+    {
+      "name": "Rutile",
+      "space_group": 136,
+      "symbol": "P42/mnm",
+      "examples": ["TiO2", "SnO2", "GeO2"],
+      "description": "Tetragonal structure"
+    },
+    {
+      "name": "Fluorite",
+      "space_group": 225,
+      "symbol": "Fm-3m",
+      "examples": ["CaF2", "UO2", "ZrO2"],
+      "description": "FCC structure with interstitials"
+    },
+    {
+      "name": "Spinel",
+      "space_group": 227,
+      "symbol": "Fd-3m",
+      "examples": ["MgAl2O4", "Fe3O4", "ZnFe2O4"],
+      "description": "AB2O4 cubic spinel"
+    }
+  ],
+  "validation_rules": {
+    "min_atoms": 1,
+    "max_atoms_warning": 1000,
+    "max_atoms_error": 10000,
+    "typical_volume_per_atom": {
+      "min": 5.0,
+      "max": 100.0,
+      "typical": [10.0, 30.0]
+    }
+  }
+}
