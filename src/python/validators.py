@@ -153,14 +153,11 @@ def validate_scaling_matrix(scaling: Any) -> Tuple[bool, Optional[str]]:
     if len(scaling) == 3:
         if all(isinstance(row, (list, tuple)) and len(row) == 3 for row in scaling):
             # Validate it's a proper transformation matrix
-            try:
-                matrix = np.array(scaling)
-                det = np.linalg.det(matrix)
-                if abs(det) < 1e-6:
-                    return False, "Scaling matrix is singular (determinant ~ 0)"
-                return True, None
-            except Exception:
-                return False, "Invalid scaling matrix"
+            matrix = np.array(scaling)
+            det = np.linalg.det(matrix)
+            if abs(det) < 1e-6:
+                return False, "Scaling matrix is singular (determinant ~ 0)"
+            return True, None
 
     return False, "Scaling must be [nx, ny, nz] or 3x3 matrix"
 

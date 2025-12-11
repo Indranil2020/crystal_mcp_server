@@ -58,6 +58,7 @@ export var CrystalErrorCode;
     CrystalErrorCode["INVALID_JSON_RESPONSE"] = "E6004";
     CrystalErrorCode["TIMEOUT_ERROR"] = "E6005";
     // General errors (E9xxx)
+    CrystalErrorCode["EXECUTION_ERROR"] = "E9000";
     CrystalErrorCode["UNKNOWN_ERROR"] = "E9001";
     CrystalErrorCode["NOT_IMPLEMENTED"] = "E9002";
     CrystalErrorCode["INVALID_OPERATION"] = "E9003";

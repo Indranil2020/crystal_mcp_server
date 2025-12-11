@@ -42,14 +42,13 @@ def validate_supercell_matrix(scaling: Any) -> Tuple[bool, Optional[str]]:
 
         # Could be a 3x3 matrix
         if all(isinstance(row, (list, tuple)) and len(row) == 3 for row in scaling):
-            try:
-                matrix = np.array(scaling)
-                det = np.linalg.det(matrix)
-                if abs(det) < 1e-6:
-                    return False, "Scaling matrix is singular (determinant ~ 0)"
-                return True, None
-            except Exception:
-                return False, "Invalid scaling matrix"
+            matrix = np.array(scaling)
+            if matrix.shape != (3, 3):
+                return False, "Invalid matrix shape"
+            det = np.linalg.det(matrix)
+            if abs(det) < 1e-6:
+                return False, "Scaling matrix is singular (determinant ~ 0)"
+            return True, None
 
     return False, "Scaling must be [nx, ny, nz] or 3x3 matrix"
 
@@ -77,12 +76,9 @@ def calculate_supercell_size(scaling: Any) -> int:
     # If it's a 3x3 matrix, use determinant
     if len(scaling) == 3:
         if all(isinstance(row, (list, tuple)) and len(row) == 3 for row in scaling):
-            try:
-                matrix = np.array(scaling)
-                det = abs(np.linalg.det(matrix))
-                return int(round(det))
-            except Exception:
-                return 1
+            matrix = np.array(scaling)
+            det = abs(np.linalg.det(matrix))
+            return int(round(det))
 
     return 1
 
@@ -199,6 +195,26 @@ def make_supercell(
             }
         }
     
+    # Handle presets
+    if isinstance(scaling_matrix, str):
+        presets = {
+            "sqrt3": [[2, 1, 0], [-1, 1, 0], [0, 0, 1]], # Det=3, sqrt(3)xsqrt(3)R30 for hexagonal
+            "root2": [[1, 1, 0], [1, -1, 0], [0, 0, 1]], # Det=2, sqrt(2)xsqrt(2)R45 for square
+            "2x2x2": [[2, 0, 0], [0, 2, 0], [0, 0, 2]],
+            "3x3x3": [[3, 0, 0], [0, 3, 0], [0, 0, 3]]
+        }
+        if scaling_matrix.lower() in presets:
+            scaling_matrix = presets[scaling_matrix.lower()]
+        else:
+             return {
+                "success": False, 
+                "error": {
+                    "code": "INVALID_SCALING_MATRIX",
+                    "message": f"Unknown matrix preset: {scaling_matrix}",
+                    "details": {"available": list(presets.keys())}
+                }
+            }
+
     # Validate scaling matrix
     if isinstance(scaling_matrix, list):
         if len(scaling_matrix) == 3 and all(isinstance(x, (int, float)) for x in scaling_matrix):
@@ -401,6 +417,12 @@ def generate_slab(
     # Use first slab
     slab = slabs[0]
     
+    # Orthogonalize if requested
+    if orthogonalize:
+        # Pymatgen's get_orthogonal_c_slab might raise errors if impossible
+        # We allow it to propagate
+        slab = slab.get_orthogonal_c_slab()
+    
     # Calculate fixed atoms
     fixed_atoms = []
     if fix_bottom_layers > 0:
@@ -587,6 +609,246 @@ def apply_strain(
     }
 
 
+def create_alloy(
+    structure_dict: Dict[str, Any],
+    substitutions: Dict[str, Dict[str, Any]],
+    seed: Optional[int] = None
+) -> Dict[str, Any]:
+    """
+    Create an alloy by random substitution.
+    
+    Args:
+        structure_dict: Base structure
+        substitutions: Dict mapping element -> {element, concentration}
+                       e.g. {"Si": {"element": "Ge", "concentration": 0.5}}
+        seed: Random seed
+    
+    Returns:
+        Alloy structure
+    """
+    if seed is not None:
+        np.random.seed(seed)
+        
+    structure = dict_to_structure(structure_dict)
+    if structure is None:
+        return {"success": False, "error": "Invalid structure"}
+        
+    alloy = structure.copy()
+    
+    # Process each substitution rule
+    for target_elem, rule in substitutions.items():
+        if "element" not in rule or "concentration" not in rule:
+             continue
+             
+        new_elem = rule["element"]
+        conc = float(rule["concentration"])
+        
+        # Find sites with target element
+        # Only check symbol, ignore oxidation state for simplicity
+        indices = [i for i, site in enumerate(alloy) if site.specie.symbol == target_elem]
+        
+        if not indices:
+            continue
+            
+        n_replace = int(round(len(indices) * conc))
+        if n_replace == 0:
+            continue
+            
+        # Randomly select indices to replace
+        replace_indices = np.random.choice(indices, size=n_replace, replace=False)
+        
+        for idx in replace_indices:
+            alloy.replace(idx, new_elem)
+            
+    return {
+        "success": True,
+        "alloy_structure": structure_to_dict(alloy)
+    }
+
+
+def create_heterostructure(
+    substrate_dict: Dict[str, Any],
+    overlayer_dict: Dict[str, Any],
+    interface_distance: float = 3.0,
+    vacuum: float = 10.0
+) -> Dict[str, Any]:
+    """
+    Create a simple vertical heterostructure (stacking).
+    Does NOT perform advanced lattice matching analysis yet (assumes pre-matched).
+    
+    Args:
+        substrate_dict: Substrate structure
+        overlayer_dict: Overlayer structure
+        interface_distance: Distance between layers
+        vacuum: Vacuum padding
+    
+    Returns:
+        Heterostructure
+    """
+    sub = dict_to_structure(substrate_dict)
+    over = dict_to_structure(overlayer_dict)
+    
+    if sub is None or over is None:
+        return {"success": False, "error": "Invalid input structures"}
+        
+    # Validation: Check lattice match (a, b)
+    # This is a 'dumb' stacker. It assumes user knows lattices match.
+    # We can warn if they differ significantly.
+    
+    # Get lattice vectors
+    a1, b1, _ = sub.lattice.abc
+    a2, b2, _ = over.lattice.abc
+    
+    mismatch_a = abs(a1 - a2) / a1
+    mismatch_b = abs(b1 - b2) / b1
+    
+    warnings = []
+    if mismatch_a > 0.05 or mismatch_b > 0.05:
+        warnings.append(f"High lattice mismatch: a={mismatch_a:.1%}, b={mismatch_b:.1%}")
+        
+    # Stack
+    # We essentially put 'over' on top of 'sub'
+    # 1. Expand c lattice to hold both + gap + vacuum
+    # 2. Shift overlayer
+    
+    # Get z-range of substrate
+    sub_coords = sub.cart_coords
+    max_z_sub = np.max(sub_coords[:, 2]) if len(sub) > 0 else 0
+    min_z_sub = np.min(sub_coords[:, 2]) if len(sub) > 0 else 0
+    
+    # Get z-range of overlayer
+    over_coords = over.cart_coords
+    max_z_over = np.max(over_coords[:, 2]) if len(over) > 0 else 0
+    min_z_over = np.min(over_coords[:, 2]) if len(over) > 0 else 0
+    over_height = max_z_over - min_z_over
+    
+    # New z position for overlayer bottom
+    # Place overlayer bottom at max_z_sub + interface_distance
+    # Shift overlayer: Subtract its min_z first, then add offset
+    shift_z = (max_z_sub + interface_distance) - min_z_over
+    
+    new_over_coords = over_coords + np.array([0, 0, shift_z])
+    
+    # Combine atoms
+    # We use substrate's lattice a, b. And new c.
+    new_c = (max_z_sub + interface_distance + over_height + vacuum)
+    
+    # Ensure c is orthogonal to a,b?
+    # Pymatgen Structure expects Lattice.
+    # We take sub.lattice but modify c
+    # Assuming sub is oriented with c along Z for simplicity?
+    # If not, this is complex.
+    # We'll assume orthogonal-ish or just set c length?
+    # Safer: Create new Lattice with sub's a,b, gamma and new c aligned with Z
+    
+    # For now, simplistic approach:
+    new_lattice = Lattice.from_parameters(
+        a1, b1, new_c, 
+        sub.lattice.angles[0], sub.lattice.angles[1], sub.lattice.angles[2]
+    )
+    
+    # Collect all species and coords
+    all_species = sub.species + over.species
+    all_coords = np.vstack([sub.cart_coords, new_over_coords])
+    
+    hetero = Structure(
+        new_lattice,
+        all_species,
+        all_coords,
+        coords_are_cartesian=True
+    )
+    
+    return {
+        "success": True,
+        "heterostructure": structure_to_dict(hetero),
+        "warnings": warnings
+    }
+
+
+def add_adsorbate(
+    structure_dict: Dict[str, Any],
+    molecule: Dict[str, Any], # Molecule dict or name?
+    site_index: int,
+    distance: float = 2.0
+) -> Dict[str, Any]:
+    """
+    Add an adsorbate molecule to a specific site.
+    
+    Args:
+        structure_dict: Surface structure
+        molecule: Molecule structure dict OR name string?
+                  Ideally a dict from molecule_generator.
+        site_index: Index of atom to adsorb on (top site mode)
+        distance: Height above site
+    """
+    surface = dict_to_structure(structure_dict)
+    if "structure" in molecule:
+        mol_struct = dict_to_structure(molecule["structure"]) # If wrapper dict
+    else:
+        mol_struct = dict_to_structure(molecule) # If direct dict
+        
+    if surface is None:
+         return {"success": False, "error": "Invalid surface structure"}
+         
+    # Validate site
+    if site_index < 0 or site_index >= len(surface):
+         return {"success": False, "error": f"Invalid site index {site_index}"}
+         
+    # Handle molecule
+    if mol_struct is None:
+         # Maybe it's just a species string?
+         return {"success": False, "error": "Invalid molecule structure"}
+    
+    # Strategy:
+    # 1. Identify "anchoring atom" in molecule? (First atom?)
+    # 2. Translate molecule so anchor is at site_coords + [0, 0, distance]
+    #    (Assuming Z is normal)
+    
+    target_site = surface[site_index]
+    target_coords = target_site.coords
+    
+    # Molecule center/anchor
+    # We'll validly assume the molecule is centered or user wants CoM?
+    # Let's align CoM to target? Or bottom-most atom?
+    # Bottom-most is safer for adsorption.
+    mol_coords = mol_struct.cart_coords
+    min_z_mol = np.min(mol_coords[:, 2])
+    
+    # Shift molecule so min_z is at 0
+    mol_coords = mol_coords - np.array([0, 0, min_z_mol])
+    
+    # Now shift to target (+ distance)
+    # We assume 'distance' is bond length approx.
+    final_origin = target_coords + np.array([0, 0, distance])
+    
+    # Center molecule horizontally relative to target?
+    # Assume molecule CoM (x,y) should match target (x,y)
+    mol_com = np.mean(mol_coords, axis=0)
+    shift_xy = final_origin[:2] - mol_com[:2]
+    
+    # Apply shift
+    total_shift = np.array([shift_xy[0], shift_xy[1], final_origin[2]])
+    # Note: final_origin[2] is target_z + distance. 
+    # Current mol min_z is 0. So adding final_origin[2] puts bottom at target+dist.
+    
+    mol_coords = mol_coords + np.array([shift_xy[0], shift_xy[1], final_origin[2]]) # Wait, shift_xy plus Z move
+    
+    # Wait, mol_coords was zeroed at Z.
+    # We want min_z to be at target_z + distance.
+    # So Z shift = (target_z + distance) - (original_min_z=0) => target_z + distance.
+    # Yes.
+    
+    # Add atoms to surface
+    new_surface = surface.copy()
+    for i, spec in enumerate(mol_struct.species):
+        new_surface.append(spec, mol_coords[i], coords_are_cartesian=True)
+        
+    return {
+        "success": True,
+        "structure": structure_to_dict(new_surface)
+    }
+
+
 def main():
     """
     Main entry point for command-line execution.
@@ -618,6 +880,12 @@ def main():
         result = create_defect(**params)
     elif operation == "strain":
         result = apply_strain(**params)
+    elif operation == "alloy":
+        result = create_alloy(**params)
+    elif operation == "heterostructure":
+        result = create_heterostructure(**params)
+    elif operation == "adsorbate":
+        result = add_adsorbate(**params)
     else:
         result = {
             "success": False,

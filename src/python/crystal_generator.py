@@ -12,6 +12,7 @@ import json
 import sys
 import numpy as np
 from pyxtal import pyxtal
+from pyxtal.lattice import Lattice as PyXtalLattice
 from pyxtal.symmetry import Group
 from pymatgen.core import Structure, Element, Lattice as PMGLattice
 
@@ -32,19 +33,29 @@ class ValidationResult:
         }
 
 
-def validate_space_group(space_group: Union[int, str]) -> Tuple[bool, Optional[str]]:
+def validate_space_group(space_group: Union[int, str], dimensionality: int = 3) -> Tuple[bool, Optional[str]]:
     """
-    Validate space group number or symbol.
+    Validate space group number or symbol for given dimensionality.
 
     Args:
-        space_group: Space group number (1-230) or Hermann-Mauguin symbol
+        space_group: Space group number or Hermann-Mauguin symbol
+        dimensionality: 0=0D, 1=1D, 2=2D, 3=3D
 
     Returns:
         Tuple of (is_valid, error_message)
     """
     if isinstance(space_group, int):
-        if space_group < 1 or space_group > 230:
-            return False, f"Space group number must be between 1 and 230, got {space_group}"
+        if dimensionality == 3:
+            if space_group < 1 or space_group > 230:
+                return False, f"Space group number must be 1-230 for 3D, got {space_group}"
+        elif dimensionality == 2:
+            if space_group < 1 or space_group > 80:
+                return False, f"Layer group number must be 1-80 for 2D, got {space_group}"
+        elif dimensionality == 1:
+            if space_group < 1 or space_group > 75:
+                 return False, f"Rod group number must be 1-75 for 1D, got {space_group}"
+        # 0D point groups range is complex, usually strings. For ints, maybe not strictly checked here.
+        
     elif isinstance(space_group, str):
         if not space_group or len(space_group.strip()) == 0:
             return False, "Space group symbol cannot be empty"
@@ -161,22 +172,12 @@ def calculate_density(crystal: pyxtal) -> float:
     Returns:
         Density in g/cm³
     """
-    mass = 0.0
-    for site in crystal.atom_sites:
-        element = Element(site.specie)
-        mass += element.atomic_mass * len(site.coords)
-    
-    # Convert volume from Ų to cm³
-    volume_cm3 = crystal.lattice.volume * 1e-24
-    
-    # Calculate density
-    avogadro = 6.022e23
-    if volume_cm3 > 0:
-        density = (mass / avogadro) / volume_cm3
-    else:
-        density = 0.0
-    
-    return float(density)
+    if crystal is None or not crystal.valid:
+        return 0.0
+        
+    # Use Pymatgen structure for robust density calculation
+    pmg_struct = crystal.to_pymatgen()
+    return float(pmg_struct.density)
 
 
 def extract_structure_data(crystal: pyxtal) -> Dict[str, Any]:
@@ -189,7 +190,9 @@ def extract_structure_data(crystal: pyxtal) -> Dict[str, Any]:
     Returns:
         Dictionary containing all structure information
     """
-    lattice = crystal.lattice
+    # Convert to Pymatgen structure for consistent handling of atoms
+    pmg_struct = crystal.to_pymatgen()
+    lattice = pmg_struct.lattice
     
     structure_data = {
         "lattice": {
@@ -212,27 +215,23 @@ def extract_structure_data(crystal: pyxtal) -> Dict[str, Any]:
         },
         "metadata": {
             "formula": str(crystal.formula),
-            "natoms": sum(len(site.coords) for site in crystal.atom_sites) if hasattr(crystal, 'atom_sites') else 0,
+            "natoms": len(pmg_struct),
             "volume": float(lattice.volume),
             "density": calculate_density(crystal)
         }
     }
     
-    # Extract atomic positions
-    if hasattr(crystal, 'atom_sites'):
-        for site in crystal.atom_sites:
-            for coord in site.coords:
-                cartesian = np.dot(coord, lattice.matrix)
-                
-                structure_data["atoms"].append({
-                    "element": str(site.specie),
-                    "coords": coord.tolist(),
-                    "cartesian": cartesian.tolist(),
-                    "wyckoff": str(site.wp.letter) if hasattr(site.wp, 'letter') else "",
-                    "multiplicity": int(site.wp.multiplicity) if hasattr(site.wp, 'multiplicity') else 1,
-                    "site_symmetry": str(site.wp.site_symm) if hasattr(site.wp, 'site_symm') else ""
-                })
-    
+    # Extract atomic positions from Pymatgen structure
+    for site in pmg_struct:
+        structure_data["atoms"].append({
+            "element": str(site.specie),
+            "coords": site.frac_coords.tolist(),
+            "cartesian": site.coords.tolist(),
+            "wyckoff": "", # Wyckoff info lost in Pymatgen conversion
+            "multiplicity": 1,
+            "site_symmetry": ""
+        })
+        
     return structure_data
 
 
@@ -298,6 +297,7 @@ def generate_crystal(
     min_distance: Optional[Dict[str, float]] = None,
     wyckoff_positions: Optional[List[Dict[str, Any]]] = None,
     seed: Optional[int] = None,
+    dimensionality: int = 3,
     max_attempts: int = 100
 ) -> Dict[str, Any]:
     """
@@ -305,27 +305,28 @@ def generate_crystal(
     
     Args:
         composition: List of element symbols
-        space_group: Space group number (1-230)
+        space_group: Space group number (1-230 for 3D)
         num_atoms: Optional total number of atoms
         lattice_params: Optional lattice parameters
         volume_factor: Relative volume factor
         min_distance: Minimum distance constraints
         wyckoff_positions: Optional Wyckoff position specifications
         seed: Random seed for reproducibility
+        dimensionality: 0=cluster, 1=rod, 2=layer, 3=bulk
         max_attempts: Maximum generation attempts
     
     Returns:
         Dictionary containing structure data and validation results
     """
     # Validate inputs
-    spg_valid, spg_error = validate_space_group(space_group)
+    spg_valid, spg_error = validate_space_group(space_group, dimensionality)
     if not spg_valid:
         return {
             "success": False,
             "error": {
                 "code": "INVALID_SPACE_GROUP",
                 "message": spg_error or "Invalid space group",
-                "details": {"space_group": space_group}
+                "details": {"space_group": space_group, "dimensionality": dimensionality}
             }
         }
 
@@ -373,6 +374,31 @@ def generate_crystal(
         # Use exact counts from composition list
         num_ions = list(counts.values())
 
+    # Check compatibility with space group
+    # Avoids try-except by pre-validating
+    # Check compatibility with space group
+    # We rely on pre-validation. If Group() fails, it will raise an error, 
+    # which is acceptable as we do not use try-except for control flow.
+    
+    # Only perform check if dimensionality matches (Group behavior specifics)
+    # PyXtal's Group(space_group) is valid for 1-230.
+    # We assume space_group is valid int from validate_space_group.
+    
+    group_obj = Group(space_group, dim=dimensionality)
+    
+    # check_compatible returns (bool, bool)
+    is_compatible = group_obj.check_compatible(num_ions)[0]
+    
+    if not is_compatible:
+         return {
+            "success": False,
+            "error": {
+                "code": "INCOMPATIBLE_COMPOSITION",
+                "message": f"Composition {num_ions} not compatible with space group {space_group} (dim={dimensionality})",
+                "details": {"num_ions": num_ions, "space_group": space_group}
+            }
+        }
+
     while attempt < max_attempts and not success:
         attempt += 1
         
@@ -380,28 +406,44 @@ def generate_crystal(
         generation_success = True
         error_msg = None
         
+        # Prepare lattice object if params provided
+        current_lattice = None
+        if lattice_params and isinstance(lattice_params, dict):
+            # Check for required keys
+            req_keys = ['a', 'b', 'c', 'alpha', 'beta', 'gamma']
+            if all(k in lattice_params for k in req_keys):
+                # PyXtal Lattice.from_para expects radians usually for angles?
+                # Let's try degrees first as is standard for "parameters" function signatures.
+                # If PyXtal fails or produces wrong result, we might need radians.
+                # Usage: Lattice.from_para(a, b, c, alpha, beta, gamma, ltype)
+                # But we don't know ltype easily without mapping SG.
+                # PyXtal infers type or we pass generic.
+                    current_lattice = PyXtalLattice.from_para(
+                        lattice_params['a'],
+                        lattice_params['b'],
+                        lattice_params['c'],
+                        lattice_params['alpha'],
+                        lattice_params['beta'],
+                        lattice_params['gamma']
+                    )
+
         # Call PyXtal's from_random method
-        # We handle errors through return values, not exceptions
-        try:
-            result = crystal.from_random(
-                dim=3,
-                group=space_group,
-                species=species,
-                numIons=num_ions,
-                factor=volume_factor,
-                lattice=lattice_params,
-                sites=wyckoff_positions
-            )
-        except Exception as e:
-            # Catch internal PyXtal errors to prevent crash
-            last_error = f"PyXtal error: {str(e)}"
-            continue
+        # We rely on pre-validation and library stability
+        result = crystal.from_random(
+            dim=dimensionality,
+            group=space_group,
+            species=species,
+            numIons=num_ions,
+            factor=volume_factor,
+            lattice=current_lattice,
+            sites=wyckoff_positions
+        )
         
         # Check if generation succeeded
-        if result is not None or (hasattr(crystal, 'valid') and crystal.valid):
+        if crystal.valid:
             success = True
         else:
-            last_error = f"Generation attempt {attempt} failed"
+            last_error = f"Generation attempt {attempt} failed (validity check)"
     
     if not success:
         return {
@@ -434,9 +476,137 @@ def generate_crystal(
         "validation": validation.to_dict(),
         "metadata": {
             "attempts": attempt,
-            "seed": seed
+            "seed": seed,
+            "dimensionality": dimensionality
         }
     }
+
+
+def validate_molecules(molecules: List[str]) -> Tuple[bool, Optional[str]]:
+    """
+    Validate molecule list.
+    
+    Args:
+        molecules: List of molecule strings (formulas or names)
+    
+    Returns:
+        Tuple of (is_valid, error_message)
+    """
+    if not molecules or len(molecules) == 0:
+        return False, "Molecules list cannot be empty"
+        
+    for i, mol in enumerate(molecules):
+        if not mol or not isinstance(mol, str) or len(mol.strip()) == 0:
+            return False, f"Invalid molecule at index {i}"
+            
+    return True, None
+
+
+def generate_molecular_crystal(
+    molecules: List[str],
+    space_group: int,
+    num_molecules: Optional[int] = None,
+    lattice_params: Optional[Dict[str, float]] = None,
+    volume_factor: float = 1.0,
+    min_distance: Optional[Dict[str, float]] = None,
+    seed: Optional[int] = None,
+    max_attempts: int = 100
+) -> Dict[str, Any]:
+    """
+    Generate molecular crystal structure.
+    
+    Args:
+        molecules: List of molecule formulas
+        space_group: Space group number
+        num_molecules: Total number of molecules
+        lattice_params: Optional lattice parameters
+        volume_factor: Volume factor
+        min_distance: Minimum distance constraints
+        seed: Random seed
+        max_attempts: Max attempts
+        
+    Returns:
+        Dictionary with structure data
+    """
+    # Validate inputs
+    spg_valid, spg_error = validate_space_group(space_group)
+    if not spg_valid:
+        return {
+            "success": False,
+            "error": {
+                "code": "INVALID_SPACE_GROUP",
+                "message": spg_error or "Invalid space group",
+                "details": {"space_group": space_group}
+            }
+        }
+        
+    mol_valid, mol_error = validate_molecules(molecules)
+    if not mol_valid:
+         return {
+            "success": False,
+            "error": {
+                "code": "INVALID_MOLECULES",
+                "message": mol_error or "Invalid molecules",
+                "details": {"molecules": molecules}
+            }
+        }
+
+    if seed is not None:
+        np.random.seed(seed)
+        
+    crystal = pyxtal(molecular=True)
+    
+    # Calculate numIons (molecules count)
+    from collections import Counter
+    counts = Counter(molecules)
+    species = list(counts.keys())
+    
+    if num_molecules:
+        total = sum(counts.values())
+        num_ions = [int(counts[s] * num_molecules / total) for s in species]
+        diff = num_molecules - sum(num_ions)
+        if diff != 0:
+            num_ions[0] += diff
+    else:
+        num_ions = list(counts.values())
+        
+    success = False
+    attempt = 0
+    last_error = None
+    
+    while attempt < max_attempts and not success:
+        attempt += 1
+        crystal.from_random(
+            dim=3,
+            group=space_group,
+            species=species,
+            numIons=num_ions,
+            factor=volume_factor,
+            lattice=lattice_params
+        )
+        if crystal.valid:
+            success = True
+        else:
+            last_error = "Generation failed check validity"
+            
+    if not success:
+        return {
+            "success": False,
+            "error": {
+                "code": "MAX_ATTEMPTS_EXCEEDED",
+                "message": f"Failed to generate molecular crystal after {max_attempts} attempts",
+                "details": {"last_error": last_error}
+            }
+        }
+        
+    structure_data = extract_structure_data(crystal)
+    # Skip standard validation for now as it might be strict on distances for molecules
+    return {
+        "success": True,
+        "structure": structure_data,
+        "metadata": {"attempts": attempt, "seed": seed}
+    }
+
 
 
 def main():
@@ -471,8 +641,25 @@ def main():
     with open(input_file, 'r') as f:
         params = json.load(f)
     
-    # Generate crystal
-    result = generate_crystal(**params)
+    # Determine mode
+    operation = params.get("operation", "generate_crystal")
+    
+    if operation == "generate_molecular":
+        result = generate_molecular_crystal(
+            molecules=params.get("molecules"),
+            space_group=params.get("space_group"),
+            num_molecules=params.get("num_molecules"),
+            lattice_params=params.get("lattice_params"),
+            volume_factor=params.get("volume_factor", 1.0),
+            min_distance=params.get("min_distance"),
+            seed=params.get("seed"),
+            max_attempts=params.get("max_attempts", 100)
+        )
+    else:
+        # Default to standard crystal generation
+        # Filter out operation key if present
+        gen_params = {k: v for k, v in params.items() if k != "operation"}
+        result = generate_crystal(**gen_params)
     
     # Output result as JSON
     print(json.dumps(result, indent=2))

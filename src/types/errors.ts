@@ -22,7 +22,7 @@ export enum CrystalErrorCode {
   INVALID_OPTIMIZER = "E1009",
   INVALID_STRUCTURE = "E1010",
   INVALID_USAGE = "E1011",
-  
+
   // Generation failures (E2xxx)
   GENERATION_TIMEOUT = "E2001",
   MAX_ATTEMPTS_EXCEEDED = "E2002",
@@ -31,7 +31,7 @@ export enum CrystalErrorCode {
   DISTANCE_CONSTRAINT_VIOLATION = "E2005",
   SYMMETRY_CONSTRAINT_VIOLATION = "E2006",
   GENERATION_FAILED = "E2007",
-  
+
   // Structure validation errors (E3xxx)
   ATOMS_TOO_CLOSE = "E3001",
   INVALID_SYMMETRY = "E3002",
@@ -41,29 +41,30 @@ export enum CrystalErrorCode {
   CONVERSION_FAILED = "E3006",
   SYMMETRY_DETECTION_FAILED = "E3007",
   REFINEMENT_FAILED = "E3008",
-  
+
   // MLFF errors (E4xxx)
   MODEL_NOT_AVAILABLE = "E4001",
   OPTIMIZATION_FAILED = "E4002",
   ENERGY_CALCULATION_FAILED = "E4003",
   CONVERGENCE_FAILURE = "E4004",
   MODEL_LOAD_FAILED = "E4005",
-  
+
   // File I/O errors (E5xxx)
   FILE_READ_ERROR = "E5001",
   FILE_WRITE_ERROR = "E5002",
   INVALID_FORMAT = "E5003",
   FILE_NOT_FOUND = "E5004",
   CORRUPTED_DATA = "E5005",
-  
+
   // Python bridge errors (E6xxx)
   PYTHON_EXECUTION_FAILED = "E6001",
   PYTHON_NOT_FOUND = "E6002",
   SCRIPT_NOT_FOUND = "E6003",
   INVALID_JSON_RESPONSE = "E6004",
   TIMEOUT_ERROR = "E6005",
-  
+
   // General errors (E9xxx)
+  EXECUTION_ERROR = "E9000",
   UNKNOWN_ERROR = "E9001",
   NOT_IMPLEMENTED = "E9002",
   INVALID_OPERATION = "E9003",
@@ -105,7 +106,7 @@ export function createError(
  * Result type for operations that may fail
  * Uses discriminated union for type-safe error handling
  */
-export type Result<T> = 
+export type Result<T> =
   | { success: true; data: T }
   | { success: false; error: CrystalError };
 
@@ -174,7 +175,7 @@ export const ERROR_MESSAGES = {
       "Use Hermann-Mauguin notation if providing a symbol"
     ]
   }),
-  
+
   INCOMPATIBLE_COMPOSITION: (composition: string[], spg: number) => ({
     message: `Composition ${composition.join(", ")} is incompatible with space group ${spg}.`,
     suggestions: [
@@ -184,7 +185,7 @@ export const ERROR_MESSAGES = {
       "Increase volume_factor to 1.2-1.5 to allow more space"
     ]
   }),
-  
+
   MAX_ATTEMPTS_EXCEEDED: (attempts: number) => ({
     message: `Structure generation failed after ${attempts} attempts.`,
     suggestions: [
@@ -195,7 +196,7 @@ export const ERROR_MESSAGES = {
       "Check that composition is compatible with space group"
     ]
   }),
-  
+
   DISTANCE_CONSTRAINT_VIOLATION: (pair: string, distance: number, minDist: number) => ({
     message: `Distance between ${pair} is ${distance.toFixed(3)} Å, less than minimum ${minDist.toFixed(3)} Å.`,
     suggestions: [
@@ -204,7 +205,7 @@ export const ERROR_MESSAGES = {
       "Try a different space group with lower symmetry"
     ]
   }),
-  
+
   MODEL_NOT_AVAILABLE: (model: string) => ({
     message: `MLFF model '${model}' is not available or failed to load.`,
     suggestions: [

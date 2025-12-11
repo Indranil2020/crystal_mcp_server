@@ -60,11 +60,13 @@ export declare const GenerateCrystalSchema: z.ZodObject<{
         coords?: [number, number, number] | undefined;
     }>, "many">>;
     seed: z.ZodOptional<z.ZodNumber>;
+    dimensionality: z.ZodDefault<z.ZodUnion<[z.ZodLiteral<0>, z.ZodLiteral<1>, z.ZodLiteral<2>, z.ZodLiteral<3>]>>;
     max_attempts: z.ZodDefault<z.ZodNumber>;
 }, "strip", z.ZodTypeAny, {
     composition: string[];
     space_group: string | number;
     volume_factor: number;
+    dimensionality: 0 | 3 | 2 | 1;
     max_attempts: number;
     num_atoms?: number | undefined;
     lattice_params?: {
@@ -102,6 +104,7 @@ export declare const GenerateCrystalSchema: z.ZodObject<{
         coords?: [number, number, number] | undefined;
     }[] | undefined;
     seed?: number | undefined;
+    dimensionality?: 0 | 3 | 2 | 1 | undefined;
     max_attempts?: number | undefined;
 }>;
 export type GenerateCrystalInput = z.infer<typeof GenerateCrystalSchema>;
@@ -145,18 +148,18 @@ export type SpaceGroupScanInput = z.infer<typeof SpaceGroupScanSchema>;
  */
 export declare const MakeSupercellSchema: z.ZodObject<{
     structure: z.ZodUnion<[z.ZodString, z.ZodAny]>;
-    scaling_matrix: z.ZodUnion<[z.ZodTuple<[z.ZodTuple<[z.ZodNumber, z.ZodNumber, z.ZodNumber], null>, z.ZodTuple<[z.ZodNumber, z.ZodNumber, z.ZodNumber], null>, z.ZodTuple<[z.ZodNumber, z.ZodNumber, z.ZodNumber], null>], null>, z.ZodTuple<[z.ZodNumber, z.ZodNumber, z.ZodNumber], null>]>;
+    matrix: z.ZodUnion<[z.ZodString, z.ZodArray<z.ZodArray<z.ZodNumber, "many">, "many">]>;
     wrap_atoms: z.ZodDefault<z.ZodBoolean>;
     preserve_symmetry: z.ZodDefault<z.ZodBoolean>;
     min_distance_check: z.ZodDefault<z.ZodBoolean>;
 }, "strip", z.ZodTypeAny, {
-    scaling_matrix: [number, number, number] | [[number, number, number], [number, number, number], [number, number, number]];
+    matrix: string | number[][];
     wrap_atoms: boolean;
     preserve_symmetry: boolean;
     min_distance_check: boolean;
     structure?: any;
 }, {
-    scaling_matrix: [number, number, number] | [[number, number, number], [number, number, number], [number, number, number]];
+    matrix: string | number[][];
     structure?: any;
     wrap_atoms?: boolean | undefined;
     preserve_symmetry?: boolean | undefined;
@@ -397,6 +400,335 @@ export interface ToolMetadata {
     readonly inputSchema: z.ZodSchema;
     readonly annotations: ToolAnnotations;
 }
+/**
+ * All tool definitions
+ */
+/**
+ * Schema for generate_visualization tool
+ */
+export declare const VisualizationSchema: z.ZodObject<{
+    structure: z.ZodAny;
+    format: z.ZodDefault<z.ZodOptional<z.ZodEnum<["html", "png"]>>>;
+    output_file: z.ZodOptional<z.ZodString>;
+}, "strip", z.ZodTypeAny, {
+    format: "html" | "png";
+    structure?: any;
+    output_file?: string | undefined;
+}, {
+    structure?: any;
+    format?: "html" | "png" | undefined;
+    output_file?: string | undefined;
+}>;
+export type VisualizationInput = z.infer<typeof VisualizationSchema>;
+/**
+ * Schema for create_defect tool
+ */
+export declare const CreateDefectSchema: z.ZodObject<{
+    structure: z.ZodUnion<[z.ZodString, z.ZodAny]>;
+    defect_type: z.ZodEnum<["vacancy", "substitution", "interstitial"]>;
+    defect_site: z.ZodNumber;
+    defect_species: z.ZodOptional<z.ZodString>;
+    concentration: z.ZodDefault<z.ZodNumber>;
+}, "strip", z.ZodTypeAny, {
+    defect_type: "vacancy" | "substitution" | "interstitial";
+    defect_site: number;
+    concentration: number;
+    structure?: any;
+    defect_species?: string | undefined;
+}, {
+    defect_type: "vacancy" | "substitution" | "interstitial";
+    defect_site: number;
+    structure?: any;
+    defect_species?: string | undefined;
+    concentration?: number | undefined;
+}>;
+export type CreateDefectInput = z.infer<typeof CreateDefectSchema>;
+/**
+ * Schema for generate_molecular_crystal tool
+ */
+export declare const GenerateMolecularCrystalSchema: z.ZodObject<{
+    molecules: z.ZodArray<z.ZodString, "many">;
+    space_group: z.ZodUnion<[z.ZodNumber, z.ZodString]>;
+    num_molecules: z.ZodOptional<z.ZodNumber>;
+    lattice_params: z.ZodOptional<z.ZodObject<{
+        a: z.ZodOptional<z.ZodNumber>;
+        b: z.ZodOptional<z.ZodNumber>;
+        c: z.ZodOptional<z.ZodNumber>;
+        alpha: z.ZodOptional<z.ZodNumber>;
+        beta: z.ZodOptional<z.ZodNumber>;
+        gamma: z.ZodOptional<z.ZodNumber>;
+    }, "strip", z.ZodTypeAny, {
+        a?: number | undefined;
+        b?: number | undefined;
+        c?: number | undefined;
+        alpha?: number | undefined;
+        beta?: number | undefined;
+        gamma?: number | undefined;
+    }, {
+        a?: number | undefined;
+        b?: number | undefined;
+        c?: number | undefined;
+        alpha?: number | undefined;
+        beta?: number | undefined;
+        gamma?: number | undefined;
+    }>>;
+    volume_factor: z.ZodDefault<z.ZodNumber>;
+    min_distance: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodNumber>>;
+    seed: z.ZodOptional<z.ZodNumber>;
+}, "strip", z.ZodTypeAny, {
+    space_group: string | number;
+    volume_factor: number;
+    molecules: string[];
+    lattice_params?: {
+        a?: number | undefined;
+        b?: number | undefined;
+        c?: number | undefined;
+        alpha?: number | undefined;
+        beta?: number | undefined;
+        gamma?: number | undefined;
+    } | undefined;
+    min_distance?: Record<string, number> | undefined;
+    seed?: number | undefined;
+    num_molecules?: number | undefined;
+}, {
+    space_group: string | number;
+    molecules: string[];
+    lattice_params?: {
+        a?: number | undefined;
+        b?: number | undefined;
+        c?: number | undefined;
+        alpha?: number | undefined;
+        beta?: number | undefined;
+        gamma?: number | undefined;
+    } | undefined;
+    volume_factor?: number | undefined;
+    min_distance?: Record<string, number> | undefined;
+    seed?: number | undefined;
+    num_molecules?: number | undefined;
+}>;
+export type GenerateMolecularCrystalInput = z.infer<typeof GenerateMolecularCrystalSchema>;
+/**
+ * Schema for generate_nanostructure tool
+ */
+export declare const GenerateNanostructureSchema: z.ZodObject<{
+    type: z.ZodEnum<["nanotube", "graphene", "nanoribbon", "fullerene", "mos2", "nanowire"]>;
+    params: z.ZodObject<{
+        n: z.ZodOptional<z.ZodNumber>;
+        m: z.ZodOptional<z.ZodNumber>;
+        length: z.ZodOptional<z.ZodNumber>;
+        bond: z.ZodOptional<z.ZodNumber>;
+        formula: z.ZodOptional<z.ZodString>;
+        size: z.ZodOptional<z.ZodTuple<[z.ZodNumber, z.ZodNumber, z.ZodNumber], null>>;
+        vacuum: z.ZodOptional<z.ZodNumber>;
+        width: z.ZodOptional<z.ZodNumber>;
+        ribbon_type: z.ZodOptional<z.ZodEnum<["armchair", "zigzag"]>>;
+        saturated: z.ZodOptional<z.ZodBoolean>;
+        name: z.ZodOptional<z.ZodString>;
+        kind: z.ZodOptional<z.ZodString>;
+        thickness: z.ZodOptional<z.ZodNumber>;
+    }, "strip", z.ZodTypeAny, {
+        length?: number | undefined;
+        thickness?: number | undefined;
+        vacuum?: number | undefined;
+        n?: number | undefined;
+        m?: number | undefined;
+        bond?: number | undefined;
+        formula?: string | undefined;
+        size?: [number, number, number] | undefined;
+        width?: number | undefined;
+        ribbon_type?: "armchair" | "zigzag" | undefined;
+        saturated?: boolean | undefined;
+        name?: string | undefined;
+        kind?: string | undefined;
+    }, {
+        length?: number | undefined;
+        thickness?: number | undefined;
+        vacuum?: number | undefined;
+        n?: number | undefined;
+        m?: number | undefined;
+        bond?: number | undefined;
+        formula?: string | undefined;
+        size?: [number, number, number] | undefined;
+        width?: number | undefined;
+        ribbon_type?: "armchair" | "zigzag" | undefined;
+        saturated?: boolean | undefined;
+        name?: string | undefined;
+        kind?: string | undefined;
+    }>;
+}, "strip", z.ZodTypeAny, {
+    params: {
+        length?: number | undefined;
+        thickness?: number | undefined;
+        vacuum?: number | undefined;
+        n?: number | undefined;
+        m?: number | undefined;
+        bond?: number | undefined;
+        formula?: string | undefined;
+        size?: [number, number, number] | undefined;
+        width?: number | undefined;
+        ribbon_type?: "armchair" | "zigzag" | undefined;
+        saturated?: boolean | undefined;
+        name?: string | undefined;
+        kind?: string | undefined;
+    };
+    type: "nanotube" | "graphene" | "nanoribbon" | "fullerene" | "mos2" | "nanowire";
+}, {
+    params: {
+        length?: number | undefined;
+        thickness?: number | undefined;
+        vacuum?: number | undefined;
+        n?: number | undefined;
+        m?: number | undefined;
+        bond?: number | undefined;
+        formula?: string | undefined;
+        size?: [number, number, number] | undefined;
+        width?: number | undefined;
+        ribbon_type?: "armchair" | "zigzag" | undefined;
+        saturated?: boolean | undefined;
+        name?: string | undefined;
+        kind?: string | undefined;
+    };
+    type: "nanotube" | "graphene" | "nanoribbon" | "fullerene" | "mos2" | "nanowire";
+}>;
+export type GenerateNanostructureInput = z.infer<typeof GenerateNanostructureSchema>;
+/**
+ * Schema for explore_symmetry_relations tool
+ */
+export declare const ExploreSymmetryRelationsSchema: z.ZodEffects<z.ZodObject<{
+    operation: z.ZodEnum<["get_subgroups", "get_path"]>;
+    space_group: z.ZodOptional<z.ZodNumber>;
+    start_group: z.ZodOptional<z.ZodNumber>;
+    end_group: z.ZodOptional<z.ZodNumber>;
+    max_depth: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+}, "strip", z.ZodTypeAny, {
+    operation: "get_subgroups" | "get_path";
+    space_group?: number | undefined;
+    start_group?: number | undefined;
+    end_group?: number | undefined;
+    max_depth?: number | undefined;
+}, {
+    operation: "get_subgroups" | "get_path";
+    space_group?: number | undefined;
+    start_group?: number | undefined;
+    end_group?: number | undefined;
+    max_depth?: number | undefined;
+}>, {
+    operation: "get_subgroups" | "get_path";
+    space_group?: number | undefined;
+    start_group?: number | undefined;
+    end_group?: number | undefined;
+    max_depth?: number | undefined;
+}, {
+    operation: "get_subgroups" | "get_path";
+    space_group?: number | undefined;
+    start_group?: number | undefined;
+    end_group?: number | undefined;
+    max_depth?: number | undefined;
+}>;
+export type ExploreSymmetryRelationsInput = z.infer<typeof ExploreSymmetryRelationsSchema>;
+export declare const BuildMoleculeSchema: z.ZodObject<{
+    name: z.ZodString;
+    vacuum: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+}, "strip", z.ZodTypeAny, {
+    name: string;
+    vacuum?: number | undefined;
+}, {
+    name: string;
+    vacuum?: number | undefined;
+}>;
+export type BuildMoleculeInput = z.infer<typeof BuildMoleculeSchema>;
+/**
+ * Schema for create_alloy tool
+ */
+export declare const CreateAlloySchema: z.ZodObject<{
+    structure: z.ZodUnion<[z.ZodString, z.ZodAny]>;
+    substitutions: z.ZodRecord<z.ZodString, z.ZodObject<{
+        element: z.ZodString;
+        concentration: z.ZodNumber;
+    }, "strip", z.ZodTypeAny, {
+        element: string;
+        concentration: number;
+    }, {
+        element: string;
+        concentration: number;
+    }>>;
+    seed: z.ZodOptional<z.ZodNumber>;
+}, "strip", z.ZodTypeAny, {
+    substitutions: Record<string, {
+        element: string;
+        concentration: number;
+    }>;
+    seed?: number | undefined;
+    structure?: any;
+}, {
+    substitutions: Record<string, {
+        element: string;
+        concentration: number;
+    }>;
+    seed?: number | undefined;
+    structure?: any;
+}>;
+export type CreateAlloyInput = z.infer<typeof CreateAlloySchema>;
+/**
+ * Schema for create_heterostructure tool
+ */
+export declare const CreateHeterostructureSchema: z.ZodObject<{
+    substrate: z.ZodUnion<[z.ZodString, z.ZodAny]>;
+    overlayer: z.ZodUnion<[z.ZodString, z.ZodAny]>;
+    interface_distance: z.ZodDefault<z.ZodNumber>;
+    vacuum: z.ZodDefault<z.ZodNumber>;
+}, "strip", z.ZodTypeAny, {
+    vacuum: number;
+    interface_distance: number;
+    substrate?: any;
+    overlayer?: any;
+}, {
+    vacuum?: number | undefined;
+    substrate?: any;
+    overlayer?: any;
+    interface_distance?: number | undefined;
+}>;
+export type CreateHeterostructureInput = z.infer<typeof CreateHeterostructureSchema>;
+/**
+ * Schema for add_adsorbate tool
+ */
+export declare const AddAdsorbateSchema: z.ZodObject<{
+    structure: z.ZodUnion<[z.ZodString, z.ZodAny]>;
+    molecule: z.ZodUnion<[z.ZodString, z.ZodAny]>;
+    site_index: z.ZodNumber;
+    distance: z.ZodDefault<z.ZodNumber>;
+}, "strip", z.ZodTypeAny, {
+    site_index: number;
+    distance: number;
+    structure?: any;
+    molecule?: any;
+}, {
+    site_index: number;
+    structure?: any;
+    molecule?: any;
+    distance?: number | undefined;
+}>;
+export type AddAdsorbateInput = z.infer<typeof AddAdsorbateSchema>;
+/**
+ * Schema for apply_strain tool
+ */
+export declare const ApplyStrainSchema: z.ZodObject<{
+    structure: z.ZodUnion<[z.ZodString, z.ZodAny]>;
+    strain_tensor: z.ZodOptional<z.ZodArray<z.ZodNumber, "many">>;
+    strain_type: z.ZodOptional<z.ZodEnum<["biaxial", "uniaxial", "hydrostatic"]>>;
+    strain_value: z.ZodOptional<z.ZodNumber>;
+}, "strip", z.ZodTypeAny, {
+    structure?: any;
+    strain_tensor?: number[] | undefined;
+    strain_type?: "biaxial" | "uniaxial" | "hydrostatic" | undefined;
+    strain_value?: number | undefined;
+}, {
+    structure?: any;
+    strain_tensor?: number[] | undefined;
+    strain_type?: "biaxial" | "uniaxial" | "hydrostatic" | undefined;
+    strain_value?: number | undefined;
+}>;
+export type ApplyStrainInput = z.infer<typeof ApplyStrainSchema>;
 /**
  * All tool definitions
  */
