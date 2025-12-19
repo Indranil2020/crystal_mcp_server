@@ -1,202 +1,294 @@
 """
 bulk/supercells.py - Supercell Generation
 
-Generates supercells using integer and rational transformation matrices.
-Supports commensurate cell generation for heterostructures.
-
-Scientific basis:
-- Integer matrices: Simple n×m×l expansions
-- Rational matrices: Non-diagonal transformations for Moiré patterns
-- Commensurate cells: Matching lattices for heterostructures
+Comprehensive supercell generation utilities:
+- Diagonal and non-diagonal supercells
+- Random alloy supercells
+- Special supercells for DFT
 """
 
 from typing import Dict, Any, List, Optional, Union
 import numpy as np
 from pymatgen.core import Structure, Lattice
-from pymatgen.transformations.standard_transformations import SupercellTransformation
 
-from .base import structure_to_dict, BulkStructure
+
+# Common supercell sizes for DFT
+COMMON_SUPERCELLS = {
+    "2x2x2": [[2, 0, 0], [0, 2, 0], [0, 0, 2]],
+    "3x3x3": [[3, 0, 0], [0, 3, 0], [0, 0, 3]],
+    "4x4x4": [[4, 0, 0], [0, 4, 0], [0, 0, 4]],
+    "2x2x1": [[2, 0, 0], [0, 2, 0], [0, 0, 1]],
+    "3x3x1": [[3, 0, 0], [0, 3, 0], [0, 0, 1]],
+    "4x4x1": [[4, 0, 0], [0, 4, 0], [0, 0, 1]],
+    "sqrt2_sqrt2_1": [[1, 1, 0], [-1, 1, 0], [0, 0, 1]],  # 45° rotation
+    "sqrt3_sqrt3_1": [[2, 1, 0], [-1, 1, 0], [0, 0, 1]],  # 30° rotation
+}
+
+
+# Special cells for calculations
+SPECIAL_CELLS = {
+    "Monkhorst_Pack_convergence": {
+        "description": "Typical sizes for MP grid convergence",
+        "sizes": [[1, 1, 1], [2, 2, 2], [3, 3, 3], [4, 4, 4]]
+    },
+    "phonon_supercells": {
+        "description": "Common sizes for phonon calculations",
+        "cubic": [2, 3, 4],
+        "hexagonal": [[3, 3, 2], [4, 4, 2], [5, 5, 3]]
+    },
+    "defect_supercells": {
+        "description": "Minimum sizes for defect isolation",
+        "min_size_A": 10.0,
+        "recommended": [[3, 3, 3], [4, 4, 4], [5, 5, 5]]
+    },
+}
+
+
+def structure_to_dict(structure: Structure) -> Dict[str, Any]:
+    lattice = structure.lattice
+    return {
+        "lattice": {"a": lattice.a, "b": lattice.b, "c": lattice.c,
+                    "matrix": lattice.matrix.tolist()},
+        "atoms": [{"element": str(s.specie), "coords": list(s.frac_coords)} for s in structure],
+        "metadata": {"formula": structure.formula, "n_atoms": len(structure)}
+    }
 
 
 def make_supercell(
-    structure_dict: Dict[str, Any],
-    scaling: Union[List[int], List[List[int]]],
-    wrap_atoms: bool = True
+    structure: Structure,
+    scaling: Union[List[int], List[List[int]], str]
 ) -> Dict[str, Any]:
     """
-    Generate supercell with integer scaling matrix.
+    Create supercell from structure.
     
     Args:
-        structure_dict: Base structure dictionary
-        scaling: [nx, ny, nz] or 3x3 matrix
-        wrap_atoms: Wrap atoms into unit cell
+        structure: Input structure
+        scaling: [nx, ny, nz] or transformation matrix or preset name
     
     Returns:
-        Supercell structure dictionary
+        Supercell structure
     """
-    # Validate input
-    if not structure_dict.get("lattice") or not structure_dict.get("atoms"):
-        return {"success": False, "error": {"code": "INVALID_STRUCTURE", "message": "Missing lattice or atoms"}}
-    
-    # Parse scaling
-    scaling_arr = np.array(scaling)
-    if scaling_arr.shape == (3,):
-        matrix = np.diag(scaling_arr.astype(int))
-    elif scaling_arr.shape == (3, 3):
-        matrix = scaling_arr.astype(int)
+    # Handle preset names
+    if isinstance(scaling, str):
+        if scaling not in COMMON_SUPERCELLS:
+            return {
+                "success": False,
+                "error": {"code": "INVALID_SCALING", "message": f"Unknown preset",
+                          "available": list(COMMON_SUPERCELLS.keys())}
+            }
+        matrix = COMMON_SUPERCELLS[scaling]
+    elif len(scaling) == 3 and all(isinstance(s, int) for s in scaling):
+        matrix = [[scaling[0], 0, 0], [0, scaling[1], 0], [0, 0, scaling[2]]]
     else:
-        return {"success": False, "error": {"code": "INVALID_SCALING", "message": "Scaling must be [3] or [3,3]"}}
+        matrix = scaling
     
-    det = np.linalg.det(matrix)
-    if abs(det) < 0.5:
-        return {"success": False, "error": {"code": "SINGULAR_MATRIX", "message": "Scaling matrix is singular"}}
+    supercell = structure.copy()
+    supercell.make_supercell(matrix)
     
-    # Convert to pymatgen
-    lattice = Lattice(structure_dict["lattice"].get("matrix", [[1,0,0],[0,1,0],[0,0,1]]))
-    species = [a["element"] for a in structure_dict["atoms"]]
-    coords = [a["coords"] for a in structure_dict["atoms"]]
+    # Calculate expansion factor
+    det = abs(np.linalg.det(matrix))
+    
+    return {
+        "success": True,
+        "original_n_atoms": len(structure),
+        "supercell_n_atoms": len(supercell),
+        "expansion_factor": int(det),
+        "transformation_matrix": matrix,
+        "supercell_lattice_A": [supercell.lattice.a, supercell.lattice.b, supercell.lattice.c],
+        "structure": structure_to_dict(supercell)
+    }
+
+
+def generate_random_alloy_supercell(
+    base_structure: Structure,
+    substitutions: Dict[str, Dict[str, float]],
+    supercell: List[int] = [3, 3, 3],
+    seed: int = 42
+) -> Dict[str, Any]:
+    """
+    Generate random alloy supercell.
+    
+    Args:
+        base_structure: Base structure
+        substitutions: {element: {new_element: fraction}}
+        supercell: Supercell size
+        seed: Random seed
+    
+    Returns:
+        Random alloy supercell
+    """
+    np.random.seed(seed)
+    
+    # Make supercell first
+    sc_structure = base_structure.copy()
+    sc_structure.make_supercell(supercell)
+    
+    # Apply substitutions
+    for site_idx, site in enumerate(sc_structure):
+        elem = str(site.specie)
+        
+        if elem in substitutions:
+            sub_dict = substitutions[elem]
+            rand = np.random.random()
+            
+            cumulative = 0
+            for new_elem, frac in sub_dict.items():
+                cumulative += frac
+                if rand < cumulative:
+                    sc_structure.replace(site_idx, new_elem)
+                    break
+    
+    # Calculate actual composition
+    composition = {}
+    for site in sc_structure:
+        elem = str(site.specie)
+        composition[elem] = composition.get(elem, 0) + 1
+    
+    return {
+        "success": True,
+        "n_atoms": len(sc_structure),
+        "substitutions": substitutions,
+        "actual_composition": composition,
+        "random_seed": seed,
+        "structure": structure_to_dict(sc_structure)
+    }
+
+
+def generate_graded_supercell(
+    base_structure: Structure,
+    element_from: str,
+    element_to: str,
+    gradient_axis: int = 2,
+    supercell: List[int] = [2, 2, 8]
+) -> Dict[str, Any]:
+    """
+    Generate compositionally graded supercell.
+    
+    Args:
+        base_structure: Base structure
+        element_from: Starting element
+        element_to: Ending element
+        gradient_axis: Axis along which to grade (0, 1, or 2)
+        supercell: Supercell size
+    
+    Returns:
+        Graded supercell
+    """
+    sc_structure = base_structure.copy()
+    sc_structure.make_supercell(supercell)
+    
+    n_axis = supercell[gradient_axis]
+    
+    for site_idx, site in enumerate(sc_structure):
+        if str(site.specie) == element_from:
+            # Position along gradient axis determines probability
+            pos = site.frac_coords[gradient_axis]
+            prob_substitute = pos
+            
+            if np.random.random() < prob_substitute:
+                sc_structure.replace(site_idx, element_to)
+    
+    return {
+        "success": True,
+        "n_atoms": len(sc_structure),
+        "element_from": element_from,
+        "element_to": element_to,
+        "gradient_axis": gradient_axis,
+        "structure": structure_to_dict(sc_structure)
+    }
+
+
+def calculate_supercell_for_size(
+    base_structure: Structure,
+    target_size_A: float = 15.0
+) -> Dict[str, Any]:
+    """
+    Calculate supercell needed to reach target size.
+    
+    Args:
+        base_structure: Base structure
+        target_size_A: Target minimum dimension in Angstrom
+    
+    Returns:
+        Recommended supercell
+    """
+    a = base_structure.lattice.a
+    b = base_structure.lattice.b
+    c = base_structure.lattice.c
+    
+    nx = max(1, int(np.ceil(target_size_A / a)))
+    ny = max(1, int(np.ceil(target_size_A / b)))
+    nz = max(1, int(np.ceil(target_size_A / c)))
+    
+    return {
+        "success": True,
+        "base_lattice_A": [a, b, c],
+        "target_size_A": target_size_A,
+        "recommended_supercell": [nx, ny, nz],
+        "resulting_size_A": [a * nx, b * ny, c * nz],
+        "n_atoms_estimate": len(base_structure) * nx * ny * nz
+    }
+
+
+def generate_slab_supercell(
+    base_structure: Structure,
+    miller_index: List[int] = [1, 1, 1],
+    slab_thickness: int = 5,
+    vacuum: float = 15.0
+) -> Dict[str, Any]:
+    """
+    Generate slab supercell for surface calculations.
+    
+    Args:
+        base_structure: Bulk structure
+        miller_index: Surface orientation
+        slab_thickness: Number of layers
+        vacuum: Vacuum thickness in Angstrom
+    
+    Returns:
+        Slab supercell
+    """
+    a = base_structure.lattice.a
+    
+    # Simplified slab generation
+    h, k, l = miller_index
+    
+    # Surface lattice vectors
+    if miller_index == [1, 1, 1]:
+        a_surf = a / np.sqrt(2)
+        interlayer = a / np.sqrt(3)
+    elif miller_index == [1, 1, 0]:
+        a_surf = a
+        interlayer = a / np.sqrt(8)
+    else:
+        a_surf = a
+        interlayer = a / np.sqrt(h**2 + k**2 + l**2)
+    
+    c_total = slab_thickness * interlayer + vacuum
+    
+    lattice = Lattice.orthorhombic(a_surf * 2, a_surf * 2 * np.sqrt(3), c_total)
+    
+    species = []
+    coords = []
+    
+    base_elem = str(base_structure[0].specie)
+    
+    for layer in range(slab_thickness):
+        z = (layer + 0.5) * interlayer / c_total
+        for i in range(4):
+            for j in range(4):
+                x = (i + 0.5 * (layer % 2)) / 4
+                y = (j + (layer % 3) * 0.33) / 4
+                species.append(base_elem)
+                coords.append([x, y, z])
     
     structure = Structure(lattice, species, coords)
     
-    # Make supercell
-    structure.make_supercell(matrix)
-    
     return {
         "success": True,
-        "transformation_matrix": matrix.tolist(),
-        "volume_multiplier": int(round(abs(det))),
+        "miller_index": miller_index,
+        "slab_thickness_layers": slab_thickness,
+        "vacuum_A": vacuum,
         "n_atoms": len(structure),
         "structure": structure_to_dict(structure)
     }
-
-
-def make_rational_supercell(
-    structure_dict: Dict[str, Any],
-    transformation_matrix: List[List[float]]
-) -> Dict[str, Any]:
-    """
-    Generate supercell with rational (non-integer) transformation matrix.
-    
-    Uses the supercell transformation to create cells with non-integer
-    relationships, useful for Moiré superlattices and incommensurate structures.
-    
-    Args:
-        structure_dict: Base structure dictionary
-        transformation_matrix: 3x3 float matrix
-    
-    Returns:
-        Supercell structure dictionary
-    """
-    matrix = np.array(transformation_matrix)
-    if matrix.shape != (3, 3):
-        return {"success": False, "error": {"code": "INVALID_MATRIX", "message": "Matrix must be 3x3"}}
-    
-    det = np.abs(np.linalg.det(matrix))
-    if det < 0.01:
-        return {"success": False, "error": {"code": "SINGULAR_MATRIX", "message": f"Determinant {det:.4f} too small"}}
-    
-    # Convert to pymatgen
-    lattice = Lattice(structure_dict["lattice"].get("matrix", [[1,0,0],[0,1,0],[0,0,1]]))
-    species = [a["element"] for a in structure_dict["atoms"]]
-    coords = [a["coords"] for a in structure_dict["atoms"]]
-    
-    structure = Structure(lattice, species, coords)
-    
-    # For rational matrices, we need to scale up and find a commensurate cell
-    # Round to integers if close
-    int_matrix = np.round(matrix).astype(int)
-    
-    if np.allclose(matrix, int_matrix, atol=0.05):
-        structure.make_supercell(int_matrix)
-    else:
-        # Scale up to find approximate integer matrix
-        for scale in [2, 3, 4, 5, 6]:
-            scaled = matrix * scale
-            int_scaled = np.round(scaled).astype(int)
-            if np.allclose(scaled, int_scaled, atol=0.1):
-                structure.make_supercell(int_scaled)
-                break
-        else:
-            # Fall back to direct application
-            structure.make_supercell(np.round(matrix).astype(int))
-    
-    return {
-        "success": True,
-        "transformation_matrix": matrix.tolist(),
-        "volume_multiplier": float(det),
-        "n_atoms": len(structure),
-        "structure": structure_to_dict(structure)
-    }
-
-
-def make_commensurate_cell(
-    structure1: Dict[str, Any],
-    structure2: Dict[str, Any],
-    max_atoms: int = 200,
-    tolerance: float = 0.05
-) -> Dict[str, Any]:
-    """
-    Find commensurate supercells for two structures (for heterostructures).
-    
-    Searches for integer matrices M1 and M2 such that the resulting
-    supercells have matching in-plane lattice vectors.
-    
-    Args:
-        structure1: First structure (usually substrate)
-        structure2: Second structure (usually overlayer)
-        max_atoms: Maximum total atoms allowed
-        tolerance: Lattice mismatch tolerance
-    
-    Returns:
-        Dictionary with commensurate cell information
-    """
-    lat1 = np.array(structure1["lattice"]["matrix"])
-    lat2 = np.array(structure2["lattice"]["matrix"])
-    n1 = len(structure1["atoms"])
-    n2 = len(structure2["atoms"])
-    
-    a1, a2 = np.linalg.norm(lat1[0]), np.linalg.norm(lat2[0])
-    
-    best_result = None
-    best_mismatch = float('inf')
-    
-    # Search for commensurate cells
-    for m1 in range(1, 6):
-        for m2 in range(1, 6):
-            if m1 * n1 + m2 * n2 > max_atoms:
-                continue
-            
-            # Simple diagonal scaling
-            scaled_a1 = a1 * m1
-            scaled_a2 = a2 * m2
-            
-            mismatch = abs(scaled_a1 - scaled_a2) / max(scaled_a1, scaled_a2)
-            
-            if mismatch < tolerance and mismatch < best_mismatch:
-                best_mismatch = mismatch
-                best_result = {
-                    "m1": [m1, m1, 1],
-                    "m2": [m2, m2, 1],
-                    "mismatch": mismatch,
-                    "total_atoms": m1 * m1 * n1 + m2 * m2 * n2
-                }
-    
-    if best_result is None:
-        return {"success": False, "error": {"code": "NO_COMMENSURATE", 
-                "message": f"No commensurate cell found within {tolerance*100}% mismatch"}}
-    
-    return {
-        "success": True,
-        **best_result
-    }
-
-
-# Preset supercell transformations for common cases
-SUPERCELL_PRESETS = {
-    "sqrt3": [[2, 1, 0], [-1, 1, 0], [0, 0, 1]],  # √3×√3 R30° for hexagonal
-    "root2": [[1, 1, 0], [1, -1, 0], [0, 0, 1]],  # √2×√2 R45° for square
-    "2x2x2": [[2, 0, 0], [0, 2, 0], [0, 0, 2]],
-    "3x3x3": [[3, 0, 0], [0, 3, 0], [0, 0, 3]],
-    "2x2x1": [[2, 0, 0], [0, 2, 0], [0, 0, 1]],
-    "3x3x1": [[3, 0, 0], [0, 3, 0], [0, 0, 1]],
-}

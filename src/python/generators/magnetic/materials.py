@@ -1,7 +1,10 @@
 """
-magnetic/materials.py - Magnetic Material Structures
+magnetic/materials.py - Magnetic Materials
 
-Ferromagnets, antiferromagnets, ferrimagnets with magnetic moments.
+Comprehensive magnetic material generation:
+- Ferromagnets, antiferromagnets, ferrimagnets
+- Magnetic orderings (FM, AFM, FiM, helical, skyrmion)
+- Magnetic anisotropy
 """
 
 from typing import Dict, Any, List, Optional
@@ -9,165 +12,214 @@ import numpy as np
 from pymatgen.core import Structure, Lattice
 
 
-MAGNETIC_DATABASE = {
-    # Elemental Ferromagnets
-    "Fe-bcc": {"a": 2.87, "structure": "bcc", "ordering": "FM", "moment": 2.2, "tc": 1043},
-    "Co-hcp": {"a": 2.51, "c": 4.07, "structure": "hcp", "ordering": "FM", "moment": 1.7, "tc": 1388},
-    "Ni-fcc": {"a": 3.52, "structure": "fcc", "ordering": "FM", "moment": 0.6, "tc": 627},
-    "Gd-hcp": {"a": 3.64, "c": 5.78, "structure": "hcp", "ordering": "FM", "moment": 7.6, "tc": 293},
+# Magnetic material database
+MAGNETIC_MATERIAL_DATABASE = {
+    # Elemental ferromagnets
+    "Fe_bcc": {"a": 2.87, "ordering": "FM", "Tc_K": 1043, "moment_muB": 2.22,
+               "anisotropy": "cubic", "K1_MJ_m3": 0.048},
+    "Co_hcp": {"a": 2.51, "c": 4.07, "ordering": "FM", "Tc_K": 1388, "moment_muB": 1.72,
+               "anisotropy": "uniaxial", "K1_MJ_m3": 0.53},
+    "Ni_fcc": {"a": 3.52, "ordering": "FM", "Tc_K": 631, "moment_muB": 0.62,
+               "anisotropy": "cubic", "K1_MJ_m3": -0.005},
+    "Gd_hcp": {"a": 3.63, "c": 5.78, "ordering": "FM", "Tc_K": 293, "moment_muB": 7.63,
+               "rare_earth": True},
     
     # Antiferromagnets
-    "Cr-bcc": {"a": 2.88, "structure": "bcc", "ordering": "AFM", "moment": 0.6, "tn": 311},
-    "MnO": {"a": 4.44, "structure": "rocksalt", "ordering": "AFM", "moment": 4.6, "tn": 118},
-    "NiO": {"a": 4.18, "structure": "rocksalt", "ordering": "AFM", "moment": 1.9, "tn": 523},
-    "FeO": {"a": 4.30, "structure": "rocksalt", "ordering": "AFM", "moment": 4.6, "tn": 198},
-    "CoO": {"a": 4.26, "structure": "rocksalt", "ordering": "AFM", "moment": 3.8, "tn": 289},
-    "alpha-Fe2O3": {"a": 5.04, "c": 13.75, "structure": "corundum", "ordering": "AFM", "moment": 4.6, "tn": 955},
+    "Cr": {"a": 2.88, "ordering": "AFM", "TN_K": 311, "type": "SDW"},
+    "Mn_alpha": {"ordering": "AFM", "TN_K": 95, "complex": True},
+    "FeO": {"a": 4.31, "ordering": "AFM", "TN_K": 198, "structure": "rocksalt"},
+    "NiO": {"a": 4.17, "ordering": "AFM", "TN_K": 523, "structure": "rocksalt",
+            "exchange_bias": True},
+    "MnO": {"a": 4.44, "ordering": "AFM", "TN_K": 118, "structure": "rocksalt"},
+    "CoO": {"a": 4.26, "ordering": "AFM", "TN_K": 291, "structure": "rocksalt"},
     
     # Ferrimagnets
-    "Fe3O4": {"a": 8.396, "structure": "spinel", "ordering": "FiM", "moment": 4.1, "tc": 858},
-    "CoFe2O4": {"a": 8.391, "structure": "spinel", "ordering": "FiM", "moment": 3.7, "tc": 793},
-    "NiFe2O4": {"a": 8.339, "structure": "spinel", "ordering": "FiM", "moment": 2.4, "tc": 858},
-    "YIG": {"a": 12.376, "structure": "garnet", "ordering": "FiM", "moment": 5.0, "tc": 559,
-            "formula": "Y3Fe5O12", "description": "Yttrium iron garnet"},
+    "Fe3O4": {"a": 8.40, "ordering": "FiM", "Tc_K": 858, "moment_muB": 4.0,
+              "structure": "spinel", "half_metal": True},
+    "Y3Fe5O12": {"a": 12.38, "ordering": "FiM", "Tc_K": 560, "structure": "garnet",
+                 "name": "YIG", "damping_low": True},
+    "CoFe2O4": {"a": 8.39, "ordering": "FiM", "Tc_K": 793, "structure": "spinel",
+                "high_coercivity": True},
     
-    # Hard Magnets
-    "Nd2Fe14B": {"a": 8.80, "c": 12.20, "structure": "tetragonal", "ordering": "FM", 
-                 "moment": 2.15, "tc": 585, "BHmax": 512, "description": "Strongest permanent magnet"},
-    "SmCo5": {"a": 5.01, "c": 3.97, "structure": "hexagonal", "ordering": "FM",
-              "moment": 1.0, "tc": 1020, "BHmax": 240, "description": "High-temperature magnet"},
-    "Sm2Co17": {"a": 8.40, "c": 12.20, "structure": "hexagonal", "ordering": "FM",
-                "moment": 1.2, "tc": 1190, "BHmax": 280, "description": "High-coercivity"},
+    # Hard magnets
+    "Nd2Fe14B": {"a": 8.80, "c": 12.20, "ordering": "FM", "Tc_K": 585,
+                 "moment_muB": 31.8, "BHmax_MGOe": 56, "hard_magnet": True},
+    "SmCo5": {"a": 5.00, "c": 3.97, "ordering": "FM", "Tc_K": 1000,
+              "moment_muB": 9.0, "BHmax_MGOe": 28, "hard_magnet": True},
+    "FePt_L10": {"a": 3.86, "c": 3.71, "ordering": "FM", "Tc_K": 750,
+                 "moment_muB": 3.0, "K1_MJ_m3": 6.6, "hard_magnet": True},
     
-    # Soft Magnets
-    "Fe-Si": {"a": 2.87, "structure": "bcc", "ordering": "FM", "moment": 2.0, "tc": 1000,
-              "description": "Electrical steel"},
-    "Permalloy": {"a": 3.55, "structure": "fcc", "ordering": "FM", "moment": 1.0, "tc": 870,
-                  "formula": "Ni80Fe20", "description": "High permeability"},
+    # Spin glass and frustration
+    "CuMn": {"ordering": "spin_glass", "Tf_K": 10, "dilute": True},
+    "AuFe": {"ordering": "spin_glass", "Tf_K": 15, "dilute": True},
     
-    # Skyrmion Hosts
-    "MnSi": {"a": 4.558, "structure": "B20", "ordering": "helical", "moment": 0.4, "tc": 29,
-             "skyrmion": True, "description": "Chiral magnet with skyrmions"},
-    "FeGe": {"a": 4.700, "structure": "B20", "ordering": "helical", "moment": 1.0, "tc": 278,
-             "skyrmion": True, "description": "Room-temperature skyrmions"},
+    # 2D magnets
+    "CrI3": {"a": 6.87, "ordering": "FM", "Tc_K": 61, "2D": True,
+             "monolayer_FM": True, "Ising": True},
+    "CrGeTe3": {"a": 6.83, "ordering": "FM", "Tc_K": 68, "2D": True},
+    "Fe3GeTe2": {"a": 3.99, "c": 16.33, "ordering": "FM", "Tc_K": 230, "2D": True,
+                 "itinerant": True},
+    
+    # Antiferromagnetic for spintronics
+    "Mn3Sn": {"a": 5.67, "c": 4.53, "ordering": "AFM", "TN_K": 420,
+              "Weyl_AFM": True, "AHE": True},
+    "Mn3Pt": {"ordering": "AFM", "TN_K": 475, "kagome": True},
+}
+
+
+# Magnetic ordering types
+MAGNETIC_ORDERINGS = {
+    "FM": {"type": "ferromagnetic", "parallel": True, "net_moment": True},
+    "AFM_A": {"type": "antiferromagnetic", "layered": True, "planes_parallel": True},
+    "AFM_C": {"type": "antiferromagnetic", "checkerboard": True},
+    "AFM_G": {"type": "antiferromagnetic", "all_antiparallel": True},
+    "FiM": {"type": "ferrimagnetic", "sublattices": 2, "net_moment": True},
+    "canted": {"type": "canted_AFM", "weak_FM": True},
+    "helical": {"type": "helical", "spiral": True, "wavevector": True},
+    "conical": {"type": "conical", "helical_component": True, "FM_component": True},
+    "skyrmion_lattice": {"type": "skyrmion", "topological": True},
 }
 
 
 def structure_to_dict(structure: Structure) -> Dict[str, Any]:
+    lattice = structure.lattice
     return {
-        "lattice": {"a": structure.lattice.a, "b": structure.lattice.b, "c": structure.lattice.c,
-                    "matrix": structure.lattice.matrix.tolist()},
+        "lattice": {"a": lattice.a, "b": lattice.b, "c": lattice.c,
+                    "matrix": lattice.matrix.tolist()},
         "atoms": [{"element": str(s.specie), "coords": list(s.frac_coords)} for s in structure],
         "metadata": {"formula": structure.formula, "n_atoms": len(structure)}
     }
 
 
-def generate_magnetic_material(
-    material: str = "Fe-bcc",
-    size: List[int] = [1, 1, 1],
-    spin_configuration: str = "ground"
+def generate_magnetic_structure(
+    material: str = "Fe_bcc",
+    ordering: str = "FM",
+    supercell: List[int] = [2, 2, 2]
 ) -> Dict[str, Any]:
     """
-    Generate magnetic material with moments.
+    Generate magnetic material with specified ordering.
     
     Args:
-        material: Material name
-        size: Supercell size
-        spin_configuration: 'ground', 'FM', 'AFM', or 'random'
+        material: Material from database
+        ordering: Magnetic ordering type
+        supercell: Supercell dimensions
     
     Returns:
-        Magnetic structure with moments
+        Magnetic structure with spin information
     """
-    if material not in MAGNETIC_DATABASE:
-        return {"success": False, "error": {"code": "UNKNOWN", "message": f"Unknown: {material}",
-                "available": list(MAGNETIC_DATABASE.keys())}}
+    if material not in MAGNETIC_MATERIAL_DATABASE:
+        return {
+            "success": False,
+            "error": {"code": "INVALID_MATERIAL", "message": f"Unknown material",
+                      "available": list(MAGNETIC_MATERIAL_DATABASE.keys())}
+        }
     
-    info = MAGNETIC_DATABASE[material]
-    a = info["a"]
-    struct_type = info["structure"]
-    ordering = info["ordering"]
-    moment = info["moment"]
+    info = MAGNETIC_MATERIAL_DATABASE[material]
+    a = info.get("a", 4.0)
+    c = info.get("c", a)
     
-    if struct_type == "bcc":
-        lattice = Lattice.bcc(a)
-        elem = material.split("-")[0]
-        species = [elem, elem]
-        coords = [[0, 0, 0], [0.5, 0.5, 0.5]]
-        
-    elif struct_type == "fcc":
-        lattice = Lattice.fcc(a)
-        elem = material.split("-")[0]
-        species = [elem] * 4
-        coords = [[0, 0, 0], [0.5, 0.5, 0], [0.5, 0, 0.5], [0, 0.5, 0.5]]
-        
-    elif struct_type == "hcp":
-        c = info["c"]
+    # Create structure
+    if "hcp" in material or info.get("structure") == "hcp":
         lattice = Lattice.hexagonal(a, c)
-        elem = material.split("-")[0]
-        species = [elem, elem]
-        coords = [[1/3, 2/3, 0.25], [2/3, 1/3, 0.75]]
-        
-    elif struct_type == "rocksalt":
+        base_coords = [[0, 0, 0], [1/3, 2/3, 0.5]]
+    elif info.get("structure") == "rocksalt":
         lattice = Lattice.cubic(a)
-        M = material[:-1]
-        species = [M, M, M, M, "O", "O", "O", "O"]
-        coords = [[0, 0, 0], [0.5, 0.5, 0], [0.5, 0, 0.5], [0, 0.5, 0.5],
-                  [0.5, 0, 0], [0, 0.5, 0], [0, 0, 0.5], [0.5, 0.5, 0.5]]
-        
-    elif struct_type == "spinel":
+        base_coords = [[0, 0, 0], [0.5, 0.5, 0.5]]
+    elif info.get("structure") == "spinel":
         lattice = Lattice.cubic(a)
-        species = ["Fe"] * 8 + ["O"] * 4
-        coords = [[i/8, i/8, i/8] for i in range(8)] + [[0.25, 0.25, 0.25 + i/4] for i in range(4)]
-        
-    elif struct_type == "B20":
+        base_coords = [[0.125, 0.125, 0.125], [0.5, 0.5, 0.5], 
+                       [0.25, 0.25, 0.25]]
+    else:  # BCC or FCC
         lattice = Lattice.cubic(a)
-        M, X = material[:2], material[2:]
-        species = [M, M, M, M, X, X, X, X]
-        coords = [[0, 0, 0], [0.5, 0, 0.5], [0, 0.5, 0.5], [0.5, 0.5, 0],
-                  [0.137, 0.137, 0.137], [0.637, 0.363, 0.863], [0.363, 0.863, 0.637], [0.863, 0.637, 0.363]]
-        
-    else:
-        c = info.get("c", a)
-        lattice = Lattice.tetragonal(a, c) if c != a else Lattice.cubic(a)
-        species = ["Fe"] * 4
-        coords = [[0, 0, 0], [0.5, 0.5, 0], [0.5, 0, 0.5], [0, 0.5, 0.5]]
+        if "bcc" in material:
+            base_coords = [[0, 0, 0], [0.5, 0.5, 0.5]]
+        else:
+            base_coords = [[0, 0, 0], [0.5, 0.5, 0], [0.5, 0, 0.5], [0, 0.5, 0.5]]
+    
+    # Extract element
+    elem = material.split("_")[0].replace("3", "").replace("2", "")
+    if len(elem) > 2:
+        elem = elem[:2]
+    
+    species = []
+    coords = []
+    spins = []
+    
+    nx, ny, nz = supercell
+    
+    for i in range(nx):
+        for j in range(ny):
+            for k in range(nz):
+                for idx, base in enumerate(base_coords):
+                    x = (i + base[0]) / nx
+                    y = (j + base[1]) / ny
+                    z = (k + base[2]) / nz
+                    
+                    species.append(elem)
+                    coords.append([x % 1, y % 1, z % 1])
+                    
+                    # Assign spin based on ordering
+                    moment = info.get("moment_muB", 2.0)
+                    
+                    if ordering == "FM":
+                        spin = [0, 0, moment]
+                    elif ordering == "AFM_A":
+                        spin = [0, 0, moment if k % 2 == 0 else -moment]
+                    elif ordering == "AFM_C":
+                        spin = [0, 0, moment if (i + j) % 2 == 0 else -moment]
+                    elif ordering == "AFM_G":
+                        spin = [0, 0, moment if (i + j + k) % 2 == 0 else -moment]
+                    elif ordering == "FiM":
+                        spin = [0, 0, moment if idx == 0 else -moment * 0.5]
+                    elif ordering == "helical":
+                        angle = 2 * np.pi * k / 8
+                        spin = [moment * np.cos(angle), moment * np.sin(angle), 0]
+                    else:
+                        spin = [0, 0, moment]
+                    
+                    spins.append(spin)
     
     structure = Structure(lattice, species, coords)
     
-    if size != [1, 1, 1]:
-        structure.make_supercell(size)
-    
-    # Add magnetic moments
-    struct_dict = structure_to_dict(structure)
-    
-    for i, atom in enumerate(struct_dict["atoms"]):
-        if spin_configuration == "ground":
-            if ordering == "FM":
-                atom["magmom"] = [0, 0, moment]
-            elif ordering == "AFM":
-                sign = 1 if i % 2 == 0 else -1
-                atom["magmom"] = [0, 0, sign * moment]
-            elif ordering == "FiM":
-                sign = 1 if i < len(struct_dict["atoms"]) // 2 else -0.5
-                atom["magmom"] = [0, 0, sign * moment]
-            else:
-                atom["magmom"] = [0, 0, moment]
-        elif spin_configuration == "FM":
-            atom["magmom"] = [0, 0, moment]
-        elif spin_configuration == "AFM":
-            sign = 1 if i % 2 == 0 else -1
-            atom["magmom"] = [0, 0, sign * moment]
-        else:
-            np.random.seed(i)
-            atom["magmom"] = list(np.random.randn(3) * moment)
+    if supercell != [2, 2, 2]:
+        pass  # Already built with supercell
     
     return {
         "success": True,
         "material": material,
         "ordering": ordering,
-        "moment_uB": moment,
-        "tc_kelvin": info.get("tc"),
-        "tn_kelvin": info.get("tn"),
-        "is_skyrmion_host": info.get("skyrmion", False), 
-        "structure": struct_dict
+        "Tc_or_TN_K": info.get("Tc_K", info.get("TN_K", 0)),
+        "moment_muB_per_atom": info.get("moment_muB", 0),
+        "is_hard_magnet": info.get("hard_magnet", False),
+        "is_2D": info.get("2D", False),
+        "n_atoms": len(structure),
+        "spins": spins,
+        "structure": structure_to_dict(structure)
+    }
+
+
+def generate_antiferromagnet(
+    material: str = "NiO",
+    ordering: str = "AFM_G",
+    supercell: List[int] = [2, 2, 2]
+) -> Dict[str, Any]:
+    """Generate antiferromagnetic structure."""
+    result = generate_magnetic_structure(material, ordering, supercell)
+    if result["success"]:
+        result["is_antiferromagnet"] = True
+        result["has_exchange_bias"] = MAGNETIC_MATERIAL_DATABASE.get(material, {}).get("exchange_bias", False)
+    return result
+
+
+def get_magnetic_database() -> Dict[str, Any]:
+    """Get database organized by type."""
+    return {
+        "success": True,
+        "by_ordering": {
+            "ferromagnets": [k for k, v in MAGNETIC_MATERIAL_DATABASE.items() if v["ordering"] == "FM"],
+            "antiferromagnets": [k for k, v in MAGNETIC_MATERIAL_DATABASE.items() if v["ordering"] == "AFM"],
+            "ferrimagnets": [k for k, v in MAGNETIC_MATERIAL_DATABASE.items() if v["ordering"] == "FiM"],
+            "hard_magnets": [k for k, v in MAGNETIC_MATERIAL_DATABASE.items() if v.get("hard_magnet")],
+            "2D_magnets": [k for k, v in MAGNETIC_MATERIAL_DATABASE.items() if v.get("2D")],
+        }
     }

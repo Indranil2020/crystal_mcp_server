@@ -1,63 +1,33 @@
 """
-adsorption/ - Adsorption and Interface Motifs
+adsorption/ - Adsorption and Interface Structures
 
-Comprehensive module for adsorption structures.
-Covers Category 6 of structure_catalogue.md (9 items).
-
-Submodules:
-- sac: Single Atom Catalysts
-- adsorbates: Simple molecular adsorbates
-- fragments: Dissociated fragments (OH*, CHx*, etc.)
-- water_layers: Water bilayers and ice
-- sams: Self-Assembled Monolayers
-- ionic_liquids: IL monolayers
+Covers Category 6 of structure_catalogue.md.
 """
 
-# Single Atom Catalysts
-from .sac import generate_sac, SAC_SUPPORTS
-
-# Simple adsorbates
-from .adsorbates import add_adsorbate, ADSORPTION_SITES
-
-# Dissociated fragments
-from .fragments import (
-    generate_fragment_adsorbate,
-    generate_coverage_pattern,
-    FRAGMENT_DATABASE,
+from .adsorbates import (
+    generate_adsorbate_on_surface,
+    generate_coadsorption,
+    get_adsorbate_molecule,
+    ADSORBATE_DATABASE,
+    COVERAGE_PATTERNS,
+    ADSORPTION_SITES,
 )
 
-# Water and ice layers
-from .water_layers import (
-    generate_water_bilayer,
-    generate_ice_layer,
-    WATER_LAYER_DATABASE,
-)
-
-# Self-Assembled Monolayers
-from .sams import (
-    generate_sam,
-    generate_mixed_sam,
-    SAM_DATABASE,
-)
-
-# Ionic liquid monolayers
-from .ionic_liquids import (
-    generate_il_monolayer,
-    IL_DATABASE,
+from .sac import (
+    generate_sac_graphene,
+    generate_sac_oxide,
+    generate_sac_tmd,
+    SAC_METALS,
+    SAC_SUPPORTS,
+    COORDINATION_MOTIFS,
 )
 
 
 __all__ = [
-    # SAC
-    "generate_sac", "SAC_SUPPORTS",
     # Adsorbates
-    "add_adsorbate", "ADSORPTION_SITES",
-    # Fragments
-    "generate_fragment_adsorbate", "generate_coverage_pattern", "FRAGMENT_DATABASE",
-    # Water
-    "generate_water_bilayer", "generate_ice_layer", "WATER_LAYER_DATABASE",
-    # SAMs
-    "generate_sam", "generate_mixed_sam", "SAM_DATABASE",
-    # Ionic liquids
-    "generate_il_monolayer", "IL_DATABASE",
+    "generate_adsorbate_on_surface", "generate_coadsorption", "get_adsorbate_molecule",
+    "ADSORBATE_DATABASE", "COVERAGE_PATTERNS", "ADSORPTION_SITES",
+    # SAC
+    "generate_sac_graphene", "generate_sac_oxide", "generate_sac_tmd",
+    "SAC_METALS", "SAC_SUPPORTS", "COORDINATION_MOTIFS",
 ]

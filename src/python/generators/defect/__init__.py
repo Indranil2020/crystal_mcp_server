@@ -1,63 +1,59 @@
 """
-defect/ - Defect and Disorder Structures
+defect/ - Crystal Defects
 
-Comprehensive module for defect structures.
-Covers Category 7 of structure_catalogue.md (8 items).
-
-Submodules:
-- point_defects: Vacancies, interstitials, substitutions
-- extended_defects: Dislocations, grain boundaries
-- amorphous: Amorphous/glassy structures
-- volume_defects: Voids, precipitates, cracks
-- sqs: Special Quasirandom Structures, chemical disorder
+Covers Category 7 of structure_catalogue.md.
 """
 
-# Point defects
 from .point_defects import (
     generate_vacancy,
     generate_interstitial,
     generate_substitution,
+    generate_antisite,
+    generate_f_center,
+    DEFECT_FORMATION_ENERGIES,
+    DOPANT_DATABASE,
 )
 
-# Extended defects
 from .extended_defects import (
     generate_dislocation,
+    generate_stacking_fault,
     generate_grain_boundary,
+    DISLOCATION_DATABASE,
+    GRAIN_BOUNDARY_DATABASE,
+    STACKING_FAULT_ENERGIES,
 )
 
-# Amorphous structures
 from .amorphous import (
     generate_amorphous_structure,
-    generate_melt_quenched_amorphous,
+    generate_melt_quench,
+    generate_amorphous_interface,
     AMORPHOUS_DATABASE,
+    COORDINATION_NUMBERS,
 )
 
-# Volume defects
 from .volume_defects import (
     generate_void,
     generate_precipitate,
-    generate_crack_tip,
-    generate_radiation_cascade,
 )
 
-# SQS and chemical disorder
 from .sqs import (
     generate_sqs,
-    generate_sro_structure,
-    generate_hea_sqs,
-    SQS_ALLOY_DATABASE,
 )
 
 
 __all__ = [
     # Point defects
     "generate_vacancy", "generate_interstitial", "generate_substitution",
+    "generate_antisite", "generate_f_center",
+    "DEFECT_FORMATION_ENERGIES", "DOPANT_DATABASE",
     # Extended defects
-    "generate_dislocation", "generate_grain_boundary",
+    "generate_dislocation", "generate_stacking_fault", "generate_grain_boundary",
+    "DISLOCATION_DATABASE", "GRAIN_BOUNDARY_DATABASE", "STACKING_FAULT_ENERGIES",
     # Amorphous
-    "generate_amorphous_structure", "generate_melt_quenched_amorphous", "AMORPHOUS_DATABASE",
+    "generate_amorphous_structure", "generate_melt_quench", "generate_amorphous_interface",
+    "AMORPHOUS_DATABASE", "COORDINATION_NUMBERS",
     # Volume defects
-    "generate_void", "generate_precipitate", "generate_crack_tip", "generate_radiation_cascade",
+    "generate_void", "generate_precipitate",
     # SQS
-    "generate_sqs", "generate_sro_structure", "generate_hea_sqs", "SQS_ALLOY_DATABASE",
+    "generate_sqs",
 ]

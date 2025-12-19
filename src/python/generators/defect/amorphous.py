@@ -1,11 +1,10 @@
 """
-defect/amorphous.py - Amorphous and Glassy Structures
+defect/amorphous.py - Amorphous Structure Generation
 
-Generates amorphous/disordered structures:
-- a-Si, a-Ge, a-C (amorphous semiconductors)
-- a-SiO2 (silica glass)
-- a-IGZO (amorphous oxide semiconductors)
-- Metallic glasses
+Comprehensive amorphous structure generation:
+- Melt-quench simulation
+- Random network models
+- Amorphous alloys and glasses
 """
 
 from typing import Dict, Any, List, Optional
@@ -15,47 +14,62 @@ from pymatgen.core import Structure, Lattice
 
 # Amorphous material database
 AMORPHOUS_DATABASE = {
-    "a-Si": {
-        "elements": {"Si": 1.0}, "density": 2.3, "coordination": 4,
-        "bond_length": 2.35, "description": "Amorphous silicon"
-    },
-    "a-Ge": {
-        "elements": {"Ge": 1.0}, "density": 5.3, "coordination": 4,
-        "bond_length": 2.45, "description": "Amorphous germanium"
-    },
-    "a-C": {
-        "elements": {"C": 1.0}, "density": 2.0, "coordination": 3.5,
-        "bond_length": 1.54, "description": "Amorphous carbon (diamond-like)"
-    },
-    "a-SiO2": {
-        "elements": {"Si": 0.33, "O": 0.67}, "density": 2.2, "coordination": 4,
-        "bond_length": 1.61, "description": "Fused silica"
-    },
-    "a-IGZO": {
-        "elements": {"In": 0.4, "Ga": 0.2, "Zn": 0.2, "O": 0.2}, "density": 6.4,
-        "bond_length": 2.0, "description": "Amorphous InGaZnO"
-    },
-    "a-GST": {
-        "elements": {"Ge": 0.225, "Sb": 0.225, "Te": 0.55}, "density": 6.4,
-        "bond_length": 2.8, "description": "Amorphous Ge2Sb2Te5 (phase change)"
-    },
-    "a-Li3PS4": {
-        "elements": {"Li": 0.375, "P": 0.125, "S": 0.5}, "density": 1.9,
-        "bond_length": 2.0, "description": "Amorphous lithium thiophosphate"
-    },
+    # Oxide glasses
+    "SiO2": {"type": "network_glass", "network_former": "Si", 
+             "coordination": 4, "density_gcm3": 2.20, "Tg_K": 1473},
+    "GeO2": {"type": "network_glass", "network_former": "Ge", 
+             "coordination": 4, "density_gcm3": 3.65, "Tg_K": 823},
+    "B2O3": {"type": "network_glass", "network_former": "B", 
+             "coordination": 3, "density_gcm3": 1.84, "Tg_K": 530},
+    "P2O5": {"type": "network_glass", "network_former": "P", 
+             "coordination": 4, "density_gcm3": 2.39},
+    "Na2O_SiO2": {"type": "modified_glass", "modifier": "Na", 
+                  "network_former": "Si", "density_gcm3": 2.40},
+    "CaO_SiO2": {"type": "modified_glass", "modifier": "Ca",
+                 "network_former": "Si"},
+    
     # Metallic glasses
-    "Zr-Cu-Al_MG": {
-        "elements": {"Zr": 0.55, "Cu": 0.30, "Al": 0.15}, "density": 6.5,
-        "bond_length": 2.8, "description": "Zr-Cu-Al metallic glass"
-    },
-    "Pd-Ni-P_MG": {
-        "elements": {"Pd": 0.4, "Ni": 0.4, "P": 0.2}, "density": 9.5,
-        "bond_length": 2.5, "description": "Pd-Ni-P metallic glass"
-    },
-    "Fe-B_MG": {
-        "elements": {"Fe": 0.8, "B": 0.2}, "density": 7.3,
-        "bond_length": 2.5, "description": "Fe-B amorphous alloy"
-    },
+    "Zr_Cu": {"type": "metallic_glass", "composition": {"Zr": 0.5, "Cu": 0.5},
+              "density_gcm3": 6.8, "Tg_K": 670},
+    "Zr_Cu_Ni_Al": {"type": "bulk_metallic_glass", 
+                    "composition": {"Zr": 0.55, "Cu": 0.30, "Ni": 0.05, "Al": 0.10},
+                    "density_gcm3": 6.7, "Tg_K": 673, "GFA": "high"},
+    "Pd_Ni_P": {"type": "metallic_glass",
+                "composition": {"Pd": 0.40, "Ni": 0.40, "P": 0.20},
+                "density_gcm3": 9.4, "Tg_K": 590},
+    "Fe_B": {"type": "metallic_glass", 
+             "composition": {"Fe": 0.80, "B": 0.20},
+             "magnetic": True, "soft_magnetic": True},
+    
+    # Chalcogenide glasses
+    "As2S3": {"type": "chalcogenide_glass", "elements": ["As", "S"],
+              "density_gcm3": 3.20, "infrared_transparent": True},
+    "As2Se3": {"type": "chalcogenide_glass", "elements": ["As", "Se"],
+               "density_gcm3": 4.60},
+    "GeSe2": {"type": "chalcogenide_glass", "elements": ["Ge", "Se"],
+              "phase_change": True},
+    "Ge2Sb2Te5": {"type": "phase_change", "PCM": True,
+                  "elements": ["Ge", "Sb", "Te"],
+                  "crystallization_fast": True},
+    
+    # Amorphous semiconductors
+    "a_Si": {"type": "amorphous_semiconductor", "element": "Si",
+             "density_gcm3": 2.29, "dangling_bonds": True},
+    "a_Si_H": {"type": "hydrogenated_aSi", "elements": ["Si", "H"],
+               "H_content_percent": 10, "solar_cell": True},
+    "a_Ge": {"type": "amorphous_semiconductor", "element": "Ge",
+             "density_gcm3": 5.1},
+    "a_C": {"type": "amorphous_carbon", "element": "C",
+            "sp3_fraction": 0.3, "DLC": True},
+}
+
+
+# Coordination number database
+COORDINATION_NUMBERS = {
+    "Si": 4, "Ge": 4, "B": 3, "P": 4, "As": 3,
+    "O": 2, "S": 2, "Se": 2, "Te": 2,
+    "Na": 6, "Ca": 6, "Mg": 6,
+    "Zr": 12, "Cu": 12, "Ni": 12, "Al": 12, "Fe": 12,
 }
 
 
@@ -70,18 +84,18 @@ def structure_to_dict(structure: Structure) -> Dict[str, Any]:
 
 
 def generate_amorphous_structure(
-    material: str = "a-Si",
-    n_atoms: int = 64,
-    density: Optional[float] = None,
+    material: str = "SiO2",
+    n_atoms: int = 100,
+    density_gcm3: Optional[float] = None,
     seed: int = 42
 ) -> Dict[str, Any]:
     """
-    Generate amorphous structure using random packing.
+    Generate amorphous structure using random placement with constraints.
     
     Args:
-        material: Material type from database
+        material: Amorphous material from database
         n_atoms: Number of atoms
-        density: Override density (g/cm³)
+        density_gcm3: Target density (uses database default if None)
         seed: Random seed
     
     Returns:
@@ -90,113 +104,213 @@ def generate_amorphous_structure(
     if material not in AMORPHOUS_DATABASE:
         return {
             "success": False,
-            "error": {"code": "INVALID_MATERIAL", "message": f"Unknown material '{material}'",
+            "error": {"code": "INVALID_MATERIAL", "message": f"Unknown material",
                       "available": list(AMORPHOUS_DATABASE.keys())}
         }
     
-    np.random.seed(seed)
     info = AMORPHOUS_DATABASE[material]
+    np.random.seed(seed)
     
-    # Use provided or database density
-    rho = density if density else info["density"]
+    # Get density
+    if density_gcm3 is None:
+        density_gcm3 = info.get("density_gcm3", 2.5)
     
     # Calculate box size from density
-    # Approximate average atomic mass
-    elements = info["elements"]
-    avg_mass = sum(
-        frac * {"Si": 28, "Ge": 73, "C": 12, "O": 16, "In": 115, "Ga": 70, "Zn": 65,
-                "Te": 128, "Sb": 122, "Li": 7, "P": 31, "S": 32, "Zr": 91, "Cu": 64,
-                "Al": 27, "Pd": 106, "Ni": 59, "Fe": 56, "B": 11}.get(elem, 50)
-        for elem, frac in elements.items()
-    )
+    composition = info.get("composition", {})
+    if not composition:
+        if "elements" in info:
+            n_elem = len(info["elements"])
+            composition = {e: 1/n_elem for e in info["elements"]}
+        elif "element" in info:
+            composition = {info["element"]: 1.0}
+        else:
+            # Extract from formula
+            if "SiO2" in material:
+                composition = {"Si": 0.33, "O": 0.67}
+            elif "GeO2" in material:
+                composition = {"Ge": 0.33, "O": 0.67}
+            elif "B2O3" in material:
+                composition = {"B": 0.40, "O": 0.60}
+            elif "As2S3" in material:
+                composition = {"As": 0.40, "S": 0.60}
+            else:
+                composition = {"Si": 1.0}
     
-    # Volume in Å³
-    volume = n_atoms * avg_mass / (rho * 0.6022)  # 0.6022 converts g/cm³ to amu/Å³
-    box_size = volume ** (1/3)
+    # Estimate atomic volume
+    avg_mass = sum(comp * COORDINATION_NUMBERS.get(elem, 12) for elem, comp in composition.items())
+    volume_A3 = (avg_mass * n_atoms * 1.66054) / density_gcm3  # Approximate
+    box_size = volume_A3 ** (1/3)
     
     lattice = Lattice.cubic(box_size)
     
-    # Generate atom types based on composition
-    atom_types = []
-    for elem, frac in elements.items():
-        n_elem = max(1, int(n_atoms * frac))
-        atom_types.extend([elem] * n_elem)
+    species = []
+    coords = []
     
-    # Adjust to exact number
-    while len(atom_types) < n_atoms:
-        atom_types.append(list(elements.keys())[0])
-    atom_types = atom_types[:n_atoms]
-    np.random.shuffle(atom_types)
+    # Generate species based on composition
+    for elem, frac in composition.items():
+        n_elem = int(n_atoms * frac)
+        species.extend([elem] * n_elem)
     
-    # Random positions with minimum distance constraint
-    min_dist = info["bond_length"] * 0.8
-    positions = []
-    max_attempts = 1000
+    # Pad to n_atoms
+    while len(species) < n_atoms:
+        species.append(list(composition.keys())[0])
+    species = species[:n_atoms]
+    
+    # Generate random positions with minimum distance constraint
+    min_dist = 1.5 / box_size
     
     for i in range(n_atoms):
-        for attempt in range(max_attempts):
-            pos = np.random.uniform(0, 1, 3)
+        for attempt in range(100):
+            pos = np.random.random(3)
             
-            # Check minimum distance to existing atoms
+            # Check minimum distance
             valid = True
-            for existing in positions:
-                diff = pos - existing
-                # Periodic boundary
-                diff = diff - np.round(diff)
-                dist = np.linalg.norm(diff * box_size)
+            for existing in coords:
+                dist = np.sqrt(sum((pos[j] - existing[j])**2 for j in range(3)))
                 if dist < min_dist:
                     valid = False
                     break
             
             if valid:
-                positions.append(pos)
+                coords.append(list(pos))
                 break
         else:
-            # If couldn't place with constraint, place randomly
-            positions.append(np.random.uniform(0, 1, 3))
+            # If can't place, just add anyway
+            coords.append(list(np.random.random(3)))
     
-    structure = Structure(lattice, atom_types, positions)
+    structure = Structure(lattice, species, coords)
     
     return {
         "success": True,
         "material": material,
-        "description": info["description"],
-        "n_atoms": n_atoms,
-        "density_g_cm3": rho,
-        "box_size_angstrom": round(box_size, 2),
-        "composition": {k: round(v * n_atoms) for k, v in elements.items()},
+        "type": info["type"],
+        "n_atoms": len(structure),
+        "target_density_gcm3": density_gcm3,
+        "box_size_A": round(box_size, 2),
+        "Tg_K": info.get("Tg_K", 0),
+        "composition": composition,
+        "random_seed": seed,
         "structure": structure_to_dict(structure)
     }
 
 
-def generate_melt_quenched_amorphous(
-    material: str = "a-Si",
-    n_atoms: int = 64,
-    quench_rate: str = "fast",
-    seed: int = 42
+def generate_melt_quench(
+    elements: List[str],
+    composition: List[float],
+    n_atoms: int = 100,
+    quench_rate: str = "fast"
 ) -> Dict[str, Any]:
     """
-    Generate amorphous structure simulating melt-quench process.
+    Generate amorphous structure using simulated melt-quench.
     
     Args:
-        material: Material type
-        n_atoms: Number of atoms
+        elements: List of elements
+        composition: Composition fractions
+        n_atoms: Total atoms
         quench_rate: 'fast', 'medium', 'slow'
-        seed: Random seed
     
     Returns:
-        Melt-quenched amorphous structure
+        Melt-quenched structure
     """
-    # For now, use random structure with disorder parameter
-    result = generate_amorphous_structure(material, n_atoms, seed=seed)
+    if len(elements) != len(composition):
+        return {"success": False, "error": {"code": "MISMATCH", "message": "Elements and composition length mismatch"}}
     
-    if result["success"]:
-        # Add quench-specific metadata
-        result["generation_method"] = "melt_quench"
-        result["quench_rate"] = quench_rate
-        
-        # Disorder increases with faster quench
-        disorder_factor = {"fast": 1.2, "medium": 1.0, "slow": 0.8}[quench_rate]
-        result["disorder_factor"] = disorder_factor
+    if abs(sum(composition) - 1.0) > 0.01:
+        return {"success": False, "error": {"code": "COMPOSITION", "message": "Composition must sum to 1"}}
     
-    return result
+    np.random.seed(42)
+    
+    # Estimate box size
+    box_size = (n_atoms * 15) ** (1/3)
+    
+    lattice = Lattice.cubic(box_size)
+    
+    species = []
+    coords = []
+    
+    # Build species list
+    for elem, frac in zip(elements, composition):
+        n = int(n_atoms * frac)
+        species.extend([elem] * n)
+    
+    while len(species) < n_atoms:
+        species.append(elements[0])
+    
+    # Random positions
+    for _ in range(len(species)):
+        coords.append(list(np.random.random(3)))
+    
+    structure = Structure(lattice, species, coords)
+    
+    return {
+        "success": True,
+        "elements": elements,
+        "composition": dict(zip(elements, composition)),
+        "n_atoms": len(structure),
+        "quench_rate": quench_rate,
+        "simulated": True,
+        "structure": structure_to_dict(structure)
+    }
+
+
+def generate_amorphous_interface(
+    crystalline: str = "Si",
+    amorphous: str = "a_Si",
+    crystal_layers: int = 5,
+    amorphous_thickness_A: float = 20.0
+) -> Dict[str, Any]:
+    """
+    Generate crystalline-amorphous interface.
+    
+    Args:
+        crystalline: Crystalline phase
+        amorphous: Amorphous phase
+        crystal_layers: Number of crystal layers
+        amorphous_thickness_A: Thickness of amorphous region
+    
+    Returns:
+        Interface structure
+    """
+    a_Si = 5.43
+    interlayer = a_Si / 4
+    
+    total_c = crystal_layers * interlayer + amorphous_thickness_A + 10
+    
+    lattice = Lattice.orthorhombic(a_Si * 2, a_Si * 2, total_c)
+    
+    species = []
+    coords = []
+    
+    # Crystal region
+    for layer in range(crystal_layers):
+        z = (layer * interlayer) / total_c
+        for i in range(4):
+            for j in range(4):
+                x = (i + 0.5 * (layer % 2)) / 4
+                y = (j + 0.5 * (layer % 2)) / 4
+                species.append("Si")
+                coords.append([x, y, z])
+    
+    # Amorphous region
+    crystal_z = crystal_layers * interlayer / total_c
+    n_amorphous = int(amorphous_thickness_A**3 * 0.05 / 20)
+    
+    np.random.seed(42)
+    for _ in range(n_amorphous):
+        x = np.random.random()
+        y = np.random.random()
+        z = crystal_z + np.random.random() * (amorphous_thickness_A / total_c)
+        species.append("Si")
+        coords.append([x, y, z])
+    
+    structure = Structure(lattice, species, coords)
+    
+    return {
+        "success": True,
+        "crystalline": crystalline,
+        "amorphous": amorphous,
+        "crystal_layers": crystal_layers,
+        "amorphous_thickness_A": amorphous_thickness_A,
+        "n_atoms": len(structure),
+        "structure": structure_to_dict(structure)
+    }

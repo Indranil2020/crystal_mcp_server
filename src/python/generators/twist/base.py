@@ -1,151 +1,286 @@
 """
-twist/base.py - Common utilities for twisted structures
+twist/base.py - Twist Base Utilities
 
-Provides base classes and helper functions for:
-- Moiré angle calculations
-- Commensurate cell finding
-- Layer alignment
+Common utilities and databases for twisted/Moiré structures.
 """
 
 from typing import Dict, Any, List, Optional, Tuple
 import numpy as np
-from dataclasses import dataclass, field
-
 from pymatgen.core import Structure, Lattice
 
 
-@dataclass
-class TwistStructure:
-    """
-    Represents a twisted multilayer structure.
-    """
-    lattice: Dict[str, Any]
-    layers: List[Dict[str, Any]]
-    twist_angles: List[float]
-    interlayer_distances: List[float]
-    metadata: Dict[str, Any] = field(default_factory=dict)
+# Twist angle database for common systems
+MAGIC_ANGLES = {
+    # Graphene
+    "twisted_bilayer_graphene": {
+        "magic_1": 1.08, "magic_2": 0.50, "magic_3": 0.35,
+        "flat_band": True, "correlated": True, "superconducting": True
+    },
+    "twisted_trilayer_graphene": {
+        "magic_1": 1.57, "alternating": True,
+        "displacement_field": True, "FQHE": True
+    },
     
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "lattice": self.lattice,
-            "layers": self.layers,
-            "twist_angles": self.twist_angles,
-            "interlayer_distances": self.interlayer_distances,
-            "metadata": self.metadata
-        }
+    # TMDs
+    "twisted_MoS2": {
+        "flat_band_angle": 1.5, "moire_excitons": True,
+        "interlayer_excitons": True
+    },
+    "twisted_WSe2": {
+        "flat_band_angle": 2.0, "moire_potential_meV": 100,
+        "Moiré_Hubbard": True
+    },
+    "MoSe2_WSe2_heterobilayer": {
+        "type_II": True, "moire_trapping": True,
+        "spatially_indirect_excitons": True
+    },
+    
+    # Other 2D materials
+    "twisted_hBN": {
+        "ferroelectric": True, "polar_domains": True
+    },
+    "twisted_phosphorene": {
+        "anisotropic": True, "angle_dependent_bandgap": True
+    },
+}
 
 
-def calculate_moire_angle(theta: float, a1: float, a2: Optional[float] = None) -> Dict[str, Any]:
+# Commensurate angle database
+COMMENSURATE_ANGLES = {
+    # (n, m) indices for twisted bilayer graphene
+    (1, 0): 60.0,
+    (2, 1): 21.79,
+    (3, 2): 13.17,
+    (4, 3): 9.43,
+    (5, 4): 7.34,
+    (6, 5): 6.01,
+    (7, 6): 5.09,
+    (8, 7): 4.41,
+    (9, 8): 3.89,
+    (10, 9): 3.48,
+    (11, 10): 3.15,
+    (21, 20): 1.70,
+    (31, 30): 1.16,
+    (32, 31): 1.12,  # Near first magic angle
+}
+
+
+# Stacking registry database
+STACKING_REGISTRY = {
+    "graphene": {
+        "AA": {"energy_meV_atom": 20, "interlayer_A": 3.60},
+        "AB": {"energy_meV_atom": 0, "interlayer_A": 3.35, "Bernal": True},
+        "SP": {"energy_meV_atom": 10, "saddle_point": True},
+    },
+    "MoS2": {
+        "AA": {"energy_meV_atom": 30, "interlayer_A": 6.5},
+        "AB": {"energy_meV_atom": 0, "interlayer_A": 6.15, "2H": True},
+        "AA'": {"energy_meV_atom": 15, "3R": True},
+    },
+    "hBN": {
+        "AA": {"energy_meV_atom": 25, "polar": True},
+        "AB": {"energy_meV_atom": 0, "centrosymmetric": True},
+        "BA": {"energy_meV_atom": 0, "centrosymmetric": True},
+    },
+}
+
+
+def calculate_moire_period(
+    a: float,
+    theta_deg: float
+) -> float:
     """
-    Calculate Moiré superlattice periodicity.
+    Calculate Moiré period from twist angle.
     
     Args:
-        theta: Twist angle in degrees
-        a1: Lattice constant of layer 1
-        a2: Lattice constant of layer 2 (if different from a1)
+        a: Lattice constant in Angstrom
+        theta_deg: Twist angle in degrees
     
     Returns:
-        Moiré parameters
+        Moiré period in Angstrom
     """
-    if a2 is None:
-        a2 = a1
+    theta = np.radians(theta_deg)
+    if np.sin(theta / 2) < 1e-10:
+        return float('inf')
+    return a / (2 * np.sin(theta / 2))
+
+
+def calculate_moire_atoms(
+    a: float,
+    theta_deg: float,
+    atoms_per_unit_cell: int = 2
+) -> int:
+    """
+    Calculate number of atoms in Moiré unit cell.
     
-    theta_rad = np.radians(theta)
+    Args:
+        a: Lattice constant
+        theta_deg: Twist angle
+        atoms_per_unit_cell: Atoms in primitive cell
     
-    if abs(a1 - a2) < 1e-6:
-        # Homo-bilayer: L_M = a / (2 * sin(theta/2))
-        if abs(theta) < 0.1:
-            L_M = float('inf')
-        else:
-            L_M = a1 / (2 * np.sin(theta_rad / 2))
-    else:
-        # Hetero-bilayer with lattice mismatch
-        delta = (a2 - a1) / a1
-        L_M = a1 / np.sqrt(delta**2 + (2 * np.sin(theta_rad / 2))**2)
+    Returns:
+        Number of atoms in Moiré cell (per layer)
+    """
+    L = calculate_moire_period(a, theta_deg)
+    if L == float('inf'):
+        return 2
     
-    # Number of atoms in Moiré unit cell (approximate)
-    n_atoms_approx = 2 * (L_M / a1) ** 2
+    # For graphene-like honeycomb
+    area_moire = L**2 * np.sqrt(3) / 2
+    area_unit = a**2 * np.sqrt(3) / 2
+    
+    n_unit_cells = int(area_moire / area_unit)
+    return n_unit_cells * atoms_per_unit_cell
+
+
+def find_commensurate(
+    target_angle: float,
+    max_n: int = 50
+) -> Tuple[int, int, float]:
+    """
+    Find nearest commensurate angle.
+    
+    Args:
+        target_angle: Target angle in degrees
+        max_n: Maximum index to search
+    
+    Returns:
+        (n, m, actual_angle)
+    """
+    best_n, best_m = 1, 0
+    best_angle = 60.0
+    min_diff = abs(target_angle - 60.0)
+    
+    for n in range(1, max_n + 1):
+        for m in range(n):
+            # Commensurate angle formula
+            angle = np.degrees(np.arccos((n**2 + 4*n*m + m**2) / (2*(n**2 + n*m + m**2))))
+            
+            diff = abs(target_angle - angle)
+            if diff < min_diff:
+                min_diff = diff
+                best_n, best_m = n, m
+                best_angle = angle
+    
+    return (best_n, best_m, best_angle)
+
+
+def calculate_twist_strain(
+    a1: float,
+    a2: float,
+    theta_deg: float
+) -> Dict[str, float]:
+    """
+    Calculate strain from lattice mismatch in twisted heterostructure.
+    
+    Args:
+        a1: Lattice constant of layer 1
+        a2: Lattice constant of layer 2
+        theta_deg: Twist angle
+    
+    Returns:
+        Strain information
+    """
+    mismatch = abs(a1 - a2) / ((a1 + a2) / 2) * 100
+    
+    L1 = calculate_moire_period(a1, theta_deg)
+    L2 = calculate_moire_period(a2, theta_deg)
     
     return {
-        "twist_angle_deg": theta,
-        "moire_period_angstrom": round(L_M, 2),
-        "n_atoms_approx": int(n_atoms_approx),
-        "lattice_mismatch_percent": round(abs(a1 - a2) / a1 * 100, 3) if a2 else 0
+        "lattice_mismatch_percent": round(mismatch, 2),
+        "moire_period_layer1_A": round(L1, 1),
+        "moire_period_layer2_A": round(L2, 1),
+        "average_moire_period_A": round((L1 + L2) / 2, 1),
+        "commensurate": mismatch < 0.5 and theta_deg in [1.08, 1.1, 21.8]
     }
 
 
-def find_commensurate_cell(
-    theta: float,
-    a: float,
-    max_size: int = 100
-) -> Optional[Tuple[int, int, int, int]]:
-    """
-    Find commensurate supercell for twisted bilayer.
-    
-    Uses the algorithm from Moiré literature to find (m, r) such that
-    the twist angle is exactly representable.
-    
-    Args:
-        theta: Target twist angle (degrees)
-        a: Lattice constant
-        max_size: Maximum supercell size to search
-    
-    Returns:
-        Tuple (m, r, nx, ny) for commensurate cell, or None
-    """
-    theta_rad = np.radians(theta)
-    target_cos = np.cos(theta_rad)
-    
-    best_match = None
-    best_error = float('inf')
-    
-    for m in range(1, max_size):
-        for r in range(0, m + 1):
-            # Commensurate angle formula
-            cos_approx = (3*m**2 + 3*m*r + r**2/2) / (3*m**2 + 3*m*r + r**2)
-            
-            if abs(cos_approx) <= 1:
-                error = abs(cos_approx - target_cos)
-                if error < best_error:
-                    best_error = error
-                    nx = m
-                    ny = m + r
-                    best_match = (m, r, nx, ny)
-                    
-                    if error < 0.001:
-                        return best_match
-    
-    return best_match
+def get_twist_database() -> Dict[str, Any]:
+    """Get all twist system information."""
+    return {
+        "success": True,
+        "magic_angle_systems": list(MAGIC_ANGLES.keys()),
+        "commensurate_angles": {str(k): v for k, v in COMMENSURATE_ANGLES.items()},
+        "stacking_registries": list(STACKING_REGISTRY.keys()),
+        "first_magic_angle_graphene": 1.08,
+    }
 
 
-def rotation_matrix_2d(theta: float) -> np.ndarray:
-    """
-    2D rotation matrix.
-    
-    Args:
-        theta: Angle in degrees
-    
-    Returns:
-        2x2 rotation matrix
-    """
-    theta_rad = np.radians(theta)
-    c, s = np.cos(theta_rad), np.sin(theta_rad)
-    return np.array([[c, -s], [s, c]])
-
-
-def structure_to_dict(structure: Structure, vacuum: float = 15.0) -> Dict[str, Any]:
-    """Convert pymatgen Structure to dictionary format."""
+def structure_to_dict(structure: Structure) -> Dict[str, Any]:
     lattice = structure.lattice
+    return {
+        "lattice": {"a": lattice.a, "b": lattice.b, "c": lattice.c,
+                    "matrix": lattice.matrix.tolist()},
+        "atoms": [{"element": str(s.specie), "coords": list(s.frac_coords)} for s in structure],
+        "metadata": {"formula": structure.formula, "n_atoms": len(structure)}
+    }
+
+
+def generate_twisted_bilayer_simple(
+    material: str = "graphene",
+    twist_angle_deg: float = 1.08,
+    interlayer_distance_A: float = 3.35
+) -> Dict[str, Any]:
+    """
+    Generate simplified twisted bilayer structure (small angle approximation).
+    
+    Args:
+        material: Base material
+        twist_angle_deg: Twist angle
+        interlayer_distance_A: Interlayer distance
+    
+    Returns:
+        Twisted bilayer structure
+    """
+    lattice_params = {"graphene": 2.46, "MoS2": 3.16, "hBN": 2.50, "WSe2": 3.28}
+    a = lattice_params.get(material, 2.46)
+    
+    L_moire = calculate_moire_period(a, twist_angle_deg)
+    
+    # For small angles, use Moiré period as lattice constant
+    if L_moire > 100:
+        # Too large, use smaller approximation
+        L_moire = 50
+    
+    lattice = Lattice.hexagonal(L_moire, interlayer_distance_A * 2 + 20)
+    
+    species = []
+    coords = []
+    
+    n_atoms_layer = calculate_moire_atoms(a, twist_angle_deg)
+    n_atoms_layer = min(n_atoms_layer, 500)  # Limit for practical structures
+    
+    # Generate atoms for both layers
+    theta = np.radians(twist_angle_deg / 2)
+    
+    for layer in range(2):
+        sign = 1 if layer == 0 else -1
+        z = 0.4 if layer == 0 else 0.6
+        
+        for i in range(int(np.sqrt(n_atoms_layer))):
+            for j in range(int(np.sqrt(n_atoms_layer))):
+                # Rotate positions
+                x = i / np.sqrt(n_atoms_layer)
+                y = j / np.sqrt(n_atoms_layer)
+                
+                x_rot = x * np.cos(sign * theta) - y * np.sin(sign * theta)
+                y_rot = x * np.sin(sign * theta) + y * np.cos(sign * theta)
+                
+                species.append("C" if material == "graphene" else material[:2])
+                coords.append([x_rot % 1, y_rot % 1, z])
+    
+    structure = Structure(lattice, species, coords)
+    
+    info = MAGIC_ANGLES.get(f"twisted_bilayer_{material}", {})
     
     return {
-        "lattice": {
-            "a": lattice.a, "b": lattice.b, "c": lattice.c,
-            "alpha": lattice.alpha, "beta": lattice.beta, "gamma": lattice.gamma,
-            "matrix": lattice.matrix.tolist(), "volume": lattice.volume
-        },
-        "atoms": [
-            {"element": str(site.specie), "coords": list(site.frac_coords), "cartesian": list(site.coords)}
-            for site in structure
-        ],
-        "metadata": {"formula": structure.formula, "n_atoms": len(structure)}
+        "success": True,
+        "material": material,
+        "twist_angle_deg": twist_angle_deg,
+        "moire_period_A": round(L_moire, 1),
+        "interlayer_distance_A": interlayer_distance_A,
+        "n_atoms": len(structure),
+        "is_magic_angle": abs(twist_angle_deg - 1.08) < 0.1,
+        "flat_band_expected": info.get("flat_band", False),
+        "structure": structure_to_dict(structure)
     }

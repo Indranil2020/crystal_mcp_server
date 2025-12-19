@@ -1,11 +1,22 @@
 """
-magnetic/ - Magnetic Materials Generation
+magnetic/ - Magnetic Materials
 
-Category 14: Ferromagnets, antiferromagnets, spintronic materials.
+Covers magnetic structure generation from structure_catalogue.md.
 """
 
-from .materials import generate_magnetic_material, MAGNETIC_DATABASE
-from .heusler import generate_heusler, HEUSLER_DATABASE
+from .heusler import (
+    generate_full_heusler,
+    generate_half_heusler,
+    generate_inverse_heusler,
+    generate_quaternary_heusler,
+    FULL_HEUSLER_DATABASE,
+    HALF_HEUSLER_DATABASE,
+    QUATERNARY_HEUSLER_DATABASE,
+)
 
 
-__all__ = ["generate_magnetic_material", "MAGNETIC_DATABASE", "generate_heusler", "HEUSLER_DATABASE"]
+__all__ = [
+    "generate_full_heusler", "generate_half_heusler",
+    "generate_inverse_heusler", "generate_quaternary_heusler",
+    "FULL_HEUSLER_DATABASE", "HALF_HEUSLER_DATABASE", "QUATERNARY_HEUSLER_DATABASE",
+]

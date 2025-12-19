@@ -1,16 +1,27 @@
 """
-electronic/ - Electronic Materials Generation
+electronic/ - Electronic Materials
 
-Category 12: Semiconductors, topological materials, superconductors.
+Comprehensive module for electronic materials.
+Covers Category 8 (partial) of new_structure_catalogue.md.
+
+Submodules:
+- topological: TIs, Weyl/Dirac semimetals, Majorana platforms
+- semiconductors: Semiconductor heterostructures
+- superconductors: Superconducting materials
 """
 
-from .semiconductors import generate_semiconductor, SEMICONDUCTOR_DATABASE
-from .topological import generate_topological_insulator, TOPOLOGICAL_DATABASE
-from .superconductors import generate_superconductor, SUPERCONDUCTOR_DATABASE
+from .topological import (
+    generate_topological_insulator,
+    generate_weyl_semimetal,
+    generate_majorana_nanowire,
+    TOPOLOGICAL_INSULATOR_DATABASE,
+    SEMIMETAL_DATABASE,
+    MAJORANA_DATABASE,
+)
 
 
 __all__ = [
-    "generate_semiconductor", "SEMICONDUCTOR_DATABASE",
-    "generate_topological_insulator", "TOPOLOGICAL_DATABASE",
-    "generate_superconductor", "SUPERCONDUCTOR_DATABASE",
+    # Topological
+    "generate_topological_insulator", "generate_weyl_semimetal", "generate_majorana_nanowire",
+    "TOPOLOGICAL_INSULATOR_DATABASE", "SEMIMETAL_DATABASE", "MAJORANA_DATABASE",
 ]

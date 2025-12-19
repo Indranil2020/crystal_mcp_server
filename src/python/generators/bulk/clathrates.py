@@ -1,195 +1,268 @@
 """
-bulk/clathrates.py - Clathrate Cage Structure Generation
+bulk/clathrates.py - Clathrate Structures
 
-Generates clathrate structures with guest atoms:
-- Type I (sI): Pm-3n, 46 framework atoms, 2 small + 6 large cages
-- Type II (sII): Fd-3m, 136 framework atoms, 16 small + 8 large cages
-- Type III (sIII): P4_2/mnm, 34 framework atoms
-- Type H (sH): Complex with 34 atoms per unit cell
-
-Scientific basis:
-- Gas hydrate structures (CH4, CO2, H2)
-- Semiconductor clathrates (Ba8Si46, Na8Si46)
-- Intermetallic clathrates
+Comprehensive clathrate generation:
+- Type I, II, III clathrates
+- Guest-host systems
+- Thermoelectric clathrates
 """
 
 from typing import Dict, Any, List, Optional
 import numpy as np
 from pymatgen.core import Structure, Lattice
 
-from .base import structure_to_dict
+
+# Clathrate type database
+CLATHRATE_DATABASE = {
+    # Type I clathrates (Pm-3n)
+    "Ba8Ga16Ge30": {
+        "type": "I", "framework": "Ge-Ga", "guest": "Ba",
+        "a": 10.78, "n_framework": 46, "n_guest": 8,
+        "thermoelectric": True, "ZT": 1.4
+    },
+    "Ba8Ga16Si30": {
+        "type": "I", "framework": "Si-Ga", "guest": "Ba",
+        "a": 10.44, "n_framework": 46, "n_guest": 8
+    },
+    "Sr8Ga16Ge30": {
+        "type": "I", "framework": "Ge-Ga", "guest": "Sr",
+        "a": 10.72, "n_framework": 46, "n_guest": 8
+    },
+    "K8Ga8Si38": {
+        "type": "I", "framework": "Si-Ga", "guest": "K",
+        "a": 10.35, "n_framework": 46, "n_guest": 8
+    },
+    "Na8Si46": {
+        "type": "I", "framework": "Si", "guest": "Na",
+        "a": 10.19, "empty_framework": False
+    },
+    
+    # Type II clathrates (Fd-3m)
+    "Na24Si136": {
+        "type": "II", "framework": "Si", "guest": "Na",
+        "a": 14.62, "n_framework": 136, "n_guest": 24
+    },
+    "Cs8Na16Si136": {
+        "type": "II", "framework": "Si", "guest": ["Cs", "Na"],
+        "a": 14.74, "dual_guest": True
+    },
+    "K8Si136": {
+        "type": "II", "framework": "Si", "guest": "K",
+        "a": 14.68, "partially_filled": True
+    },
+    
+    # Inverse clathrates (metal framework)
+    "Ba8Cu16P30": {
+        "type": "I_inverse", "framework": "Cu-P", "guest": "Ba",
+        "a": 10.12, "semiconductor": True
+    },
+    "Ba8Au16As30": {
+        "type": "I_inverse", "framework": "Au-As", "guest": "Ba",
+        "a": 10.42
+    },
+    
+    # Hydrate clathrates
+    "CH4_5.75H2O": {
+        "type": "sI_hydrate", "framework": "H2O", "guest": "CH4",
+        "a": 11.88, "hydrate": True, "gas_storage": True
+    },
+    "CO2_5.75H2O": {
+        "type": "sI_hydrate", "framework": "H2O", "guest": "CO2",
+        "a": 11.83, "hydrate": True
+    },
+    "H2_5.67H2O": {
+        "type": "sII_hydrate", "framework": "H2O", "guest": "H2",
+        "a": 17.03, "hydrogen_storage": True
+    },
+}
 
 
-# Clathrate type definitions
-CLATHRATE_TYPES = {
-    "I": {
-        "space_group": 223,  # Pm-3n
-        "n_framework": 46,
-        "cages": {"small": 2, "large": 6},
-        "description": "Type I (sI) - most common for gas hydrates"
+# Cage types
+CAGE_TYPES = {
+    "type_I": {
+        "small_cage": {"vertices": 20, "faces": "5^12", "name": "dodecahedron"},
+        "large_cage": {"vertices": 24, "faces": "5^12 6^2", "name": "tetrakaidecahedron"},
+        "n_small": 2, "n_large": 6
     },
-    "II": {
-        "space_group": 227,  # Fd-3m
-        "n_framework": 136,
-        "cages": {"small": 16, "large": 8},
-        "description": "Type II (sII) - larger guests"
+    "type_II": {
+        "small_cage": {"vertices": 20, "faces": "5^12", "name": "dodecahedron"},
+        "large_cage": {"vertices": 28, "faces": "5^12 6^4", "name": "hexakaidecahedron"},
+        "n_small": 16, "n_large": 8
     },
-    "III": {
-        "space_group": 136,  # P4_2/mnm
-        "n_framework": 34,
-        "cages": {"small": 3, "large": 2},
-        "description": "Type III - tetragonal"
-    },
-    "H": {
-        "space_group": 191,  # P6/mmm
-        "n_framework": 34,
-        "cages": {"small": 3, "medium": 2, "large": 1},
-        "description": "Type H (sH) - hexagonal"
+}
+
+
+def structure_to_dict(structure: Structure) -> Dict[str, Any]:
+    lattice = structure.lattice
+    return {
+        "lattice": {"a": lattice.a, "b": lattice.b, "c": lattice.c,
+                    "matrix": lattice.matrix.tolist()},
+        "atoms": [{"element": str(s.specie), "coords": list(s.frac_coords)} for s in structure],
+        "metadata": {"formula": structure.formula, "n_atoms": len(structure)}
     }
-}
-
-# Lattice constants for common clathrate compositions
-CLATHRATE_LATTICE_DB = {
-    ("Si", "I"): 10.19,
-    ("Ge", "I"): 10.72,
-    ("Sn", "I"): 11.68,
-    ("Si", "II"): 14.67,
-    ("Ge", "II"): 15.23,
-}
 
 
 def generate_clathrate(
-    framework_element: str = "Si",
-    clathrate_type: str = "I",
-    guest_elements: Optional[Dict[str, str]] = None,
-    a: Optional[float] = None
+    clathrate: str = "Ba8Ga16Ge30",
+    empty_cages: bool = False,
+    supercell: List[int] = [1, 1, 1]
 ) -> Dict[str, Any]:
     """
-    Generate clathrate cage structure.
+    Generate clathrate structure.
     
     Args:
-        framework_element: Element forming the cage network (Si, Ge, Sn)
-        clathrate_type: Type of clathrate (I, II, III, H)
-        guest_elements: Mapping of cage type to guest element
-                       e.g., {"small": "Ba", "large": "Na"}
-        a: Lattice constant (estimated if not provided)
+        clathrate: Clathrate formula from database
+        empty_cages: Generate empty framework without guests
+        supercell: Supercell dimensions
     
     Returns:
-        Clathrate structure dictionary
-    
-    Examples:
-        >>> result = generate_clathrate('Si', 'I', guest_elements={'small': 'Ba', 'large': 'Na'})
-        >>> result["success"]
-        True
+        Clathrate structure
     """
-    if clathrate_type not in CLATHRATE_TYPES:
+    if clathrate not in CLATHRATE_DATABASE:
         return {
             "success": False,
-            "error": {
-                "code": "INVALID_TYPE",
-                "message": f"Unknown clathrate type '{clathrate_type}'",
-                "available": list(CLATHRATE_TYPES.keys())
-            }
+            "error": {"code": "INVALID_CLATHRATE", "message": f"Unknown clathrate",
+                      "available": list(CLATHRATE_DATABASE.keys())}
         }
     
-    template = CLATHRATE_TYPES[clathrate_type]
+    info = CLATHRATE_DATABASE[clathrate]
+    a = info["a"]
+    clath_type = info["type"]
     
-    # Determine lattice constant
-    if a is None:
-        key = (framework_element, clathrate_type)
-        a = CLATHRATE_LATTICE_DB.get(key, 10.5)
+    lattice = Lattice.cubic(a)
     
-    if clathrate_type == "I":
-        lattice = Lattice.cubic(a)
+    species = []
+    coords = []
+    
+    if clath_type in ["I", "I_inverse"]:
+        # Type I: Pm-3n, 46 framework + 8 guest atoms
         
-        # Type I framework positions (Wyckoff sites 6c, 16i, 24k)
-        # 6c sites (0, 1/2, 1/4)
-        coords_6c = [
-            [0, 0.5, 0.25], [0, 0.5, 0.75],
-            [0.5, 0.25, 0], [0.5, 0.75, 0],
-            [0.25, 0, 0.5], [0.75, 0, 0.5]
+        # Framework positions (Wyckoff 6c, 16i, 24k)
+        # 6c: 1/4, 0, 1/2 family
+        wyckoff_6c = [
+            [0.25, 0, 0.5], [0.75, 0, 0.5], [0.5, 0.25, 0],
+            [0.5, 0.75, 0], [0, 0.5, 0.25], [0, 0.5, 0.75]
         ]
         
-        # 16i sites (~0.18, 0.18, 0.18)
-        x = 0.1837
-        coords_16i = []
-        for sx in [1, -1]:
-            for sy in [1, -1]:
-                for sz in [1, -1]:
-                    coords_16i.append([(sx * x) % 1, (sy * x) % 1, (sz * x) % 1])
-                    # Additional by symmetry
-        coords_16i = coords_16i[:16]  # Take 16
+        # 16i: x, x, x family (approximately 0.18)
+        x_16i = 0.1835
+        wyckoff_16i = [
+            [x_16i, x_16i, x_16i], [1-x_16i, 1-x_16i, x_16i],
+            [1-x_16i, x_16i, 1-x_16i], [x_16i, 1-x_16i, 1-x_16i],
+            [x_16i+0.5, x_16i+0.5, x_16i+0.5] if x_16i < 0.5 else [x_16i, x_16i, x_16i],
+        ][:4]
+        # Add reflections for 16 positions
+        for pos in list(wyckoff_16i):
+            wyckoff_16i.extend([
+                [pos[0]+0.5, pos[1]+0.5, pos[2]],
+                [pos[0]+0.5, pos[1], pos[2]+0.5],
+                [pos[0], pos[1]+0.5, pos[2]+0.5],
+            ][:min(3, 16 - len(wyckoff_16i))])
+        wyckoff_16i = wyckoff_16i[:16]
         
-        # 24k sites (~0.31, 0.12, 0)
-        x, y = 0.3092, 0.1172
-        coords_24k = []
-        for pos in [[x, y, 0], [y, x, 0], [-x, y, 0], [y, -x, 0]]:
-            for p in [[pos[0], pos[1], pos[2]], [pos[2], pos[0], pos[1]], [pos[1], pos[2], pos[0]]]:
-                coords_24k.append([c % 1 for c in p])
-        coords_24k = coords_24k[:24]  # Take 24
+        # 24k: simplified positions
+        wyckoff_24k = [
+            [0, 0.31, 0.12], [0, 0.69, 0.12], [0, 0.31, 0.88], [0, 0.69, 0.88],
+            [0.31, 0.12, 0], [0.69, 0.12, 0], [0.31, 0.88, 0], [0.69, 0.88, 0],
+            [0.12, 0, 0.31], [0.12, 0, 0.69], [0.88, 0, 0.31], [0.88, 0, 0.69],
+        ]
         
-        framework_coords = coords_6c + coords_16i + coords_24k
-        framework_species = [framework_element] * len(framework_coords)
+        # Use mixed framework elements
+        framework_elem = info["framework"].split("-")
+        if len(framework_elem) == 2:
+            elem1, elem2 = framework_elem
+        else:
+            elem1, elem2 = framework_elem[0], framework_elem[0]
         
-        # Guest cage centers
-        guest_species = []
-        guest_coords = []
+        # Add 6c positions
+        for pos in wyckoff_6c:
+            species.append(elem2)
+            coords.append([p % 1 for p in pos])
         
-        if guest_elements:
-            if "small" in guest_elements:
-                # 2a site: small cages at (0, 0, 0) and (0.5, 0.5, 0.5)
-                guest_species.extend([guest_elements["small"]] * 2)
-                guest_coords.extend([[0, 0, 0], [0.5, 0.5, 0.5]])
+        # Add 16i positions
+        for pos in wyckoff_16i:
+            species.append(elem1 if len(species) % 2 == 0 else elem2)
+            coords.append([p % 1 for p in pos])
+        
+        # Add 24k positions
+        for pos in wyckoff_24k:
+            species.append(elem1)
+            coords.append([p % 1 for p in pos])
+        
+        # Guest positions (2a and 6d)
+        if not empty_cages:
+            guest = info["guest"] if isinstance(info["guest"], str) else info["guest"][0]
             
-            if "large" in guest_elements:
-                # 6d sites: large cages
-                guest_species.extend([guest_elements["large"]] * 6)
-                guest_coords.extend([
-                    [0.25, 0.5, 0], [0.75, 0.5, 0],
-                    [0, 0.25, 0.5], [0, 0.75, 0.5],
-                    [0.5, 0, 0.25], [0.5, 0, 0.75]
-                ])
-        
-        species = framework_species + guest_species
-        coords = framework_coords + guest_coords
+            # 2a: 0, 0, 0 (small cage)
+            species.append(guest)
+            coords.append([0, 0, 0])
+            species.append(guest)
+            coords.append([0.5, 0.5, 0.5])
+            
+            # 6d: 1/4, 1/2, 0 (large cage)
+            for pos in [[0.25, 0.5, 0], [0.75, 0.5, 0], [0, 0.25, 0.5],
+                       [0, 0.75, 0.5], [0.5, 0, 0.25], [0.5, 0, 0.75]]:
+                species.append(guest)
+                coords.append(pos)
     
-    elif clathrate_type == "II":
-        lattice = Lattice.cubic(a)
+    elif clath_type == "II":
+        # Type II: Fd-3m, 136 framework + 24 guest
+        # Simplified version
+        for i in range(8):
+            for j in range(8):
+                for k in range(8):
+                    if (i + j + k) % 2 == 0:
+                        species.append("Si")
+                        coords.append([i/8, j/8, k/8])
         
-        # Type II is more complex - simplified version
-        # 8a + 32e + 96g for framework
-        species = [framework_element] * 34  # Simplified
-        coords = [[i/10, (i*2)%10/10, (i*3)%10/10] for i in range(34)]
-        
-        if guest_elements:
-            if "small" in guest_elements:
-                species.extend([guest_elements["small"]] * 16)
-                coords.extend([[0.125 + 0.25*i, 0.125, 0.125] for i in range(16)])
-            if "large" in guest_elements:
-                species.extend([guest_elements["large"]] * 8)
-                coords.extend([[0.375, 0.375, 0.375 + 0.125*i] for i in range(8)])
+        if not empty_cages:
+            guest = info["guest"] if isinstance(info["guest"], str) else info["guest"][0]
+            for i in range(3):
+                for j in range(3):
+                    for k in range(3):
+                        if (i + j + k) % 3 == 0:
+                            species.append(guest)
+                            coords.append([(i+0.125)/3, (j+0.125)/3, (k+0.125)/3])
     
     else:
-        # Simplified for other types
-        lattice = Lattice.cubic(a)
-        species = [framework_element] * template["n_framework"]
-        coords = [[i/template["n_framework"], 0.5, 0.5] for i in range(template["n_framework"])]
+        # Hydrate or other type - simplified
+        species = ["O", "H", "H", "C"]
+        coords = [[0, 0, 0], [0.1, 0, 0], [-0.1, 0, 0], [0.5, 0.5, 0.5]]
     
     structure = Structure(lattice, species, coords)
     
-    # Determine formula
-    n_guests = sum(template["cages"].values()) if guest_elements else 0
-    formula = f"{guest_elements.get('small', '') if guest_elements else ''}{template['cages'].get('small', 0)}"
-    formula += f"{guest_elements.get('large', '') if guest_elements else ''}{template['cages'].get('large', 0)}"
-    formula += f"{framework_element}{template['n_framework']}"
+    if supercell != [1, 1, 1]:
+        structure.make_supercell(supercell)
     
     return {
         "success": True,
-        "clathrate_type": clathrate_type,
-        "description": template["description"],
-        "framework": framework_element,
-        "n_framework_atoms": template["n_framework"],
-        "cages": template["cages"],
-        "guests": guest_elements or {},
+        "clathrate": clathrate,
+        "type": clath_type,
+        "framework": info["framework"],
+        "guest": info["guest"],
+        "empty_framework": empty_cages,
+        "is_thermoelectric": info.get("thermoelectric", False),
+        "ZT": info.get("ZT", 0),
+        "n_atoms": len(structure),
         "structure": structure_to_dict(structure)
     }
+
+
+def generate_empty_clathrate(
+    framework: str = "Si",
+    clathrate_type: str = "I"
+) -> Dict[str, Any]:
+    """
+    Generate empty clathrate framework (superconducting Si-46).
+    
+    Args:
+        framework: Framework element
+        clathrate_type: I or II
+    
+    Returns:
+        Empty clathrate structure
+    """
+    if clathrate_type == "I":
+        return generate_clathrate("Na8Si46", empty_cages=True)
+    else:
+        return generate_clathrate("Na24Si136", empty_cages=True)

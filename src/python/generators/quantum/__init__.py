@@ -1,11 +1,20 @@
 """
-quantum/ - Quantum Materials Generation
+quantum/ - Quantum Structures (Dots, Wires, Wells)
 
-Category 15-16: Quantum dots, qubits, color centers.
+Covers Category 8 items from structure_catalogue.md.
 """
 
-from .qubits import generate_qubit_host, QUBIT_DATABASE
-from .dots import generate_quantum_dot_3d, QD_DATABASE
+from .dots import (
+    generate_quantum_dot,
+    generate_coreshell_qd,
+    calculate_bandgap_qd,
+    QUANTUM_DOT_DATABASE,
+    CORESHELL_DATABASE,
+    LIGAND_DATABASE,
+)
 
 
-__all__ = ["generate_qubit_host", "QUBIT_DATABASE", "generate_quantum_dot_3d", "QD_DATABASE"]
+__all__ = [
+    "generate_quantum_dot", "generate_coreshell_qd", "calculate_bandgap_qd",
+    "QUANTUM_DOT_DATABASE", "CORESHELL_DATABASE", "LIGAND_DATABASE",
+]

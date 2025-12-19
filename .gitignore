@@ -1,1 +1,8 @@
 node_modules
+.claude
+.claude.md
+.claude.json
+.claude.lock
+.claude.log
+.gitignore
+.gitignore.md
