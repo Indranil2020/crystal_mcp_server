@@ -11,13 +11,13 @@ export declare const GeneratePrototypeSchema: z.ZodObject<{
     lattice_constant: z.ZodNumber;
     c_over_a: z.ZodDefault<z.ZodNumber>;
 }, "strip", z.ZodTypeAny, {
-    prototype: "rocksalt" | "zincblende" | "wurtzite" | "fluorite" | "antifluorite" | "perovskite" | "spinel" | "heusler" | "rutile" | "diamond";
     elements: Record<string, string>;
+    prototype: "rocksalt" | "zincblende" | "wurtzite" | "fluorite" | "antifluorite" | "perovskite" | "spinel" | "heusler" | "rutile" | "diamond";
     lattice_constant: number;
     c_over_a: number;
 }, {
-    prototype: "rocksalt" | "zincblende" | "wurtzite" | "fluorite" | "antifluorite" | "perovskite" | "spinel" | "heusler" | "rutile" | "diamond";
     elements: Record<string, string>;
+    prototype: "rocksalt" | "zincblende" | "wurtzite" | "fluorite" | "antifluorite" | "perovskite" | "spinel" | "heusler" | "rutile" | "diamond";
     lattice_constant: number;
     c_over_a?: number | undefined;
 }>;
@@ -29,16 +29,16 @@ export declare const GenerateTwistedBilayerSchema: z.ZodObject<{
     interlayer_distance: z.ZodDefault<z.ZodNumber>;
     vacuum: z.ZodDefault<z.ZodNumber>;
 }, "strip", z.ZodTypeAny, {
-    vacuum: number;
     material: "graphene" | "MoS2" | "WS2" | "hBN";
     twist_angle: number;
+    vacuum: number;
     layers: number;
     stacking: "AA" | "AB";
     interlayer_distance: number;
 }, {
     twist_angle: number;
-    vacuum?: number | undefined;
     material?: "graphene" | "MoS2" | "WS2" | "hBN" | undefined;
+    vacuum?: number | undefined;
     layers?: number | undefined;
     stacking?: "AA" | "AB" | undefined;
     interlayer_distance?: number | undefined;
@@ -51,8 +51,8 @@ export declare const GenerateHighEntropyAlloySchema: z.ZodObject<{
     lattice_constant: z.ZodOptional<z.ZodNumber>;
     seed: z.ZodOptional<z.ZodNumber>;
 }, "strip", z.ZodTypeAny, {
-    supercell: [number, number, number];
     elements: string[];
+    supercell: [number, number, number];
     structure_type: "fcc" | "bcc" | "hcp";
     seed?: number | undefined;
     lattice_constant?: number | undefined;
@@ -71,9 +71,9 @@ export declare const Generate2DMaterialSchema: z.ZodObject<{
     vacuum: z.ZodDefault<z.ZodNumber>;
     extra_params: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodAny>>;
 }, "strip", z.ZodTypeAny, {
+    material: "MoS2" | "WS2" | "hBN" | "MoSe2" | "WSe2" | "phosphorene" | "silicene" | "MXene";
     vacuum: number;
     size: [number, number, number];
-    material: "MoS2" | "WS2" | "hBN" | "MoSe2" | "WSe2" | "phosphorene" | "silicene" | "MXene";
     extra_params?: Record<string, any> | undefined;
 }, {
     material: "MoS2" | "WS2" | "hBN" | "MoSe2" | "WSe2" | "phosphorene" | "silicene" | "MXene";

@@ -63,6 +63,55 @@ export const GenerateCrystalSchema = z.object({
         .describe("Maximum attempts to generate valid structure")
 });
 /**
+ * Schema for comprehensive_generate tool
+ *
+ * Unified entry point for all 51+ generator operations across 18 categories:
+ * bulk, two_d, surface, molecule, twist, defect, electronic, thermoelectric,
+ * battery, catalyst, adsorption, magnetic, nanotube, quantum, photonic,
+ * quality_control, high_pressure, external_fields
+ */
+export const ComprehensiveGenerateSchema = z.object({
+    operation: z.string()
+        .describe("Generator operation name. Use 'list_all' to see all available operations, or 'list_category' with category param to see operations in a category."),
+    category: z.string().optional()
+        .describe("Category name when using operation='list_category'. Categories: bulk, two_d, surface, molecule, twist, defect, electronic, thermoelectric, battery, catalyst, adsorption, magnetic, nanotube, quantum, photonic, quality_control, high_pressure, external_fields"),
+    // Common parameters - passed through to the generator function
+    spacegroup: z.number().int().min(1).max(230).optional()
+        .describe("Space group number (1-230) for bulk generation"),
+    elements: z.union([
+        z.array(z.string()),
+        z.record(z.string(), z.string())
+    ]).optional()
+        .describe("Elements for structure generation"),
+    composition: z.array(z.number().int()).optional()
+        .describe("Composition (number of each element)"),
+    material: z.string().optional()
+        .describe("Material name/type for specific generators"),
+    supercell: z.array(z.number().int()).optional()
+        .describe("Supercell dimensions [a, b, c]"),
+    prototype: z.string().optional()
+        .describe("Prototype name: rocksalt, perovskite, zincblende, wurtzite, rutile, spinel, bcc, fcc, hcp, diamond"),
+    framework: z.string().optional()
+        .describe("Zeolite framework type: MFI, FAU, LTA, CHA, BEA, MOR"),
+    clathrate: z.string().optional()
+        .describe("Clathrate type: Ba8Ga16Ge30, Na8Si46, etc."),
+    materials: z.array(z.string()).optional()
+        .describe("List of materials for heterostructures"),
+    twist_angle: z.number().optional()
+        .describe("Twist angle in degrees for bilayer structures"),
+    n_atoms: z.number().int().positive().optional()
+        .describe("Number of atoms for various generators"),
+    size_nm: z.number().positive().optional()
+        .describe("Size in nanometers for nanostructures"),
+    thickness_QL: z.number().int().positive().optional()
+        .describe("Thickness in quintuple layers for topological materials"),
+    pressure_GPa: z.number().positive().optional()
+        .describe("Pressure in GPa for high-pressure phases"),
+    // Additional parameters are passed through dynamically
+    list_available: z.boolean().optional()
+        .describe("Include list of available options in response")
+});
+/**
  * Schema for space_group_scan tool
  */
 export const SpaceGroupScanSchema = z.object({
@@ -412,6 +461,17 @@ export const ApplyStrainSchema = z.object({
  * All tool definitions
  */
 export const TOOL_DEFINITIONS = [
+    {
+        name: "comprehensive_generate",
+        description: "Unified generator for all crystal structures. Access 50+ operations across 18 categories: bulk, 2D, surface, molecule, twist, defect, electronic, etc.",
+        inputSchema: ComprehensiveGenerateSchema,
+        annotations: {
+            readOnlyHint: false,
+            destructiveHint: false,
+            idempotentHint: false,
+            openWorldHint: true
+        }
+    },
     {
         name: "build_molecule",
         description: "Generate an isolated molecular structure from a name (e.g., H2O, C60, Benzene).",

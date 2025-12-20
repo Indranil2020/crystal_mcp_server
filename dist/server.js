@@ -8,6 +8,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { zodToJsonSchema } from "zod-to-json-schema";
 // Import tool handlers
+import { handleComprehensiveGenerate } from "./tools/generation/comprehensive-generator.js";
 import { handleGenerateCrystal } from "./tools/generation/generate-crystal.js";
 import { handleSpaceGroupScan } from "./tools/generation/space-group-scan.js";
 import { handleMakeSupercell } from "./tools/transformation/supercell.js";
@@ -58,6 +59,8 @@ export function createServer() {
     server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const { name, arguments: args } = request.params;
         switch (name) {
+            case "comprehensive_generate":
+                return await handleComprehensiveGenerate(args);
             case "generate_crystal":
                 return await handleGenerateCrystal(args);
             case "generate_space_group_scan":

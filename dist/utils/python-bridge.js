@@ -25,7 +25,12 @@ export class PythonConfig {
     scriptsDirectory;
     constructor() {
         // Default to src/python directory
-        this.scriptsDirectory = path.resolve(__dirname, "..", "python");
+        // Check possible locations
+        const possiblePaths = [
+            path.resolve(__dirname, "..", "python"), // Relative to src/utils
+            path.resolve(__dirname, "..", "..", "src", "python"), // Relative to dist/utils
+        ];
+        this.scriptsDirectory = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0];
     }
     static getInstance() {
         if (PythonConfig.instance === null) {

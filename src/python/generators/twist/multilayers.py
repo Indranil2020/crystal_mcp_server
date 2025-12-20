@@ -283,3 +283,36 @@ def generate_heterostructure_stack(
     del MULTILAYER_SYSTEMS[system_key]
     
     return result
+
+
+def generate_twisted_trilayer(
+    stacking: str = "alternating",
+    twist_angle: float = 1.57,
+    supercell: List[int] = [5, 5]
+) -> Dict[str, Any]:
+    """
+    Generate twisted trilayer graphene (wrapper).
+    """
+    system = "twisted_trilayer_ALT" if stacking == "alternating" else "twisted_trilayer_MONO"
+    
+    # Temporarily update angle
+    if system in MULTILAYER_SYSTEMS:
+        old_angles = MULTILAYER_SYSTEMS[system]["twist_angles"]
+        if stacking == "alternating":
+            MULTILAYER_SYSTEMS[system]["twist_angles"] = [twist_angle, -twist_angle]
+        else:
+            MULTILAYER_SYSTEMS[system]["twist_angles"] = [twist_angle, 0]
+            
+        result = generate_multilayer_stack(system, supercell)
+        
+        # Restore
+        MULTILAYER_SYSTEMS[system]["twist_angles"] = old_angles
+        return result
+    
+    return generate_multilayer_stack("twisted_trilayer_ALT", supercell)
+
+
+def generate_twisted_multilayer(system: str = "twisted_trilayer_ALT", supercell: List[int] = [5, 5]) -> Dict[str, Any]:
+    """Alias for generate_multilayer_stack."""
+    return generate_multilayer_stack(system, supercell)
+

@@ -373,3 +373,10 @@ Below is a “no-stone-unturned” catalogue of EVERY structural motif that is r
 (vii) Elastic & piezoelectric tensor templates for every generated cell  
 
 --------------------------------------------------
+
+
+
+
+
+
+niel@niel-fzu:~/git/crystal-mcp-server$ echo "=== FILE SIZE AUDIT (lines < 250) ===" && find src/python/generators -name "*.py" -exec wc -l {} \; | awk '$1 < 250 {print $0}' | sort -n

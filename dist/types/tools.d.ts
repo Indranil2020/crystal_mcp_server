@@ -109,6 +109,70 @@ export declare const GenerateCrystalSchema: z.ZodObject<{
 }>;
 export type GenerateCrystalInput = z.infer<typeof GenerateCrystalSchema>;
 /**
+ * Schema for comprehensive_generate tool
+ *
+ * Unified entry point for all 51+ generator operations across 18 categories:
+ * bulk, two_d, surface, molecule, twist, defect, electronic, thermoelectric,
+ * battery, catalyst, adsorption, magnetic, nanotube, quantum, photonic,
+ * quality_control, high_pressure, external_fields
+ */
+export declare const ComprehensiveGenerateSchema: z.ZodObject<{
+    operation: z.ZodString;
+    category: z.ZodOptional<z.ZodString>;
+    spacegroup: z.ZodOptional<z.ZodNumber>;
+    elements: z.ZodOptional<z.ZodUnion<[z.ZodArray<z.ZodString, "many">, z.ZodRecord<z.ZodString, z.ZodString>]>>;
+    composition: z.ZodOptional<z.ZodArray<z.ZodNumber, "many">>;
+    material: z.ZodOptional<z.ZodString>;
+    supercell: z.ZodOptional<z.ZodArray<z.ZodNumber, "many">>;
+    prototype: z.ZodOptional<z.ZodString>;
+    framework: z.ZodOptional<z.ZodString>;
+    clathrate: z.ZodOptional<z.ZodString>;
+    materials: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+    twist_angle: z.ZodOptional<z.ZodNumber>;
+    n_atoms: z.ZodOptional<z.ZodNumber>;
+    size_nm: z.ZodOptional<z.ZodNumber>;
+    thickness_QL: z.ZodOptional<z.ZodNumber>;
+    pressure_GPa: z.ZodOptional<z.ZodNumber>;
+    list_available: z.ZodOptional<z.ZodBoolean>;
+}, "strip", z.ZodTypeAny, {
+    operation: string;
+    composition?: number[] | undefined;
+    category?: string | undefined;
+    spacegroup?: number | undefined;
+    elements?: Record<string, string> | string[] | undefined;
+    material?: string | undefined;
+    supercell?: number[] | undefined;
+    prototype?: string | undefined;
+    framework?: string | undefined;
+    clathrate?: string | undefined;
+    materials?: string[] | undefined;
+    twist_angle?: number | undefined;
+    n_atoms?: number | undefined;
+    size_nm?: number | undefined;
+    thickness_QL?: number | undefined;
+    pressure_GPa?: number | undefined;
+    list_available?: boolean | undefined;
+}, {
+    operation: string;
+    composition?: number[] | undefined;
+    category?: string | undefined;
+    spacegroup?: number | undefined;
+    elements?: Record<string, string> | string[] | undefined;
+    material?: string | undefined;
+    supercell?: number[] | undefined;
+    prototype?: string | undefined;
+    framework?: string | undefined;
+    clathrate?: string | undefined;
+    materials?: string[] | undefined;
+    twist_angle?: number | undefined;
+    n_atoms?: number | undefined;
+    size_nm?: number | undefined;
+    thickness_QL?: number | undefined;
+    pressure_GPa?: number | undefined;
+    list_available?: boolean | undefined;
+}>;
+export type ComprehensiveGenerateInput = z.infer<typeof ComprehensiveGenerateSchema>;
+/**
  * Schema for space_group_scan tool
  */
 export declare const SpaceGroupScanSchema: z.ZodObject<{

@@ -9,6 +9,31 @@ import numpy as np
 from pymatgen.core import Structure, Lattice
 
 
+class TwistStructure:
+    """
+    Class to hold twisted structure information.
+    """
+    def __init__(
+        self,
+        structure: Structure,
+        twist_angle: float,
+        layer_index: Optional[List[int]] = None,
+        metadata: Optional[Dict[str, Any]] = None
+    ):
+        self.structure = structure
+        self.twist_angle = twist_angle
+        self.layer_index = layer_index or []
+        self.metadata = metadata or {}
+        
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "structure": structure_to_dict(self.structure),
+            "twist_angle": self.twist_angle,
+            "metadata": self.metadata
+        }
+
+
+
 # Twist angle database for common systems
 MAGIC_ANGLES = {
     # Graphene
@@ -163,6 +188,35 @@ def find_commensurate(
                 best_angle = angle
     
     return (best_n, best_m, best_angle)
+
+
+def calculate_moire_angle(n: int, m: int) -> float:
+    """
+    Calculate twist angle for commensurate indices (n, m).
+    """
+    try:
+        cos_theta = (n**2 + 4*n*m + m**2) / (2*(n**2 + n*m + m**2))
+        return np.degrees(np.arccos(cos_theta))
+    except:
+        return 0.0
+
+
+def calculate_moire_wavelength(theta_deg: float, a: float = 2.46) -> float:
+    """Wrapper for calculate_moire_period."""
+    return calculate_moire_period(a, theta_deg)
+
+
+def find_commensurate_cell(target_angle: float, max_n: int = 50) -> Tuple[int, int, float]:
+    """Alias for find_commensurate."""
+    return find_commensurate(target_angle, max_n)
+
+
+def rotation_matrix_2d(angle_deg: float) -> np.ndarray:
+    """Generate 2D rotation matrix."""
+    theta = np.radians(angle_deg)
+    c, s = np.cos(theta), np.sin(theta)
+    return np.array([[c, -s], [s, c]])
+
 
 
 def calculate_twist_strain(

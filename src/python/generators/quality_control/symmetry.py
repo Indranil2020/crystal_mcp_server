@@ -322,3 +322,21 @@ def identify_special_positions(
         "n_unique_wyckoffs": len(wyckoff_groups),
         "total_atoms": len(structure)
     }
+
+
+def find_space_group(structure: Structure, symprec: float = 0.01) -> Dict[str, Any]:
+    """
+    Find space group of a structure (Wrapper for analyze_symmetry).
+    """
+    return analyze_symmetry(structure, symprec=symprec)
+
+
+def check_tolerance(structure: Structure, tolerance: float = 0.01) -> bool:
+    """
+    Check if structure maintains symmetry at given tolerance.
+    """
+    try:
+        analyzer = SpacegroupAnalyzer(structure, symprec=tolerance)
+        return True
+    except:
+        return False

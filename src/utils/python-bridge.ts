@@ -12,11 +12,11 @@ import * as path from "path";
 import { fileURLToPath } from "url";
 import { spawnSync } from "child_process";
 import type { Result } from "../types/errors.js";
-import { 
-  createSuccess, 
-  createFailure, 
-  createError, 
-  CrystalErrorCode 
+import {
+  createSuccess,
+  createFailure,
+  createError,
+  CrystalErrorCode
 } from "../types/errors.js";
 
 /**
@@ -55,35 +55,41 @@ export class PythonConfig {
   private static instance: PythonConfig | null = null;
   private pythonPath: string = "python3";
   private scriptsDirectory: string;
-  
+
   private constructor() {
     // Default to src/python directory
-    this.scriptsDirectory = path.resolve(__dirname, "..", "python");
+    // Check possible locations
+    const possiblePaths = [
+      path.resolve(__dirname, "..", "python"), // Relative to src/utils
+      path.resolve(__dirname, "..", "..", "src", "python"), // Relative to dist/utils
+    ];
+
+    this.scriptsDirectory = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0] as string;
   }
-  
+
   public static getInstance(): PythonConfig {
     if (PythonConfig.instance === null) {
       PythonConfig.instance = new PythonConfig();
     }
     return PythonConfig.instance;
   }
-  
+
   public setPythonPath(pythonPath: string): void {
     this.pythonPath = pythonPath;
   }
-  
+
   public getPythonPath(): string {
     return this.pythonPath;
   }
-  
+
   public setScriptsDirectory(dir: string): void {
     this.scriptsDirectory = dir;
   }
-  
+
   public getScriptsDirectory(): string {
     return this.scriptsDirectory;
   }
-  
+
   /**
    * Get full path to a Python script
    */
@@ -108,7 +114,7 @@ function verifyScriptExists(scriptPath: string): Result<string> {
       ]
     ));
   }
-  
+
   const stats = fs.statSync(scriptPath);
   if (!stats.isFile()) {
     return createFailure(createError(
@@ -118,7 +124,7 @@ function verifyScriptExists(scriptPath: string): Result<string> {
       ["Provide a valid file path"]
     ));
   }
-  
+
   return createSuccess(scriptPath);
 }
 
@@ -129,12 +135,12 @@ function isValidJSON(str: string): boolean {
   if (str.trim().length === 0) {
     return false;
   }
-  
+
   const firstChar = str.trim()[0];
   if (firstChar !== "{" && firstChar !== "[") {
     return false;
   }
-  
+
   return true;
 }
 
@@ -154,7 +160,7 @@ function parseJSONOutput<T>(output: string): Result<T> {
       ]
     ));
   }
-  
+
   // Manual JSON parsing without try/catch
   let parsed: unknown;
 
@@ -178,7 +184,7 @@ function parseJSONOutput<T>(output: string): Result<T> {
       ]
     ));
   }
-  
+
   return createSuccess(parsed as T);
 }
 
@@ -189,16 +195,16 @@ export async function executePython<T = unknown>(
   options: PythonExecutionOptions
 ): Promise<Result<PythonExecutionResult<T>>> {
   const config = PythonConfig.getInstance();
-  
+
   // Get script path
   const scriptPath = config.getScriptPath(options.scriptName);
-  
+
   // Verify script exists
   const scriptVerification = verifyScriptExists(scriptPath);
   if (!scriptVerification.success) {
     return createFailure(scriptVerification.error);
   }
-  
+
   // Prepare execution options
   const pythonOptions: PythonShellOptions = {
     mode: "text",
@@ -206,49 +212,49 @@ export async function executePython<T = unknown>(
     scriptPath: path.dirname(scriptPath),
     args: options.args ? [...options.args] : [],
   };
-  
+
   if (options.env) {
     pythonOptions.env = { ...process.env, ...options.env };
   }
-  
+
   const startTime = Date.now();
   let timedOut = false;
   let timeoutId: NodeJS.Timeout | null = null;
-  
+
   // Set up timeout if specified
   if (options.timeout) {
     timeoutId = setTimeout(() => {
       timedOut = true;
     }, options.timeout);
   }
-  
+
   return new Promise<Result<PythonExecutionResult<T>>>((resolve) => {
     const shell = new PythonShell(path.basename(scriptPath), pythonOptions);
     const stdoutLines: string[] = [];
     const stderrLines: string[] = [];
-    
+
     // Collect stdout
     shell.on("message", (message) => {
       if (!timedOut) {
         stdoutLines.push(message);
       }
     });
-    
+
     // Collect stderr
     shell.on("stderr", (stderr) => {
       if (!timedOut) {
         stderrLines.push(stderr);
       }
     });
-    
+
     // Handle completion
     shell.end((err, code) => {
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
-      
+
       const executionTime = Date.now() - startTime;
-      
+
       // Check for timeout
       if (timedOut) {
         resolve(createFailure(createError(
@@ -263,14 +269,14 @@ export async function executePython<T = unknown>(
         )));
         return;
       }
-      
+
       // Check for execution error
       if (err) {
         resolve(createFailure(createError(
           CrystalErrorCode.PYTHON_EXECUTION_FAILED,
           `Python script execution failed: ${err.message}`,
-          { 
-            scriptName: options.scriptName, 
+          {
+            scriptName: options.scriptName,
             error: err.message,
             stderr: stderrLines.join("\n")
           },
@@ -283,15 +289,15 @@ export async function executePython<T = unknown>(
         )));
         return;
       }
-      
+
       // Check exit code
       const exitCode = code ?? 0;
       if (exitCode !== 0) {
         resolve(createFailure(createError(
           CrystalErrorCode.PYTHON_EXECUTION_FAILED,
           `Python script exited with code ${exitCode}`,
-          { 
-            scriptName: options.scriptName, 
+          {
+            scriptName: options.scriptName,
             exitCode,
             stderr: stderrLines.join("\n")
           },
@@ -303,10 +309,10 @@ export async function executePython<T = unknown>(
         )));
         return;
       }
-      
+
       // Parse stdout as JSON if available
       const combinedOutput = stdoutLines.join("\n").trim();
-      
+
       let parsedData: T | undefined = undefined;
       if (combinedOutput.length > 0) {
         const parseResult = parseJSONOutput<T>(combinedOutput);
@@ -316,7 +322,7 @@ export async function executePython<T = unknown>(
         }
         parsedData = parseResult.data;
       }
-      
+
       // Return successful result
       resolve(createSuccess({
         stdout: stdoutLines,
@@ -339,13 +345,13 @@ export async function executePythonWithJSON<TInput, TOutput>(
 ): Promise<Result<TOutput>> {
   // Serialize input to JSON
   let jsonInput: string;
-  
+
   // Manual JSON stringification
   const stringifyResult = (() => {
     const result = JSON.stringify(input);
     return { success: true as const, data: result };
   })();
-  
+
   if (!stringifyResult.success) {
     return createFailure(createError(
       CrystalErrorCode.INVALID_OPERATION,
@@ -354,9 +360,9 @@ export async function executePythonWithJSON<TInput, TOutput>(
       ["Ensure input is JSON-serializable"]
     ));
   }
-  
+
   jsonInput = stringifyResult.data;
-  
+
   // Write input to temporary file
   const tempDir = "/tmp";
   const tempFileName = `crystal_mcp_${Date.now()}_${Math.random().toString(36).substring(7)}.json`;
@@ -375,23 +381,23 @@ export async function executePythonWithJSON<TInput, TOutput>(
       ["Check write permissions", "Ensure /tmp directory exists"]
     ));
   }
-  
+
   // Execute Python script with temp file as argument
   const execResult = await executePython<TOutput>({
     scriptName,
     args: [tempFilePath],
     ...options
   });
-  
+
   // Clean up temp file
   if (fs.existsSync(tempFilePath)) {
     fs.unlinkSync(tempFilePath);
   }
-  
+
   if (!execResult.success) {
     return execResult;
   }
-  
+
   // Return parsed data
   if (execResult.data.data === undefined) {
     return createFailure(createError(
@@ -401,7 +407,7 @@ export async function executePythonWithJSON<TInput, TOutput>(
       ["Ensure script prints JSON output"]
     ));
   }
-  
+
   return createSuccess(execResult.data.data);
 }
 
@@ -421,7 +427,7 @@ export function checkPythonAvailable(pythonPath: string = "python3"): Result<str
     stderr: result.stderr as string,
     error: result.error
   };
-  
+
   if (!checkResult.success) {
     return createFailure(createError(
       CrystalErrorCode.PYTHON_NOT_FOUND,
@@ -434,7 +440,7 @@ export function checkPythonAvailable(pythonPath: string = "python3"): Result<str
       ]
     ));
   }
-  
+
   const version = checkResult.stdout || checkResult.stderr || "";
   return createSuccess(version.trim());
 }
