@@ -1159,7 +1159,7 @@ GENERATOR_REGISTRY: Dict[str, Dict[str, Any]] = {
     # QUALITY_CONTROL (Category)
     # -------------------------------------------------------------------------
     "quality_control": {
-        "description": "Quality Control structures",
+        "description": "Quality Control and Symmetry Analysis",
         "operations": {
             "analyze_symmetry": {
                 "module": "generators.quality_control.symmetry",
@@ -1172,6 +1172,37 @@ GENERATOR_REGISTRY: Dict[str, Dict[str, Any]] = {
                 "function": "generate_kpath",
                 "params": ['lattice_type', 'path', 'n_points'],
                 "description": "Generate k-path for band structure."
+            },
+            "get_subgroups": {
+                "module": "generators.quality_control.symmetry",
+                "function": "get_subgroups",
+                "params": ['space_group', 'strict'],
+                "description": "Get maximal subgroups of a space group."
+            },
+            "get_symmetry_path": {
+                "module": "generators.quality_control.symmetry",
+                "function": "get_symmetry_path",
+                "params": ['start_spg', 'end_spg', 'max_depth'],
+                "description": "Find group-subgroup path between two space groups."
+            },
+            "get_all_subgroup_paths": {
+                "module": "generators.quality_control.symmetry",
+                "function": "get_all_subgroup_paths",
+                "params": ['start_spg', 'end_spg', 'max_depth'],
+                "description": "Find ALL possible group-subgroup paths between two space groups."
+            },
+            "transform_to_subgroup": {
+                "module": "generators.quality_control.symmetry",
+                "function": "transform_to_subgroup",
+                "params": ['structure', 'target_spacegroup', 'eps', 'max_steps'],
+                "description": "Transform structure to a subgroup (Bilbao TRANSTRU-like). "
+                              "E.g., transform cubic BiFeO3 to rhombohedral for phase comparison."
+            },
+            "transform_by_path": {
+                "module": "generators.quality_control.symmetry",
+                "function": "transform_by_path",
+                "params": ['structure', 'path', 'eps'],
+                "description": "Transform structure following a specific group-subgroup path."
             },
             "validate_structure": {
                 "module": "generators.quality_control.symmetry",
