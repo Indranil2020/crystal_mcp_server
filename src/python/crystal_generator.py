@@ -2,6 +2,12 @@
 """
 Crystal Generator - PyXtal Wrapper
 
+DEPRECATED: This module is maintained for backward compatibility.
+New code should use the modular generators:
+  - generators.bulk.spacegroups.generate_crystal_from_spacegroup
+  - generators.bulk.prototypes.generate_from_prototype
+  - generators.molecule.small_molecules.generate_molecule
+
 This module provides a comprehensive wrapper around PyXtal for generating
 crystal structures with defensive programming and detailed error handling.
 All functions follow defensive programming principles without using try/except.

@@ -269,3 +269,55 @@ def generate_graphene(
         "stacking": stacking,
         "structure": atoms_to_dict(atoms, vacuum)
     }
+
+
+def generate_silicene(
+    size: List[int] = [1, 1, 1],
+    vacuum: float = 15.0,
+    passivate: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Generate silicene monolayer structure.
+
+    Silicene is the silicon analogue of graphene with buckled honeycomb structure.
+
+    Args:
+        size: Supercell size [nx, ny, 1]
+        vacuum: Vacuum padding in Angstroms
+        passivate: Element for surface passivation (H, F)
+
+    Returns:
+        Silicene structure dictionary
+    """
+    result = generate_xene("silicene", size, vacuum, passivate)
+    if result.get("success"):
+        result["material"] = "silicene"
+        result["is_buckled"] = True
+        result["buckling_angstrom"] = 0.44
+    return result
+
+
+def generate_germanene(
+    size: List[int] = [1, 1, 1],
+    vacuum: float = 15.0,
+    passivate: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Generate germanene monolayer structure.
+
+    Germanene is the germanium analogue of graphene with buckled honeycomb structure.
+
+    Args:
+        size: Supercell size [nx, ny, 1]
+        vacuum: Vacuum padding in Angstroms
+        passivate: Element for surface passivation (H, F)
+
+    Returns:
+        Germanene structure dictionary
+    """
+    result = generate_xene("germanene", size, vacuum, passivate)
+    if result.get("success"):
+        result["material"] = "germanene"
+        result["is_buckled"] = True
+        result["buckling_angstrom"] = 0.66
+    return result

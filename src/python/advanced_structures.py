@@ -2,6 +2,14 @@
 """
 Advanced Structure Generator
 
+DEPRECATED: This module is maintained for backward compatibility.
+New code should use the modular generators in generators/ directory:
+  - generators.twist.* for twisted bilayers
+  - generators.bulk.prototypes.* for prototype structures
+  - generators.molecule.frameworks.* for MOFs
+  - generators.bulk.hea.* for high-entropy alloys
+  - generators.two_d.* for 2D materials
+
 This module provides advanced structure generation capabilities including:
 - Twisted bilayers (graphene, TMDs)
 - Prototype structures (Perovskite, Spinel, Heusler, etc.)

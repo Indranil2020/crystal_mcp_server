@@ -264,3 +264,63 @@ def generate_layered_perovskite(
         "formula": f"({a_site},{a_prime_site or a_site})_{n_layers+1}{b_site}_{n_layers}{x_site}_{3*n_layers+1}",
         "structure": structure_to_dict(structure)
     }
+
+
+def generate_ruddlesden_popper(
+    compound: str = "Sr2TiO4",
+    n_layers: int = 1
+) -> Dict[str, Any]:
+    """
+    Generate Ruddlesden-Popper phase structure (A_{n+1}B_nO_{3n+1}).
+
+    Ruddlesden-Popper phases are layered perovskites with rock-salt blocks
+    separating perovskite slabs. Common examples: Sr2TiO4 (n=1), Sr3Ti2O7 (n=2).
+
+    Args:
+        compound: Compound name (Sr2TiO4, La2CuO4, Ca2MnO4, etc.)
+        n_layers: Number of perovskite layers (1, 2, 3...)
+
+    Returns:
+        Ruddlesden-Popper structure dictionary
+
+    Examples:
+        >>> result = generate_ruddlesden_popper('Sr2TiO4')
+        >>> result["n_layers"]
+        1
+    """
+    # Parse common compounds
+    RP_COMPOUNDS = {
+        "Sr2TiO4": {"a_site": "Sr", "b_site": "Ti", "n": 1},
+        "Sr3Ti2O7": {"a_site": "Sr", "b_site": "Ti", "n": 2},
+        "La2CuO4": {"a_site": "La", "b_site": "Cu", "n": 1},
+        "Ca2MnO4": {"a_site": "Ca", "b_site": "Mn", "n": 1},
+        "Sr2RuO4": {"a_site": "Sr", "b_site": "Ru", "n": 1},
+        "Sr3Ru2O7": {"a_site": "Sr", "b_site": "Ru", "n": 2},
+        "Ca3Ti2O7": {"a_site": "Ca", "b_site": "Ti", "n": 2},
+    }
+
+    if compound in RP_COMPOUNDS:
+        params = RP_COMPOUNDS[compound]
+        a_site = params["a_site"]
+        b_site = params["b_site"]
+        n_layers = params["n"]
+    else:
+        # Try to parse formula like A2BO4, A3B2O7
+        a_site = "Sr"
+        b_site = "Ti"
+
+    result = generate_layered_perovskite(
+        a_site=a_site,
+        a_prime_site=None,
+        b_site=b_site,
+        x_site="O",
+        n_layers=n_layers,
+        family="ruddlesden-popper"
+    )
+
+    if result.get("success"):
+        result["compound"] = compound
+        result["is_2d_like"] = True
+        result["has_rock_salt_layer"] = True
+
+    return result

@@ -418,3 +418,91 @@ def create_defect(
                 "available": ["vacancy", "interstitial", "substitution", "antisite", "f_center"]
             }
         }
+
+
+def generate_frenkel_pair(
+    host_structure: Dict[str, Any],
+    vacancy_site: int = 0,
+    interstitial_position: Optional[List[float]] = None,
+    element: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Generate a Frenkel defect pair (vacancy + interstitial of same species).
+
+    A Frenkel defect occurs when an atom leaves its lattice site and moves
+    to an interstitial position, creating a vacancy-interstitial pair.
+    Common in ionic crystals like AgCl, AgBr, CaF2.
+
+    Args:
+        host_structure: Host structure dictionary
+        vacancy_site: Index of atom to move to interstitial (creates vacancy)
+        interstitial_position: Fractional coords for interstitial (auto if None)
+        element: Element type (auto-detected if None)
+
+    Returns:
+        Structure with Frenkel pair defect
+
+    Examples:
+        >>> result = generate_frenkel_pair(nacl_structure, vacancy_site=0)
+        >>> result["defect_type"]
+        'frenkel_pair'
+    """
+    atoms = host_structure.get("atoms", [])
+    lattice_info = host_structure.get("lattice", {})
+
+    if not atoms:
+        return {"success": False, "error": {"code": "NO_ATOMS", "message": "No atoms in structure"}}
+
+    if vacancy_site >= len(atoms):
+        return {"success": False, "error": {"code": "INVALID_SITE", "message": f"Site {vacancy_site} out of range"}}
+
+    # Get the displaced atom
+    displaced_atom = atoms[vacancy_site]
+    displaced_element = element or displaced_atom.get("element", "X")
+    original_coords = displaced_atom.get("coords", [0, 0, 0])
+
+    # Calculate interstitial position if not provided
+    if interstitial_position is None:
+        # Place at tetrahedral-like site offset from original
+        interstitial_position = [
+            (original_coords[0] + 0.25) % 1.0,
+            (original_coords[1] + 0.25) % 1.0,
+            (original_coords[2] + 0.25) % 1.0
+        ]
+
+    # Create new atom list: remove original, add at interstitial
+    new_atoms = []
+    for i, atom in enumerate(atoms):
+        if i != vacancy_site:
+            new_atoms.append(atom.copy())
+
+    # Add the interstitial atom
+    new_atoms.append({
+        "element": displaced_element,
+        "coords": interstitial_position
+    })
+
+    # Build pymatgen structure
+    matrix = lattice_info.get("matrix", [[4, 0, 0], [0, 4, 0], [0, 0, 4]])
+    lattice = Lattice(matrix)
+    species = [a["element"] for a in new_atoms]
+    coords = [a["coords"] for a in new_atoms]
+    structure = Structure(lattice, species, coords)
+
+    # Calculate separation
+    vacancy_cart = np.dot(original_coords, lattice.matrix)
+    interstitial_cart = np.dot(interstitial_position, lattice.matrix)
+    separation = np.linalg.norm(interstitial_cart - vacancy_cart)
+
+    return {
+        "success": True,
+        "defect_type": "frenkel_pair",
+        "displaced_element": displaced_element,
+        "vacancy_site": vacancy_site,
+        "interstitial_position": interstitial_position,
+        "separation_angstrom": round(float(separation), 3),
+        "n_atoms": len(structure),
+        "is_charge_neutral": True,
+        "formation_energy_estimate_eV": DEFECT_FORMATION_ENERGIES.get("NaCl", {}).get("Frenkel", 2.5),
+        "structure": structure_to_dict(structure)
+    }

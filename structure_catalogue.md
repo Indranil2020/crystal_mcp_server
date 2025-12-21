@@ -87,13 +87,13 @@ Below is a “no-stone-unturned” catalogue of EVERY structural motif that is r
 --------------------------------------------------
 (i) Single atom catalysts (SACs) on graphene, h-BN, C2N, g-C3N4, Mo2TiC2Tx, CeO2, TiO2, FeOx, CoOx  
 (ii) Ad-molecules: CO, NO, N2, O2, H2O, CO2, CH4, NH3, H2, CH3OH, C2H4, C6H6, thiophene, pyridine, guaiacol, aniline, … on metals, oxides, 2-D, MOFs  
-✓ Dissociated fragments (OH*, O*, H*, CHx*, NHx*, SH*, CxHyOz*) with coverage θ = 0.01–2 ML  
-✓ High-coverage patterns (p(2×2), c(4×2), (√3×√3)R30°, p(3×1), p(4×4), Moiré adlayers)  
-✓ Co-adsorption (CO+O, NO+CO, H+OH, CHx+OH) with lateral interactions  
-✓ Solvent / water ad-layers (bilayer ice, half-dissociated, H-up, H-down)  
-✓ Ionic liquid monolayers ([BMIM][PF6], [EMIM][BF4]) on graphite, graphene  
-✓ Self-assembled monolayers (SAMs) – alkanethiols on Au(111), silanes on SiO2, phosphonates on TiO2  
-✓ Polymer–surface grafting (PMMA, PS, PEG, PANI) with chain length distribution  
+(iii) Dissociated fragments (OH*, O*, H*, CHx*, NHx*, SH*, CxHyOz*) with coverage θ = 0.01–2 ML  
+(iv) High-coverage patterns (p(2×2), c(4×2), (√3×√3)R30°, p(3×1), p(4×4), Moiré adlayers)  
+(v) Co-adsorption (CO+O, NO+CO, H+OH, CHx+OH) with lateral interactions  
+(vi) Solvent / water ad-layers (bilayer ice, half-dissociated, H-up, H-down)  
+(vii) Ionic liquid monolayers ([BMIM][PF6], [EMIM][BF4]) on graphite, graphene  
+(viii) Self-assembled monolayers (SAMs) – alkanethiols on Au(111), silanes on SiO2, phosphonates on TiO2  
+(ix) Polymer–surface grafting (PMMA, PS, PEG, PANI) with chain length distribution  
 
 --------------------------------------------------
 7. Defects & disorder

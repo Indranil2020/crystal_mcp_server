@@ -2,6 +2,11 @@
 """
 Molecule Generator
 
+DEPRECATED: This module is maintained for backward compatibility.
+New code should use:
+  - generators.molecule.small_molecules.generate_molecule
+  - generators.molecule.conformers.generate_conformers
+
 Generates isolated molecular structures using ASE.
 """
 

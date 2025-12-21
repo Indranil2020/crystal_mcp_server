@@ -256,3 +256,106 @@ def generate_tmd_heterostructure(
         "interlayer_separation": interlayer_sep,
         "structure": structure_to_dict(structure, vacuum)
     }
+
+
+# Janus TMD database - asymmetric TMDs with different top/bottom chalcogens
+JANUS_TMD_DATABASE = {
+    "MoSSe": {"metal": "Mo", "top_X": "S", "bottom_X": "Se", "a": 3.22, "thickness": 3.35},
+    "MoSeTe": {"metal": "Mo", "top_X": "Se", "bottom_X": "Te", "a": 3.40, "thickness": 3.55},
+    "WSSe": {"metal": "W", "top_X": "S", "bottom_X": "Se", "a": 3.23, "thickness": 3.36},
+    "WSeTe": {"metal": "W", "top_X": "Se", "bottom_X": "Te", "a": 3.41, "thickness": 3.56},
+    "MoSTe": {"metal": "Mo", "top_X": "S", "bottom_X": "Te", "a": 3.32, "thickness": 3.50},
+    "WSTe": {"metal": "W", "top_X": "S", "bottom_X": "Te", "a": 3.33, "thickness": 3.51},
+}
+
+
+def generate_janus_tmd(
+    formula: str,
+    phase: str = "1H",
+    size: List[int] = [1, 1, 1],
+    vacuum: float = 15.0
+) -> Dict[str, Any]:
+    """
+    Generate Janus TMD monolayer with asymmetric top/bottom chalcogens.
+
+    Janus TMDs (like MoSSe) have different chalcogen atoms on top and bottom,
+    breaking out-of-plane mirror symmetry and inducing intrinsic dipoles.
+
+    Args:
+        formula: Janus TMD formula (MoSSe, WSSe, MoSeTe, etc.)
+        phase: Crystal phase (1H, 1T)
+        size: Supercell size
+        vacuum: Vacuum padding
+
+    Returns:
+        Janus TMD structure dictionary
+
+    Examples:
+        >>> result = generate_janus_tmd('MoSSe')
+        >>> result["has_dipole"]
+        True
+    """
+    formula_upper = formula
+
+    if formula_upper not in JANUS_TMD_DATABASE:
+        return {
+            "success": False,
+            "error": {
+                "code": "INVALID_JANUS_TMD",
+                "message": f"Unknown Janus TMD '{formula}'",
+                "available": list(JANUS_TMD_DATABASE.keys())
+            }
+        }
+
+    params = JANUS_TMD_DATABASE[formula_upper]
+    metal = params["metal"]
+    top_X = params["top_X"]
+    bottom_X = params["bottom_X"]
+    a = params["a"]
+    thickness = params["thickness"]
+
+    c = thickness + vacuum
+    lattice = Lattice.hexagonal(a, c)
+
+    # Janus structure: metal in middle, different chalcogens top/bottom
+    dz = (thickness / 2) / c
+    z_metal = 0.5
+
+    if phase == "1H":
+        # Trigonal prismatic coordination
+        species = [metal, top_X, bottom_X]
+        coords = [
+            [1/3, 2/3, z_metal],
+            [1/3, 2/3, z_metal + dz],
+            [1/3, 2/3, z_metal - dz]
+        ]
+    elif phase == "1T":
+        # Octahedral coordination
+        species = [metal, top_X, bottom_X]
+        coords = [
+            [0, 0, z_metal],
+            [1/3, 2/3, z_metal + dz],
+            [2/3, 1/3, z_metal - dz]
+        ]
+    else:
+        return {"success": False, "error": {"code": "INVALID_PHASE", "message": f"Unknown phase {phase}"}}
+
+    structure = Structure(lattice, species, coords)
+
+    if size[0] > 1 or size[1] > 1:
+        structure.make_supercell([size[0], size[1], 1])
+
+    return {
+        "success": True,
+        "formula": formula_upper,
+        "phase": phase,
+        "metal": metal,
+        "top_chalcogen": top_X,
+        "bottom_chalcogen": bottom_X,
+        "a_angstrom": a,
+        "thickness_angstrom": thickness,
+        "has_dipole": True,
+        "has_broken_mirror_symmetry": True,
+        "has_rashba_effect": True,
+        "structure": structure_to_dict(structure, vacuum)
+    }

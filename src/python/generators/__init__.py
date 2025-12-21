@@ -148,9 +148,46 @@ GENERATOR_REGISTRY: Dict[str, Dict[str, Any]] = {
                 "params": ['cathode_type', 'coating', 'coating_thickness_nm', 'supercell'],
                 "description": "Generate surface-coated cathode."
             },
+            # New: Anode materials
+            "generate_silicon_anode": {
+                "module": "generators.battery.anodes",
+                "function": "generate_silicon_anode",
+                "params": ['phase', 'lithiation', 'supercell', 'amorphous', 'seed'],
+                "description": "Generate silicon anode structure with Li insertion."
+            },
+            "generate_germanium_anode": {
+                "module": "generators.battery.anodes",
+                "function": "generate_germanium_anode",
+                "params": ['phase', 'lithiation', 'supercell'],
+                "description": "Generate germanium anode structure."
+            },
+            "generate_tin_anode": {
+                "module": "generators.battery.anodes",
+                "function": "generate_tin_anode",
+                "params": ['phase', 'lithiation', 'supercell'],
+                "description": "Generate tin anode structure."
+            },
+            "generate_phosphorus_anode": {
+                "module": "generators.battery.anodes",
+                "function": "generate_phosphorus_anode",
+                "params": ['phase', 'lithiation', 'supercell'],
+                "description": "Generate phosphorus anode (black P, red P)."
+            },
+            "generate_sulfur_cathode": {
+                "module": "generators.battery.anodes",
+                "function": "generate_sulfur_cathode",
+                "params": ['phase', 'lithiation', 'host_material', 'supercell'],
+                "description": "Generate sulfur cathode for Li-S batteries."
+            },
+            "generate_metal_anode": {
+                "module": "generators.battery.anodes",
+                "function": "generate_metal_anode",
+                "params": ['metal', 'surface', 'thickness_layers', 'include_dendrite', 'include_sei'],
+                "description": "Generate metal anode (Li, Na, K, Zn) with optional dendrite/SEI."
+            },
         }
     },
-    
+
     # -------------------------------------------------------------------------
     # BIOMOLECULAR (Category)
     # -------------------------------------------------------------------------
@@ -389,6 +426,12 @@ GENERATOR_REGISTRY: Dict[str, Dict[str, Any]] = {
                 "params": ['a_site', 'b_site', 'x_site', 'a', 'phase', 'tilting'],
                 "description": "Generate simple perovskite ABX3 structure."
             },
+            "generate_ruddlesden_popper": {
+                "module": "generators.bulk.perovskites",
+                "function": "generate_ruddlesden_popper",
+                "params": ['compound', 'n_layers'],
+                "description": "Generate Ruddlesden-Popper layered perovskite (e.g., Sr2TiO4)."
+            },
             "generate_polytype": {
                 "module": "generators.bulk.polytypes",
                 "function": "generate_polytype",
@@ -600,6 +643,12 @@ GENERATOR_REGISTRY: Dict[str, Dict[str, Any]] = {
                 "params": ['host_structure', 'anion_site'],
                 "description": "Generate F-center (color center) by removing anion."
             },
+            "generate_frenkel_pair": {
+                "module": "generators.defect.point_defects",
+                "function": "generate_frenkel_pair",
+                "params": ['host_structure', 'vacancy_site', 'interstitial_position', 'element'],
+                "description": "Generate Frenkel defect pair (vacancy + interstitial)."
+            },
             "generate_grain_boundary": {
                 "module": "generators.defect.extended_defects",
                 "function": "generate_grain_boundary",
@@ -774,9 +823,65 @@ GENERATOR_REGISTRY: Dict[str, Dict[str, Any]] = {
                 "params": ['element', 'strain_xx', 'strain_yy', 'strain_zz', 'strain_type', 'supercell'],
                 "description": "Generate uniformly strained structure."
             },
+            # New: Electric field effects
+            "generate_polarized_cell": {
+                "module": "generators.external_fields.electric_fields",
+                "function": "generate_polarized_cell",
+                "params": ['material', 'polarization_direction', 'polarization_magnitude', 'supercell'],
+                "description": "Generate cell with electric polarization (ferroelectric, piezoelectric)."
+            },
+            "generate_ferroelectric_domain": {
+                "module": "generators.external_fields.electric_fields",
+                "function": "generate_ferroelectric_domain",
+                "params": ['material', 'domain_type', 'domain_width_nm', 'supercell'],
+                "description": "Generate ferroelectric domain structure (180°, 90° walls)."
+            },
+            "generate_polar_surface": {
+                "module": "generators.external_fields.electric_fields",
+                "function": "generate_polar_surface",
+                "params": ['material', 'surface', 'polarity', 'thickness', 'vacuum', 'compensated'],
+                "description": "Generate polar surface with optional compensation."
+            },
+            "generate_field_induced_phase": {
+                "module": "generators.external_fields.electric_fields",
+                "function": "generate_field_induced_phase",
+                "params": ['material', 'field_strength_V_nm', 'temperature_K'],
+                "description": "Generate field-induced phase structure (e.g., polarized SrTiO3)."
+            },
+            # New: Advanced field effects
+            "generate_floquet_cell": {
+                "module": "generators.external_fields.advanced_fields",
+                "function": "generate_floquet_cell",
+                "params": ['material', 'driving_frequency_THz', 'driving_amplitude', 'polarization', 'supercell'],
+                "description": "Generate cell for Floquet engineering (periodic driving)."
+            },
+            "generate_phonon_pumped_cell": {
+                "module": "generators.external_fields.advanced_fields",
+                "function": "generate_phonon_pumped_cell",
+                "params": ['material', 'phonon_mode', 'amplitude_A', 'supercell'],
+                "description": "Generate cell with optically pumped phonon mode."
+            },
+            "generate_warm_dense_matter": {
+                "module": "generators.external_fields.advanced_fields",
+                "function": "generate_warm_dense_matter",
+                "params": ['element', 'temperature_eV', 'density_g_cm3', 'n_atoms'],
+                "description": "Generate warm dense matter configuration (high-T plasma)."
+            },
+            "generate_laser_shocked_cell": {
+                "module": "generators.external_fields.advanced_fields",
+                "function": "generate_laser_shocked_cell",
+                "params": ['material', 'pressure_GPa', 'temperature_K', 'strain_rate', 'supercell'],
+                "description": "Generate laser-shocked cell with compression."
+            },
+            "generate_bimeron": {
+                "module": "generators.external_fields.advanced_fields",
+                "function": "generate_bimeron",
+                "params": ['material', 'bimeron_size_nm', 'supercell_size'],
+                "description": "Generate bimeron magnetic texture (in-plane analog of skyrmion)."
+            },
         }
     },
-    
+
     # -------------------------------------------------------------------------
     # HIGH_PRESSURE (Category)
     # -------------------------------------------------------------------------
@@ -833,6 +938,12 @@ GENERATOR_REGISTRY: Dict[str, Dict[str, Any]] = {
                 "function": "generate_half_heusler",
                 "params": ['formula', 'supercell'],
                 "description": "Generate half Heusler alloy (XYZ, C1b structure)."
+            },
+            "generate_heusler": {
+                "module": "generators.magnetic.materials",
+                "function": "generate_heusler",
+                "params": ['compound', 'supercell'],
+                "description": "Generate Heusler alloy structure (full or half)."
             },
             "generate_inverse_heusler": {
                 "module": "generators.magnetic.heusler",
@@ -1005,9 +1116,46 @@ GENERATOR_REGISTRY: Dict[str, Dict[str, Any]] = {
                 "params": ['output_format'],
                 "description": "Generate tripeptide library statistics."
             },
+            # New: Conformer and isomer generation
+            "generate_conformers": {
+                "module": "generators.molecule.conformers",
+                "function": "generate_conformers",
+                "params": ['smiles', 'n_conformers', 'method', 'prune_threshold', 'optimize', 'force_field'],
+                "description": "Generate molecular conformers from SMILES."
+            },
+            "generate_tautomers": {
+                "module": "generators.molecule.conformers",
+                "function": "generate_tautomers",
+                "params": ['smiles', 'max_tautomers'],
+                "description": "Generate tautomers of a molecule."
+            },
+            "enumerate_stereoisomers": {
+                "module": "generators.molecule.conformers",
+                "function": "enumerate_stereoisomers",
+                "params": ['smiles', 'include_undefined_only'],
+                "description": "Enumerate all stereoisomers (R/S, E/Z)."
+            },
+            "predict_protonation_states": {
+                "module": "generators.molecule.conformers",
+                "function": "predict_protonation_states",
+                "params": ['smiles', 'ph', 'ph_range'],
+                "description": "Predict protonation states at given pH."
+            },
+            "generate_rotamers": {
+                "module": "generators.molecule.conformers",
+                "function": "generate_rotamers",
+                "params": ['smiles', 'rotatable_bond_idx', 'n_steps'],
+                "description": "Generate rotamers by rotating around a specific bond."
+            },
+            "generate_ligand_conformers": {
+                "module": "generators.molecule.conformers",
+                "function": "generate_ligand_conformers",
+                "params": ['smiles', 'n_conformers', 'binding_constraints'],
+                "description": "Generate ligand conformers for docking."
+            },
         }
     },
-    
+
     # -------------------------------------------------------------------------
     # NANOTUBE (Category)
     # -------------------------------------------------------------------------
@@ -1107,9 +1255,46 @@ GENERATOR_REGISTRY: Dict[str, Dict[str, Any]] = {
                 "params": ['structure', 'comment'],
                 "description": "Export structure to XYZ format."
             },
+            # New: Database adapters
+            "export_ase_atoms": {
+                "module": "generators.output_formats.database_adapters",
+                "function": "export_ase_atoms",
+                "params": ['structure', 'calculator', 'add_constraints'],
+                "description": "Convert structure to ASE Atoms object."
+            },
+            "export_aiida_structuredata": {
+                "module": "generators.output_formats.database_adapters",
+                "function": "export_aiida_structuredata",
+                "params": ['structure', 'node_label', 'node_description'],
+                "description": "Convert structure to AiiDA StructureData format."
+            },
+            "export_aflow": {
+                "module": "generators.output_formats.database_adapters",
+                "function": "export_aflow",
+                "params": ['structure', 'auid', 'keywords'],
+                "description": "Export structure in AFLOW-compatible format."
+            },
+            "export_materials_project": {
+                "module": "generators.output_formats.database_adapters",
+                "function": "export_materials_project",
+                "params": ['structure', 'material_id', 'task_id'],
+                "description": "Export structure in Materials Project format."
+            },
+            "export_optimade": {
+                "module": "generators.output_formats.database_adapters",
+                "function": "export_optimade",
+                "params": ['structure', 'entry_id', 'database_id'],
+                "description": "Export structure in OPTIMADE JSON format."
+            },
+            "export_jarvis": {
+                "module": "generators.output_formats.database_adapters",
+                "function": "export_jarvis",
+                "params": ['structure', 'jid', 'dataset'],
+                "description": "Export structure in JARVIS-compatible format."
+            },
         }
     },
-    
+
     # -------------------------------------------------------------------------
     # PHOTONIC (Category)
     # -------------------------------------------------------------------------
@@ -1210,9 +1395,40 @@ GENERATOR_REGISTRY: Dict[str, Dict[str, Any]] = {
                 "params": ['structure'],
                 "description": "Validate crystal structure (check overlaps, etc)."
             },
+            # New: Structure optimization
+            "optimize_structure_ase": {
+                "module": "generators.quality_control.optimizer",
+                "function": "optimize_structure_ase",
+                "params": ['structure', 'optimizer', 'fmax', 'steps', 'fix_cell', 'constraints'],
+                "description": "Optimize structure using ASE with classical force fields."
+            },
+            "optimize_structure_mlff": {
+                "module": "generators.quality_control.optimizer",
+                "function": "optimize_structure_mlff",
+                "params": ['structure', 'model', 'optimizer', 'fmax', 'steps', 'fix_cell', 'device'],
+                "description": "Optimize structure using ML force field (CHGNet, M3GNet, MACE)."
+            },
+            "relax_cell_parameters": {
+                "module": "generators.quality_control.optimizer",
+                "function": "relax_cell_parameters",
+                "params": ['structure', 'model', 'target_pressure_GPa', 'mask'],
+                "description": "Relax cell parameters under optional pressure constraint."
+            },
+            "calculate_elastic_tensor": {
+                "module": "generators.quality_control.optimizer",
+                "function": "calculate_elastic_tensor",
+                "params": ['structure', 'model', 'strain_magnitude'],
+                "description": "Calculate elastic tensor from stress-strain relationships."
+            },
+            "generate_piezoelectric_template": {
+                "module": "generators.quality_control.optimizer",
+                "function": "generate_piezoelectric_template",
+                "params": ['material', 'supercell', 'polarization_axis'],
+                "description": "Generate template for piezoelectric constant calculation."
+            },
         }
     },
-    
+
     # -------------------------------------------------------------------------
     # QUANTUM (Category)
     # -------------------------------------------------------------------------
@@ -1543,6 +1759,18 @@ GENERATOR_REGISTRY: Dict[str, Dict[str, Any]] = {
                 "params": ['formula', 'termination', 'n_layers', 'interlayer_spacing', 'vacuum'],
                 "description": "Generate multi-layer MXene structure."
             },
+            "generate_silicene": {
+                "module": "generators.two_d.xenes",
+                "function": "generate_silicene",
+                "params": ['size', 'vacuum', 'passivate'],
+                "description": "Generate silicene monolayer (buckled Si honeycomb)."
+            },
+            "generate_janus_tmd": {
+                "module": "generators.two_d.tmds",
+                "function": "generate_janus_tmd",
+                "params": ['formula', 'phase', 'size', 'vacuum'],
+                "description": "Generate Janus TMD with asymmetric chalcogens (e.g., MoSSe)."
+            },
             "generate_nanoflake": {
                 "module": "generators.two_d.flakes",
                 "function": "generate_nanoflake",
@@ -1603,9 +1831,103 @@ GENERATOR_REGISTRY: Dict[str, Dict[str, Any]] = {
                 "params": ['xene_type', 'size', 'vacuum', 'passivate'],
                 "description": "Generate X-ene monolayer structure."
             },
+            # New: 2D High-Entropy Materials
+            "generate_2d_hea": {
+                "module": "generators.two_d.hea_2d",
+                "function": "generate_2d_hea",
+                "params": ['elements', 'anion', 'structure_type', 'composition', 'size', 'vacuum', 'ordering', 'seed'],
+                "description": "Generate 2D high-entropy material (oxide, carbide, nitride, TMD, MXene)."
+            },
+            "generate_2d_heo": {
+                "module": "generators.two_d.hea_2d",
+                "function": "generate_2d_heo",
+                "params": ['elements', 'composition', 'size', 'vacuum', 'ordering', 'seed'],
+                "description": "Generate 2D high-entropy oxide."
+            },
+            "generate_2d_hec": {
+                "module": "generators.two_d.hea_2d",
+                "function": "generate_2d_hec",
+                "params": ['elements', 'composition', 'size', 'vacuum', 'ordering', 'seed'],
+                "description": "Generate 2D high-entropy carbide (MXene-like)."
+            },
+            "generate_2d_he_tmd": {
+                "module": "generators.two_d.hea_2d",
+                "function": "generate_2d_he_tmd",
+                "params": ['metals', 'chalcogen', 'composition', 'size', 'vacuum', 'ordering', 'seed'],
+                "description": "Generate 2D high-entropy TMD."
+            },
+            "generate_2d_he_mxene": {
+                "module": "generators.two_d.hea_2d",
+                "function": "generate_2d_he_mxene",
+                "params": ['metals', 'composition', 'size', 'vacuum', 'termination', 'ordering', 'seed'],
+                "description": "Generate 2D high-entropy MXene."
+            },
         }
     },
-    
+
+    # -------------------------------------------------------------------------
+    # META_STRUCTURES (Category) - NEW
+    # -------------------------------------------------------------------------
+    "meta_structures": {
+        "description": "Meta-structures: Quasicrystals and Artificial Lattices",
+        "operations": {
+            "generate_quasicrystal": {
+                "module": "generators.meta_structures.quasicrystals",
+                "function": "generate_quasicrystal",
+                "params": ['quasicrystal_type', 'approximant_order', 'element', 'vacuum'],
+                "description": "Generate quasicrystal structure or approximant."
+            },
+            "generate_penrose_tiling": {
+                "module": "generators.meta_structures.quasicrystals",
+                "function": "generate_penrose_tiling",
+                "params": ['order', 'element', 'bond_length', 'vacuum', 'vertex_decoration'],
+                "description": "Generate Penrose tiling (5-fold quasicrystal)."
+            },
+            "generate_fibonacci_approximant": {
+                "module": "generators.meta_structures.quasicrystals",
+                "function": "generate_fibonacci_approximant",
+                "params": ['order', 'element', 'a_short', 'a_long'],
+                "description": "Generate 1D Fibonacci chain approximant."
+            },
+            "generate_icosahedral_quasicrystal": {
+                "module": "generators.meta_structures.quasicrystals",
+                "function": "generate_icosahedral_quasicrystal",
+                "params": ['approximant_order', 'elements', 'a'],
+                "description": "Generate icosahedral quasicrystal approximant."
+            },
+            "generate_kagome_lattice": {
+                "module": "generators.meta_structures.artificial_lattices",
+                "function": "generate_kagome_lattice",
+                "params": ['element', 'a', 'size', 'vacuum', 'magnetic_order', 'buckling'],
+                "description": "Generate Kagome lattice (flat band system)."
+            },
+            "generate_lieb_lattice": {
+                "module": "generators.meta_structures.artificial_lattices",
+                "function": "generate_lieb_lattice",
+                "params": ['elements', 'a', 'size', 'vacuum', 'dimerization'],
+                "description": "Generate Lieb lattice (flat band at E=0)."
+            },
+            "generate_checkerboard_lattice": {
+                "module": "generators.meta_structures.artificial_lattices",
+                "function": "generate_checkerboard_lattice",
+                "params": ['elements', 'a', 'size', 'vacuum', 'crossing_type'],
+                "description": "Generate checkerboard lattice."
+            },
+            "generate_dice_lattice": {
+                "module": "generators.meta_structures.artificial_lattices",
+                "function": "generate_dice_lattice",
+                "params": ['element', 'a', 'size', 'vacuum', 'alpha'],
+                "description": "Generate dice (T3) lattice with pseudospin-1 fermions."
+            },
+            "generate_honeycomb_variants": {
+                "module": "generators.meta_structures.artificial_lattices",
+                "function": "generate_honeycomb_variants",
+                "params": ['variant', 'element', 'a', 'size', 'vacuum', 'alpha'],
+                "description": "Generate honeycomb lattice variants (alpha-T3, Kekulé, Haldane, etc.)."
+            },
+        }
+    },
+
 }
 
 

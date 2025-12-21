@@ -115,10 +115,12 @@ def generate_magnetic_structure(
     if supercell is None:
         supercell = kwargs.get('supercell', [2, 2, 2])
 
+    # Import at function level to avoid UnboundLocalError
+    from pymatgen.core import Structure, Lattice
+
     # If user provides elements/composition/a, generate custom structure
     if kwargs.get('elements') or kwargs.get('base_structure_sg'):
         # Custom magnetic structure from scratch
-        from pymatgen.core import Structure, Lattice
 
         elements = kwargs.get('elements', ['Fe'])
         composition = kwargs.get('composition', [4])
@@ -289,4 +291,111 @@ def get_magnetic_database() -> Dict[str, Any]:
             "hard_magnets": [k for k, v in MAGNETIC_MATERIAL_DATABASE.items() if v.get("hard_magnet")],
             "2D_magnets": [k for k, v in MAGNETIC_MATERIAL_DATABASE.items() if v.get("2D")],
         }
+    }
+
+
+# Heusler alloy database
+HEUSLER_DATABASE = {
+    # Full Heusler (X2YZ)
+    "Cu2MnAl": {"X": "Cu", "Y": "Mn", "Z": "Al", "a": 5.95, "type": "full", "moment_muB": 4.0},
+    "Ni2MnGa": {"X": "Ni", "Y": "Mn", "Z": "Ga", "a": 5.82, "type": "full", "shape_memory": True},
+    "Co2MnSi": {"X": "Co", "Y": "Mn", "Z": "Si", "a": 5.65, "type": "full", "half_metal": True},
+    "Co2FeSi": {"X": "Co", "Y": "Fe", "Z": "Si", "a": 5.64, "type": "full", "half_metal": True},
+    "Co2MnGe": {"X": "Co", "Y": "Mn", "Z": "Ge", "a": 5.74, "type": "full", "half_metal": True},
+    "Fe2VAl": {"X": "Fe", "Y": "V", "Z": "Al", "a": 5.76, "type": "full", "thermoelectric": True},
+    # Half Heusler (XYZ)
+    "NiMnSb": {"X": "Ni", "Y": "Mn", "Z": "Sb", "a": 5.92, "type": "half", "half_metal": True},
+    "CoMnSb": {"X": "Co", "Y": "Mn", "Z": "Sb", "a": 5.88, "type": "half"},
+    "PtMnSb": {"X": "Pt", "Y": "Mn", "Z": "Sb", "a": 6.20, "type": "half"},
+    "GdPtBi": {"X": "Gd", "Y": "Pt", "Z": "Bi", "a": 6.68, "type": "half", "topological": True},
+    "LaPtBi": {"X": "La", "Y": "Pt", "Z": "Bi", "a": 6.85, "type": "half", "topological": True},
+}
+
+
+def generate_heusler(
+    compound: str = "Co2MnSi",
+    supercell: List[int] = None
+) -> Dict[str, Any]:
+    """
+    Generate Heusler alloy structure.
+
+    Heusler alloys are intermetallics with promising spintronic properties,
+    including half-metallicity, high spin polarization, and shape memory effects.
+
+    Args:
+        compound: Heusler compound name (Cu2MnAl, NiMnSb, etc.)
+        supercell: Supercell dimensions [nx, ny, nz]
+
+    Returns:
+        Heusler structure with magnetic properties
+
+    Examples:
+        >>> result = generate_heusler('Co2MnSi')
+        >>> result["is_half_metal"]
+        True
+    """
+    if supercell is None:
+        supercell = [1, 1, 1]
+
+    if compound not in HEUSLER_DATABASE:
+        return {
+            "success": False,
+            "error": {
+                "code": "INVALID_HEUSLER",
+                "message": f"Unknown Heusler compound '{compound}'",
+                "available": list(HEUSLER_DATABASE.keys())
+            }
+        }
+
+    params = HEUSLER_DATABASE[compound]
+    X = params["X"]
+    Y = params["Y"]
+    Z = params["Z"]
+    a = params["a"]
+    heusler_type = params["type"]
+
+    lattice = Lattice.cubic(a)
+
+    if heusler_type == "full":
+        # Full Heusler: X2YZ in L21 structure (Fm-3m, #225)
+        # X at (1/4, 1/4, 1/4) and (3/4, 3/4, 3/4)
+        # Y at (0, 0, 0) and (1/2, 1/2, 1/2)
+        # Z at (1/2, 0, 0)... but simpler: Y at origin, Z at face centers
+        species = [Y, Z, X, X]
+        coords = [
+            [0, 0, 0],       # Y at origin
+            [0.5, 0.5, 0.5], # Z at body center
+            [0.25, 0.25, 0.25],   # X
+            [0.75, 0.75, 0.75]    # X
+        ]
+    else:
+        # Half Heusler: XYZ in C1b structure (F-43m, #216)
+        # X at (1/4, 1/4, 1/4), Y at (0, 0, 0), Z at (1/2, 1/2, 1/2)
+        species = [Y, Z, X]
+        coords = [
+            [0, 0, 0],
+            [0.5, 0.5, 0.5],
+            [0.25, 0.25, 0.25]
+        ]
+
+    structure = Structure(lattice, species, coords)
+
+    if supercell != [1, 1, 1]:
+        structure.make_supercell(supercell)
+
+    return {
+        "success": True,
+        "compound": compound,
+        "heusler_type": heusler_type,
+        "X_element": X,
+        "Y_element": Y,
+        "Z_element": Z,
+        "a_angstrom": a,
+        "is_half_metal": params.get("half_metal", False),
+        "is_shape_memory": params.get("shape_memory", False),
+        "is_topological": params.get("topological", False),
+        "moment_muB": params.get("moment_muB", 0),
+        "space_group": 225 if heusler_type == "full" else 216,
+        "n_atoms": len(structure),
+        "structure": structure_to_dict(structure)
     }

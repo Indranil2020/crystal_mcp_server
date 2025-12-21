@@ -7,7 +7,12 @@
       "Bash(npm start)",
       "Bash(node --version:*)",
       "Bash(test:*)",
-      "Bash(python -m pytest:*)"
+      "Bash(python -m pytest:*)",
+      "Bash(tree:*)",
+      "Bash(ls:*)",
+      "Bash(wc:*)",
+      "Bash(git status:*)",
+      "Bash(git log:*)"
     ],
     "deny": [],
     "ask": []
