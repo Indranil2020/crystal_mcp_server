@@ -6,7 +6,8 @@
       "Bash(pip install:*)",
       "Bash(npm start)",
       "Bash(node --version:*)",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "Bash(python -m pytest:*)"
     ],
     "deny": [],
     "ask": []

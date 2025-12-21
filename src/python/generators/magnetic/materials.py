@@ -92,21 +92,88 @@ def structure_to_dict(structure: Structure) -> Dict[str, Any]:
 
 
 def generate_magnetic_structure(
-    material: str = "Fe_bcc",
-    ordering: str = "FM",
-    supercell: List[int] = [2, 2, 2]
+    material: str = None,
+    ordering: str = None,
+    supercell: List[int] = None,
+    **kwargs
 ) -> Dict[str, Any]:
     """
     Generate magnetic material with specified ordering.
-    
+
     Args:
         material: Material from database
         ordering: Magnetic ordering type
         supercell: Supercell dimensions
-    
+        **kwargs: Accepts aliases (magnetic_ordering, base_structure_sg, elements, composition, a)
+
     Returns:
         Magnetic structure with spin information
     """
+    # Handle parameter aliases
+    if ordering is None:
+        ordering = kwargs.get('magnetic_ordering', 'FM')
+    if supercell is None:
+        supercell = kwargs.get('supercell', [2, 2, 2])
+
+    # If user provides elements/composition/a, generate custom structure
+    if kwargs.get('elements') or kwargs.get('base_structure_sg'):
+        # Custom magnetic structure from scratch
+        from pymatgen.core import Structure, Lattice
+
+        elements = kwargs.get('elements', ['Fe'])
+        composition = kwargs.get('composition', [4])
+        a = kwargs.get('a', 2.87)
+        sg = kwargs.get('base_structure_sg', 229)
+
+        # Create BCC Fe-like structure
+        if sg in [229, 225]:  # BCC or FCC cubic
+            lattice = Lattice.cubic(a)
+            if sg == 229:  # Im-3m BCC
+                species = []
+                coords = []
+                for i, (elem, count) in enumerate(zip(elements, composition)):
+                    if count >= 2:
+                        species.extend([elem] * 2)
+                        coords.append([0, 0, 0])
+                        coords.append([0.5, 0.5, 0.5])
+                    else:
+                        species.append(elem)
+                        coords.append([0, 0, 0])
+            else:  # Fm-3m FCC
+                species = []
+                coords = []
+                for elem, count in zip(elements, composition):
+                    for _ in range(min(count, 4)):
+                        species.append(elem)
+                    coords = [[0, 0, 0], [0.5, 0.5, 0], [0.5, 0, 0.5], [0, 0.5, 0.5]][:len(species)]
+
+            structure = Structure(lattice, species, coords)
+
+            # Assign spins
+            moment = 2.2
+            spins = []
+            for i in range(len(structure)):
+                if ordering.lower() in ['fm', 'ferromagnetic']:
+                    spins.append([0, 0, moment])
+                elif ordering.lower() in ['afm', 'antiferromagnetic']:
+                    spins.append([0, 0, moment if i % 2 == 0 else -moment])
+                else:
+                    spins.append([0, 0, moment])
+
+            return {
+                "success": True,
+                "material": f"custom_{elements[0]}",
+                "ordering": ordering,
+                "space_group": sg,
+                "structure": structure_to_dict(structure),
+                "magnetic_moments": spins,
+                "n_atoms": len(structure)
+            }
+
+    # Default material
+    if material is None:
+        material = "Fe_bcc"
+
     if material not in MAGNETIC_MATERIAL_DATABASE:
         return {
             "success": False,

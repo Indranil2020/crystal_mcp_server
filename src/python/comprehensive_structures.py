@@ -87,13 +87,36 @@ def handle_request(args: Dict[str, Any]) -> Dict[str, Any]:
                             # If conversion fails, pass as dict (some functions might expect dict)
                             pass
             
-            # Call the function
-            result = func(**params)
-            
+            # Call the function with error handling
+            try:
+                result = func(**params)
+            except TypeError as e:
+                # Handle missing required parameters
+                error_msg = str(e)
+                if "missing" in error_msg and "required" in error_msg:
+                    return {
+                        "success": False,
+                        "error": {
+                            "code": "MISSING_REQUIRED_PARAMETER",
+                            "message": error_msg,
+                            "operation": operation
+                        }
+                    }
+                raise
+            except Exception as e:
+                return {
+                    "success": False,
+                    "error": {
+                        "code": "GENERATOR_ERROR",
+                        "message": str(e),
+                        "operation": operation
+                    }
+                }
+
             # Ensure success key exists
             if isinstance(result, dict) and "success" not in result:
                 result["success"] = True
-            
+
             return result
     
     # Operation not found - return helpful error

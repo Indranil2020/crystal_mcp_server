@@ -260,13 +260,34 @@ def get_twist_database() -> Dict[str, Any]:
     }
 
 
-def structure_to_dict(structure: Structure) -> Dict[str, Any]:
+def structure_to_dict(structure: Structure, vacuum: Optional[float] = None) -> Dict[str, Any]:
+    """Convert pymatgen Structure to dictionary format.
+
+    Args:
+        structure: pymatgen Structure object
+        vacuum: Optional vacuum padding for metadata (not used in conversion)
+
+    Returns:
+        Dictionary representation of the structure
+    """
     lattice = structure.lattice
+    sites_data = []
+    for s in structure:
+        site_info = {
+            "element": str(s.specie),
+            "coords": list(s.frac_coords),
+            "species": [{"element": str(s.specie), "occupation": 1.0}]
+        }
+        sites_data.append(site_info)
+
     return {
         "lattice": {"a": lattice.a, "b": lattice.b, "c": lattice.c,
+                    "alpha": lattice.alpha, "beta": lattice.beta, "gamma": lattice.gamma,
                     "matrix": lattice.matrix.tolist()},
-        "atoms": [{"element": str(s.specie), "coords": list(s.frac_coords)} for s in structure],
-        "metadata": {"formula": structure.formula, "n_atoms": len(structure)}
+        "atoms": sites_data,
+        "sites": sites_data,
+        "metadata": {"formula": structure.formula, "n_atoms": len(structure),
+                     "vacuum": vacuum}
     }
 
 

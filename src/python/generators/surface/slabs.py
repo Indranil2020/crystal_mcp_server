@@ -56,18 +56,19 @@ def structure_to_dict(structure: Structure) -> Dict[str, Any]:
 
 
 def generate_slab(
-    bulk_structure: Union[Structure, str],
-    miller_index: List[int] = [1, 1, 1],
+    bulk_structure: Union[Structure, str] = None,
+    miller_index: List[int] = None,
     min_slab_thickness: float = 10.0,
     min_vacuum: float = 15.0,
     in_unit_planes: bool = False,
     center_slab: bool = True,
     symmetric: bool = True,
-    primitive: bool = True
+    primitive: bool = True,
+    **kwargs
 ) -> Dict[str, Any]:
     """
     Generate slab from bulk structure.
-    
+
     Args:
         bulk_structure: Bulk structure or preset name
         miller_index: Miller indices [h, k, l]
@@ -77,10 +78,26 @@ def generate_slab(
         center_slab: Center slab in cell
         symmetric: Make slab symmetric
         primitive: Use primitive cell
-    
+        **kwargs: Accepts aliases (structure, miller_indices, min_vacuum_thickness)
+
     Returns:
         Slab structure
     """
+    # Handle parameter aliases
+    if bulk_structure is None:
+        bulk_structure = kwargs.get('structure')
+    if miller_index is None:
+        miller_index = kwargs.get('miller_indices', [1, 1, 1])
+    if 'min_vacuum_thickness' in kwargs:
+        min_vacuum = kwargs['min_vacuum_thickness']
+
+    if bulk_structure is None:
+        return {
+            "success": False,
+            "error": {"code": "MISSING_STRUCTURE",
+                      "message": "Must provide 'bulk_structure' or 'structure'"}
+        }
+
     # Handle preset configurations
     if isinstance(bulk_structure, str):
         if bulk_structure in SLAB_CONFIGURATIONS:

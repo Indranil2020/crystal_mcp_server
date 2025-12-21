@@ -23,6 +23,12 @@ Welcome to the comprehensive documentation for the Crystal MCP Server.
 - **Iterative Refinement**: How to modify structures in a chain.
 - **Export Pipelines**: Generating and saving to VASP/QE/LAMMPS.
 
+### 4. [Testing Guide](./testing_guide.md)
+**Step-by-Step Verification.**
+### 5. [Server Capabilities & FAQ](./server_details.md)
+**Questions Answered.**
+- Operations, Resources, State, I/O, and Performance details.
+
 ---
 
 ## Quick Links

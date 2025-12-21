@@ -17,7 +17,7 @@ from typing import Dict, Any, List, Optional, Tuple
 import numpy as np
 from pymatgen.core import Structure, Lattice
 
-from .base import rotation_matrix_2d, structure_to_dict, calculate_moire_angle
+from .base import rotation_matrix_2d, structure_to_dict, calculate_moire_period
 
 
 # Common bilayer combinations
@@ -36,22 +36,25 @@ def generate_twisted_bilayer(
     twist_angle: float = 5.0,
     stacking: str = "AA",
     supercell_size: int = 5,
-    vacuum: float = 20.0
+    vacuum: float = 20.0,
+    **kwargs  # Accept additional params like lattice_constant for flexibility
 ) -> Dict[str, Any]:
     """
     Generate twisted homo-bilayer structure.
-    
+
     Args:
         material: Material type (graphene, MoS2, WS2, etc.)
         twist_angle: Twist angle in degrees
         stacking: Initial stacking (AA, AB)
         supercell_size: Supercell size
         vacuum: Vacuum padding
-    
+        **kwargs: Additional parameters (lattice_constant, etc.) for API flexibility
+
     Returns:
         Twisted bilayer structure
     """
-    # Material parameters
+    # Material parameters - use lattice_constant from kwargs if provided
+    lattice_const = kwargs.get('lattice_constant')
     if material.lower() == "graphene":
         a = 2.46
         element = "C"
@@ -68,8 +71,8 @@ def generate_twisted_bilayer(
         z_sep = 3.5
         is_tmd = False
     
-    # Calculate Moiré info
-    moire_info = calculate_moire_angle(twist_angle, a)
+    # Calculate Moiré period using correct function
+    moire_period = calculate_moire_period(a, twist_angle)
     
     # Limit supercell for practicality
     supercell_size = min(supercell_size, 30)
@@ -140,9 +143,9 @@ def generate_twisted_bilayer(
         "initial_stacking": stacking,
         "supercell_size": supercell_size,
         "n_atoms": len(structure),
-        "moire_period_angstrom": moire_info["moire_period_angstrom"],
+        "moire_period_angstrom": round(moire_period, 2),
         "interlayer_distance_angstrom": z_sep,
-        "structure": structure_to_dict(structure, vacuum)
+        "structure": structure_to_dict(structure)
     }
 
 
@@ -252,5 +255,5 @@ def generate_twisted_heterobilayer(
         "lattice_mismatch_percent": round(mismatch, 2),
         "strain_distribution": strain_distribution,
         "n_atoms": len(structure),
-        "structure": structure_to_dict(structure, vacuum)
+        "structure": structure_to_dict(structure)
     }

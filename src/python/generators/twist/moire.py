@@ -16,7 +16,7 @@ from typing import Dict, Any, List, Optional, Tuple
 import numpy as np
 from pymatgen.core import Structure, Lattice
 
-from .base import calculate_moire_angle, find_commensurate_cell, rotation_matrix_2d, structure_to_dict
+from .base import calculate_moire_period, find_commensurate_cell, rotation_matrix_2d, structure_to_dict
 
 
 # Magic angles for different materials
@@ -43,21 +43,31 @@ def generate_moire_superlattice(
     twist_angle: float = 1.08,
     n_layers: int = 2,
     vacuum: float = 20.0,
-    use_commensurate: bool = True
+    use_commensurate: bool = True,
+    **kwargs  # Accept layer1_material, layer2_material, interlayer_distance, etc.
 ) -> Dict[str, Any]:
     """
     Generate Moiré superlattice structure.
-    
+
     Args:
         material: Base 2D material (graphene, MoS2, etc.)
         twist_angle: Twist angle in degrees
         n_layers: Number of layers (2 for bilayer)
         vacuum: Vacuum padding
         use_commensurate: Use commensurate approximation
-    
+        **kwargs: Additional params (layer1_material, layer2_material, interlayer_distance)
+
     Returns:
         Moiré superlattice structure
     """
+    # Handle parameter aliases
+    layer1 = kwargs.get('layer1_material', material)
+    layer2 = kwargs.get('layer2_material', material)
+    interlayer_dist = kwargs.get('interlayer_distance')
+
+    # Use layer1 as primary material (for homobilayer, both are same)
+    material = layer1
+
     # Material parameters
     if material.lower() == "graphene":
         a = 2.46
@@ -72,9 +82,8 @@ def generate_moire_superlattice(
         element = "C"
         z_sep = 3.5
     
-    # Calculate Moiré period
-    moire_info = calculate_moire_angle(twist_angle, a)
-    L_M = moire_info["moire_period_angstrom"]
+    # Calculate Moiré period using the correct function
+    L_M = calculate_moire_period(a, twist_angle)
     
     if L_M > 500:  # Too large
         return {
@@ -88,11 +97,14 @@ def generate_moire_superlattice(
     
     # Find commensurate cell
     if use_commensurate:
-        comm_cell = find_commensurate_cell(twist_angle, a)
-        if comm_cell:
-            m, r, nx, ny = comm_cell
-            # Use commensurate supercell
-            actual_size = max(nx, ny)
+        comm_result = find_commensurate_cell(twist_angle)  # Only pass twist angle
+        if comm_result:
+            n, m, actual_angle = comm_result
+            # Use commensurate supercell size based on indices
+            actual_size = max(1, int(L_M / a))
+            # Adjust for commensurate approximation
+            if abs(twist_angle - actual_angle) < 0.1:
+                actual_size = max(n, m) if n > 0 and m >= 0 else actual_size
         else:
             actual_size = max(1, int(L_M / a))
     else:

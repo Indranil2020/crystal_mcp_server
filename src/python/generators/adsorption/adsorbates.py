@@ -124,16 +124,17 @@ def structure_to_dict(structure: Structure) -> Dict[str, Any]:
 
 
 def generate_adsorbate_on_surface(
-    surface_structure: Dict[str, Any],
+    surface_structure: Dict[str, Any] = None,
     adsorbate: str = "CO",
     site: str = "atop",
     coverage: str = "2x2_quarter",
     height_offset: float = 0.0,
-    rotation_deg: float = 0.0
+    rotation_deg: float = 0.0,
+    **kwargs  # Accept structure, site_type, height as aliases
 ) -> Dict[str, Any]:
     """
     Place adsorbate molecule on surface.
-    
+
     Args:
         surface_structure: Surface slab structure dict
         adsorbate: Adsorbate molecule from database
@@ -141,10 +142,39 @@ def generate_adsorbate_on_surface(
         coverage: Coverage pattern
         height_offset: Additional height offset (Å)
         rotation_deg: Rotation around surface normal
-    
+        **kwargs: Accept aliases (structure, site_type, height)
+
     Returns:
         Surface with adsorbate
     """
+    # Handle parameter aliases
+    if surface_structure is None:
+        surface_structure = kwargs.get('structure')
+    if surface_structure is None:
+        return {"success": False, "error": {"code": "MISSING_STRUCTURE",
+                "message": "Must provide 'surface_structure' or 'structure'"}}
+
+    # Handle pymatgen Structure objects by converting to dict
+    from pymatgen.core import Structure
+    if isinstance(surface_structure, Structure):
+        lattice = surface_structure.lattice
+        surface_structure = {
+            "lattice": {"a": lattice.a, "b": lattice.b, "c": lattice.c,
+                        "matrix": lattice.matrix.tolist()},
+            "atoms": [{"element": str(s.specie), "coords": list(s.frac_coords)} for s in surface_structure]
+        }
+
+    # Handle site_type alias
+    if 'site_type' in kwargs:
+        site_raw = kwargs['site_type'].lower()
+        # Map common names
+        site_map = {'ontop': 'atop', 'on_top': 'atop', 'top': 'atop'}
+        site = site_map.get(site_raw, site_raw)
+
+    # Handle height alias
+    if 'height' in kwargs and height_offset == 0.0:
+        height_offset = kwargs['height']
+
     if adsorbate not in ADSORBATE_DATABASE:
         return {
             "success": False,

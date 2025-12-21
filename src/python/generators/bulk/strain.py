@@ -20,38 +20,104 @@ from pymatgen.core import Structure, Lattice
 from .base import structure_to_dict
 
 
+def _get_lattice_matrix(lattice: Dict[str, Any]) -> np.ndarray:
+    """
+    Get or compute lattice matrix from lattice dictionary.
+
+    Args:
+        lattice: Lattice dictionary with either 'matrix' or a/b/c/alpha/beta/gamma
+
+    Returns:
+        3x3 lattice matrix as numpy array
+    """
+    if "matrix" in lattice and lattice["matrix"] is not None:
+        return np.array(lattice["matrix"])
+
+    # Compute matrix from lattice parameters
+    a = lattice.get("a", 5.0)
+    b = lattice.get("b", a)
+    c = lattice.get("c", a)
+    alpha = np.radians(lattice.get("alpha", 90))
+    beta = np.radians(lattice.get("beta", 90))
+    gamma = np.radians(lattice.get("gamma", 90))
+
+    # Use pymatgen Lattice for accurate matrix computation
+    lat = Lattice.from_parameters(a, b, c,
+                                   np.degrees(alpha),
+                                   np.degrees(beta),
+                                   np.degrees(gamma))
+    return np.array(lat.matrix)
+
+
 def apply_strain(
-    structure_dict: Dict[str, Any],
-    strain: float,
-    strain_type: str = "hydrostatic"
+    structure_dict=None,
+    strain: float = None,
+    strain_type: str = "hydrostatic",
+    **kwargs
 ) -> Dict[str, Any]:
     """
     Apply strain to a structure.
-    
+
     Args:
-        structure_dict: Base structure
+        structure_dict: Base structure (dict or pymatgen Structure)
         strain: Strain magnitude (fractional, e.g., 0.02 for 2%)
-        strain_type: 'hydrostatic', 'uniaxial_x', 'uniaxial_z', 'biaxial_xy'
-    
+        strain_type: 'hydrostatic', 'uniaxial_x', 'uniaxial_z', 'biaxial_xy', 'uniaxial'
+        **kwargs: Accepts aliases (structure, magnitude)
+
     Returns:
         Strained structure
     """
-    matrix = np.array(structure_dict["lattice"]["matrix"])
+    # Handle parameter aliases
+    if structure_dict is None:
+        structure_dict = kwargs.get('structure')
+    if strain is None:
+        strain = kwargs.get('magnitude', 0.02)
+    # Handle pymatgen Structure objects
+    if isinstance(structure_dict, Structure):
+        structure = structure_dict
+        lattice = structure.lattice
+        matrix = np.array(lattice.matrix)
+        atoms_data = [{"element": str(s.specie), "coords": list(s.frac_coords)} for s in structure]
+        structure_dict = {
+            "lattice": {
+                "a": lattice.a, "b": lattice.b, "c": lattice.c,
+                "alpha": lattice.alpha, "beta": lattice.beta, "gamma": lattice.gamma,
+                "matrix": lattice.matrix.tolist()
+            },
+            "atoms": atoms_data
+        }
+    else:
+        # Handle missing lattice gracefully
+        if "lattice" not in structure_dict:
+            return {"success": False, "error": {"code": "MISSING_LATTICE",
+                    "message": "Structure must have 'lattice' key"}}
+        matrix = _get_lattice_matrix(structure_dict["lattice"])
     
     if strain_type == "hydrostatic":
         # Equal strain in all directions
         strain_matrix = np.eye(3) * (1 + strain)
-    elif strain_type == "uniaxial_x":
+    elif strain_type in ("uniaxial", "uniaxial_x"):
+        # Uniaxial strain along x-axis (default for "uniaxial")
         strain_matrix = np.diag([1 + strain, 1, 1])
+    elif strain_type == "uniaxial_y":
+        strain_matrix = np.diag([1, 1 + strain, 1])
     elif strain_type == "uniaxial_z":
         strain_matrix = np.diag([1, 1, 1 + strain])
-    elif strain_type == "biaxial_xy":
+    elif strain_type in ("biaxial", "biaxial_xy"):
         strain_matrix = np.diag([1 + strain, 1 + strain, 1])
     elif strain_type == "shear_xy":
         strain_matrix = np.array([[1, strain, 0], [0, 1, 0], [0, 0, 1]])
+    elif strain_type == "tensile":
+        # Tensile is same as uniaxial along z (common convention)
+        strain_matrix = np.diag([1, 1, 1 + strain])
+    elif strain_type == "compressive":
+        # Compressive strain (negative applied internally)
+        strain_matrix = np.diag([1 - abs(strain), 1 - abs(strain), 1 - abs(strain)])
     else:
-        return {"success": False, "error": {"code": "INVALID_TYPE", 
-                "message": f"Unknown strain type: {strain_type}"}}
+        return {"success": False, "error": {"code": "INVALID_TYPE",
+                "message": f"Unknown strain type: {strain_type}",
+                "available": ["hydrostatic", "uniaxial", "uniaxial_x", "uniaxial_y", "uniaxial_z",
+                             "biaxial", "biaxial_xy", "shear_xy", "tensile", "compressive"]}}
     
     new_matrix = matrix @ strain_matrix
     
@@ -85,19 +151,24 @@ def apply_strain_tensor(
 ) -> Dict[str, Any]:
     """
     Apply full 3x3 strain tensor to structure.
-    
+
     Args:
         structure_dict: Base structure
         strain_tensor: 3x3 strain tensor (Voigt or full matrix)
-    
+
     Returns:
         Strained structure
     """
     epsilon = np.array(strain_tensor)
     if epsilon.shape != (3, 3):
         return {"success": False, "error": {"code": "INVALID_TENSOR", "message": "Strain tensor must be 3x3"}}
-    
-    matrix = np.array(structure_dict["lattice"]["matrix"])
+
+    # Handle missing lattice gracefully
+    if "lattice" not in structure_dict:
+        return {"success": False, "error": {"code": "MISSING_LATTICE",
+                "message": "Structure must have 'lattice' key"}}
+
+    matrix = _get_lattice_matrix(structure_dict["lattice"])
     
     # Apply strain: new_lattice = (I + epsilon) @ old_lattice
     deformation = np.eye(3) + epsilon

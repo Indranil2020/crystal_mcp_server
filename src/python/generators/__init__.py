@@ -25,6 +25,12 @@ GENERATOR_REGISTRY: Dict[str, Dict[str, Any]] = {
                 "params": ['surface_structure', 'adsorbate', 'site', 'coverage', 'height_offset', 'rotation_deg'],
                 "description": "Place adsorbate molecule on surface."
             },
+            "add_adsorbate": {
+                "module": "generators.adsorption.adsorbates",
+                "function": "generate_adsorbate_on_surface",
+                "params": ['surface_structure', 'adsorbate', 'site', 'coverage', 'height_offset', 'rotation_deg'],
+                "description": "Alias for generate_adsorbate_on_surface."
+            },
             "generate_coadsorption": {
                 "module": "generators.adsorption.adsorbates",
                 "function": "generate_coadsorption",
@@ -340,12 +346,7 @@ GENERATOR_REGISTRY: Dict[str, Dict[str, Any]] = {
                 "params": ['phase_name'],
                 "description": "Generate a known high-pressure phase."
             },
-            "generate_interstitial": {
-                "module": "generators.bulk.defects",
-                "function": "generate_interstitial",
-                "params": ['structure_dict', 'element', 'site_type', 'crystal_type', 'position'],
-                "description": "Generate interstitial defect structure."
-            },
+            # Note: generate_interstitial is in defect category, not bulk
             "generate_jahn_teller": {
                 "module": "generators.bulk.quantum_phases",
                 "function": "generate_jahn_teller",
@@ -472,12 +473,7 @@ GENERATOR_REGISTRY: Dict[str, Dict[str, Any]] = {
                 "params": ['structure_dict', 'twin_plane', 'n_layers_below', 'n_layers_above', 'twin_type'],
                 "description": "Generate a twin boundary structure."
             },
-            "generate_vacancy": {
-                "module": "generators.bulk.defects",
-                "function": "generate_vacancy",
-                "params": ['structure_dict', 'site_index', 'element', 'n_vacancies', 'vacancy_type'],
-                "description": "Generate vacancy defect structure."
-            },
+            # Note: generate_vacancy is in defect category, not bulk
             "generate_zeolite": {
                 "module": "generators.bulk.zeolites",
                 "function": "generate_zeolite",
@@ -585,6 +581,12 @@ GENERATOR_REGISTRY: Dict[str, Dict[str, Any]] = {
                 "function": "generate_crack_tip",
                 "params": ['element', 'crack_mode', 'crack_length', 'supercell_size'],
                 "description": "Generate structure with crack tip."
+            },
+            "create_defect": {
+                "module": "generators.defect.point_defects",
+                "function": "create_defect",
+                "params": ['structure', 'defect_type', 'site_index', 'dopant', 'interstitial_species', 'interstitial_type'],
+                "description": "Create a defect in a structure (general wrapper for vacancy, interstitial, substitution, etc.)."
             },
             "generate_dislocation": {
                 "module": "generators.defect.extended_defects",
@@ -1159,11 +1161,23 @@ GENERATOR_REGISTRY: Dict[str, Dict[str, Any]] = {
     "quality_control": {
         "description": "Quality Control structures",
         "operations": {
+            "analyze_symmetry": {
+                "module": "generators.quality_control.symmetry",
+                "function": "analyze_symmetry",
+                "params": ['structure', 'symprec', 'angle_tolerance'],
+                "description": "Analyze crystal symmetry - find space group, point group, etc."
+            },
             "generate_kpath": {
                 "module": "generators.quality_control.kpath",
                 "function": "generate_kpath",
                 "params": ['lattice_type', 'path', 'n_points'],
                 "description": "Generate k-path for band structure."
+            },
+            "validate_structure": {
+                "module": "generators.quality_control.symmetry",
+                "function": "validate_structure",
+                "params": ['structure'],
+                "description": "Validate crystal structure (check overlaps, etc)."
             },
         }
     },

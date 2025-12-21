@@ -56,18 +56,30 @@ def structure_to_dict(structure: Structure) -> Dict[str, Any]:
 
 def make_supercell(
     structure: Structure,
-    scaling: Union[List[int], List[List[int]], str]
+    scaling: Union[List[int], List[List[int]], str] = None,
+    scaling_matrix: Union[List[int], List[List[int]], str] = None
 ) -> Dict[str, Any]:
     """
     Create supercell from structure.
-    
+
     Args:
-        structure: Input structure
+        structure: Input structure (pymatgen Structure)
         scaling: [nx, ny, nz] or transformation matrix or preset name
-    
+        scaling_matrix: Alias for scaling (for API compatibility)
+
     Returns:
         Supercell structure
     """
+    # Accept either 'scaling' or 'scaling_matrix' parameter
+    if scaling_matrix is not None and scaling is None:
+        scaling = scaling_matrix
+
+    if scaling is None:
+        return {
+            "success": False,
+            "error": {"code": "MISSING_SCALING", "message": "Must provide 'scaling' or 'scaling_matrix'"}
+        }
+
     # Handle preset names
     if isinstance(scaling, str):
         if scaling not in COMMON_SUPERCELLS:

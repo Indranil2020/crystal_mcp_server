@@ -154,24 +154,34 @@ def calculate_bandgap_qd(material: str, diameter_nm: float) -> float:
 
 def generate_quantum_dot(
     material: str = "CdSe",
-    diameter_nm: float = 4.0,
+    diameter_nm: float = None,
     shape: str = "sphere",
     ligand: Optional[str] = "oleic_acid",
-    faceted: bool = False
+    faceted: bool = False,
+    **kwargs  # Accept diameter, spherical shape alias
 ) -> Dict[str, Any]:
     """
     Generate quantum dot structure.
-    
+
     Args:
         material: Material from database
         diameter_nm: Dot diameter in nm
         shape: 'sphere', 'cube', 'rod', 'tetrapod', 'platelet'
         ligand: Ligand for surface passivation
         faceted: Use faceted structure
-    
+        **kwargs: Accept 'diameter' as alias for diameter_nm
+
     Returns:
         Quantum dot structure
     """
+    # Handle diameter alias
+    if diameter_nm is None:
+        diameter_nm = kwargs.get('diameter', 4.0)
+
+    # Handle shape aliases
+    shape_map = {'spherical': 'sphere', 'cubic': 'cube'}
+    shape = shape_map.get(shape.lower(), shape.lower())
+
     if material not in QUANTUM_DOT_DATABASE:
         return {
             "success": False,

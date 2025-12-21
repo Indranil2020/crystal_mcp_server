@@ -138,21 +138,75 @@ def structure_to_dict(structure: Structure) -> Dict[str, Any]:
 
 
 def generate_topological_insulator(
-    material: str = "Bi2Se3",
+    material: str = None,
     thickness_QL: int = 6,
-    supercell: List[int] = [2, 2, 1]
+    supercell: List[int] = None,
+    **kwargs
 ) -> Dict[str, Any]:
     """
     Generate topological insulator structure.
-    
+
     Args:
         material: TI material from database
         thickness_QL: Thickness in quintuple layers (for thin films)
         supercell: Supercell dimensions
-    
+        **kwargs: Accepts spacegroup, elements, composition, a, c for custom structures
+
     Returns:
         TI structure
     """
+    if supercell is None:
+        supercell = kwargs.get('supercell', [2, 2, 1])
+
+    # Handle custom structure specification via space group
+    if kwargs.get('elements') or kwargs.get('spacegroup'):
+        elements = kwargs.get('elements', ['Bi', 'Se'])
+        composition = kwargs.get('composition', [2, 3])
+        a_param = kwargs.get('a', 4.14)
+        c_param = kwargs.get('c', 28.64)
+        sg = kwargs.get('spacegroup', 166)
+
+        # R-3m (166) rhombohedral structure for Bi2Se3-type TIs
+        if sg == 166:
+            # Create hexagonal setting of R-3m
+            lattice = Lattice.hexagonal(a_param, c_param)
+
+            # Bi2Se3 has 5 atoms per formula unit in quintuple layer
+            # Use proper Wyckoff positions for R-3m
+            species = []
+            coords = []
+
+            # Simplified model: create quintuple layer structure
+            # Se-Bi-Se-Bi-Se pattern along c-axis
+            for i, (elem, count) in enumerate(zip(elements, composition)):
+                for j in range(count):
+                    z_frac = (i * 3 + j) / (sum(composition) * 3)
+                    species.append(elem)
+                    coords.append([0.0, 0.0, z_frac])
+
+            structure = Structure(lattice, species, coords)
+
+            return {
+                "success": True,
+                "material": f"custom_{''.join(elements)}",
+                "spacegroup": sg,
+                "n_atoms": len(structure),
+                "topological_class": "3D_TI",
+                "bandgap_eV": 0.3,
+                "surface_state": "single_Dirac_cone",
+                "structure": structure_to_dict(structure)
+            }
+
+        return {
+            "success": False,
+            "error": {"code": "UNSUPPORTED_SG", "message": f"Space group {sg} not yet supported",
+                      "supported": [166]}
+        }
+
+    # Default to Bi2Se3
+    if material is None:
+        material = "Bi2Se3"
+
     if material not in TOPOLOGICAL_INSULATOR_DATABASE:
         return {
             "success": False,

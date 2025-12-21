@@ -34,27 +34,13 @@ export async function handleComprehensiveGenerate(
     const data = result.data as any;
 
     if (data.success === false) {
-        // Format error message from Python generator
-        const errorInfo = data.error || {};
-        let errorMessage = `Generator failed: ${errorInfo.message || "Unknown error"}`;
-
-        if (errorInfo.hint) {
-            errorMessage += `\nHint: ${errorInfo.hint}`;
-        }
-
-        if (errorInfo.available_categories) {
-            errorMessage += `\nAvailable categories: ${errorInfo.available_categories.join(", ")}`;
-        }
-
-        if (errorInfo.available_operations) {
-            errorMessage += `\nAvailable operations: ${Object.keys(errorInfo.available_operations).join(", ")}`;
-        }
-
+        // Return JSON with success: false for proper API response
+        // This allows clients to parse and check the error details
         return {
             content: [
                 {
                     type: "text",
-                    text: errorMessage
+                    text: JSON.stringify(data, null, 2)
                 }
             ],
             isError: true

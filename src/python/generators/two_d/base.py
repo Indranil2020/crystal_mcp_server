@@ -66,6 +66,15 @@ def structure_to_dict(structure: Structure, vacuum: float = 15.0) -> Dict[str, A
     z_coords = [site.frac_coords[2] * lattice.c for site in structure]
     thickness = max(z_coords) - min(z_coords) if z_coords else 0.0
     
+    atoms_list = [
+        {
+            "element": str(site.specie),
+            "coords": list(site.frac_coords),
+            "cartesian": list(site.coords)
+        }
+        for site in structure
+    ]
+    
     return {
         "lattice": {
             "a": lattice.a,
@@ -77,14 +86,8 @@ def structure_to_dict(structure: Structure, vacuum: float = 15.0) -> Dict[str, A
             "matrix": lattice.matrix.tolist(),
             "volume": lattice.volume
         },
-        "atoms": [
-            {
-                "element": str(site.specie),
-                "coords": list(site.frac_coords),
-                "cartesian": list(site.coords)
-            }
-            for site in structure
-        ],
+        "atoms": atoms_list,
+        "sites": atoms_list,  # Added for test compatibility
         "vacuum": vacuum,
         "thickness": thickness,
         "metadata": {
@@ -124,16 +127,19 @@ def atoms_to_dict(atoms: Atoms, vacuum: float = 15.0) -> Dict[str, Any]:
     z_pos = positions[:, 2]
     thickness = max(z_pos) - min(z_pos) if len(z_pos) > 0 else 0.0
     
+    atoms_list = [
+        {"element": sym, "coords": list(frac_coords[i]), "cartesian": list(positions[i])}
+        for i, sym in enumerate(symbols)
+    ]
+    
     return {
         "lattice": {
             "a": float(a), "b": float(b), "c": float(c),
             "alpha": float(alpha), "beta": float(beta), "gamma": float(gamma),
             "matrix": cell.tolist(), "volume": float(volume)
         },
-        "atoms": [
-            {"element": sym, "coords": list(frac_coords[i]), "cartesian": list(positions[i])}
-            for i, sym in enumerate(symbols)
-        ],
+        "atoms": atoms_list,
+        "sites": atoms_list,  # Added for test compatibility
         "vacuum": vacuum,
         "thickness": thickness,
         "metadata": {"formula": atoms.get_chemical_formula(), "n_atoms": len(atoms), "is_2d": True}

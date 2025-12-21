@@ -149,7 +149,7 @@ def generate_vacancy(
         "vacancy_position": removed_position,
         "n_vacancies": n_vacancies,
         "n_atoms": len(atoms),
-        "structure": {"atoms": atoms, "lattice": lattice_info}
+        "structure": {"atoms": atoms, "sites": atoms, "lattice": lattice_info}
     }
 
 
@@ -231,7 +231,7 @@ def generate_interstitial(
         "interstitial_species": interstitial_species,
         "position": int_pos,
         "n_atoms": len(atoms),
-        "structure": {"atoms": atoms, "lattice": lattice_info}
+        "structure": {"atoms": atoms, "sites": atoms, "lattice": lattice_info}
     }
 
 
@@ -348,10 +348,73 @@ def generate_f_center(
         Structure with F-center
     """
     result = generate_vacancy(host_structure, anion_site, "single")
-    
+
     if result["success"]:
         result["defect_type"] = "F_center"
         result["trapped_electron"] = True
         result["optical_active"] = True
-    
+
     return result
+
+
+def create_defect(
+    structure: Union[Structure, Dict],
+    defect_type: str,
+    site_index: int = 0,
+    dopant: str = None,
+    interstitial_species: str = None,
+    interstitial_type: str = "tetrahedral"
+) -> Dict[str, Any]:
+    """
+    Create a defect in a structure (general wrapper).
+
+    Args:
+        structure: Host structure (pymatgen Structure or dict)
+        defect_type: Type of defect ('vacancy', 'interstitial', 'substitution', 'antisite')
+        site_index: Site index for vacancy/substitution
+        dopant: Dopant element for substitution
+        interstitial_species: Element for interstitial
+        interstitial_type: Type of interstitial site
+
+    Returns:
+        Structure with defect
+    """
+    # Convert to dict format if pymatgen Structure
+    if isinstance(structure, Structure):
+        host = {
+            "lattice": {
+                "a": structure.lattice.a, "b": structure.lattice.b, "c": structure.lattice.c,
+                "matrix": structure.lattice.matrix.tolist()
+            },
+            "atoms": [{"element": str(s.specie), "coords": list(s.frac_coords)} for s in structure]
+        }
+    else:
+        host = structure
+
+    defect_type_lower = defect_type.lower()
+
+    if defect_type_lower == "vacancy":
+        return generate_vacancy(host, site_index, "single")
+    elif defect_type_lower == "interstitial":
+        species = interstitial_species or "Li"
+        return generate_interstitial(host, species, interstitial_type)
+    elif defect_type_lower == "substitution":
+        if not dopant:
+            return {"success": False, "error": {"code": "MISSING_DOPANT",
+                    "message": "Must provide 'dopant' for substitution"}}
+        return generate_substitution(host, site_index, dopant)
+    elif defect_type_lower == "antisite":
+        # Need second site for antisite
+        site2 = (site_index + 1) % len(host.get("atoms", []))
+        return generate_antisite(host, site_index, site2)
+    elif defect_type_lower == "f_center":
+        return generate_f_center(host, site_index)
+    else:
+        return {
+            "success": False,
+            "error": {
+                "code": "INVALID_DEFECT_TYPE",
+                "message": f"Unknown defect type: {defect_type}",
+                "available": ["vacancy", "interstitial", "substitution", "antisite", "f_center"]
+            }
+        }

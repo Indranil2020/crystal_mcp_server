@@ -94,15 +94,16 @@ def structure_to_dict(structure: Structure) -> Dict[str, Any]:
 
 def generate_nanowire(
     material: str = "Si",
-    diameter_nm: float = 3.0,
-    length_nm: float = 10.0,
-    growth_direction: str = "[111]",
+    diameter_nm: float = None,
+    length_nm: float = None,
+    growth_direction = "[111]",
     cross_section: str = "circular",
-    passivated: bool = True
+    passivated: bool = True,
+    **kwargs  # Accept diameter, length aliases
 ) -> Dict[str, Any]:
     """
     Generate semiconductor/metal nanowire.
-    
+
     Args:
         material: Material from database
         diameter_nm: Wire diameter in nm
@@ -110,10 +111,28 @@ def generate_nanowire(
         growth_direction: Crystallographic growth direction
         cross_section: 'circular', 'hexagonal', 'square'
         passivated: Add surface passivation
-    
+        **kwargs: Accept diameter, length aliases
+
     Returns:
         Nanowire structure
     """
+    # Handle parameter aliases
+    if diameter_nm is None:
+        diameter_nm = kwargs.get('diameter', 3.0)
+        # If diameter is in angstrom units (> 20), convert to nm
+        if diameter_nm > 20:
+            diameter_nm = diameter_nm / 10
+
+    if length_nm is None:
+        length_nm = kwargs.get('length', 10.0)
+        # If length is in angstrom units (> 20), convert to nm
+        if length_nm > 20:
+            length_nm = length_nm / 10
+
+    # Handle growth_direction as list [1,1,1] -> "[111]"
+    if isinstance(growth_direction, (list, tuple)):
+        growth_direction = "[" + "".join(str(int(x)) for x in growth_direction) + "]"
+
     if material not in NANOWIRE_DATABASE:
         return {
             "success": False,

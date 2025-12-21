@@ -6,3 +6,7 @@ node_modules
 .claude.log
 .gitignore
 .gitignore.md
+*.pyc
+*_pycache_
+_pycache_
+.pyc

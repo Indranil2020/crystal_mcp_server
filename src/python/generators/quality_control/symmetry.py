@@ -6,10 +6,15 @@ Comprehensive symmetry analysis per structure_catalogue.md Category 16:
 (ii) Tolerance sweep for near-symmetric structures
 """
 
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Optional, Tuple, Union
 import numpy as np
 from pymatgen.core import Structure, Lattice
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
+try:
+    from pyxtal.symmetry import Group
+    PYXTAL_AVAILABLE = True
+except ImportError:
+    PYXTAL_AVAILABLE = False
 
 
 # Crystal system database
@@ -66,7 +71,7 @@ WYCKOFF_POSITIONS = {
 
 
 def analyze_symmetry(
-    structure: Structure,
+    structure: Union[Structure, Dict[str, Any]],
     symprec: float = 0.01,
     angle_tolerance: float = 5.0
 ) -> Dict[str, Any]:
@@ -74,13 +79,72 @@ def analyze_symmetry(
     Analyze crystal symmetry.
     
     Args:
-        structure: Input structure
+        structure: Input structure (pymatgen Structure or dict)
         symprec: Symmetry precision in Angstrom
         angle_tolerance: Angle tolerance in degrees
     
     Returns:
         Symmetry analysis results
     """
+    if isinstance(structure, dict):
+        # Validate dict structure structure
+        lattice_data = structure.get("lattice")
+        if not lattice_data:
+             return {"success": False, "error": {"code": "INVALID_STRUCTURE", "message": "Missing lattice data"}}
+        
+        atoms_data = structure.get("atoms")
+        if not atoms_data:
+            atoms_data = structure.get("sites")
+        
+        if not atoms_data:
+             return {"success": False, "error": {"code": "INVALID_STRUCTURE", "message": "Missing atoms/sites data"}}
+
+        # Reconstruct structure from dict with explicit checks
+        # Handle matrix format
+        if "matrix" in lattice_data:
+            matrix = lattice_data["matrix"]
+            if not isinstance(matrix, list) or len(matrix) != 3:
+                 return {"success": False, "error": {"code": "INVALID_LATTICE", "message": "Invalid lattice matrix format"}}
+            lattice = Lattice(matrix)
+        else:
+             # Fallback to parameters
+             a = lattice_data.get("a", 0)
+             b = lattice_data.get("b", 0)
+             c = lattice_data.get("c", 0)
+             if a <= 0 or b <= 0 or c <= 0:
+                  return {"success": False, "error": {"code": "INVALID_LATTICE", "message": "Invalid lattice parameters"}}
+             
+             lattice = Lattice.from_parameters(
+                 a, 
+                 b if b else a, 
+                 c if c else a,
+                 lattice_data.get("alpha", 90), 
+                 lattice_data.get("beta", 90), 
+                 lattice_data.get("gamma", 90)
+             )
+        
+        species = []
+        coords = []
+        for i, atom in enumerate(atoms_data):
+            # Element validation
+            elem = None
+            if atom.get("species") and isinstance(atom["species"], list) and len(atom["species"]) > 0:
+                elem = atom["species"][0].get("element")
+            if not elem:
+                elem = atom.get("element")
+            
+            if not elem:
+                 return {"success": False, "error": {"code": "INVALID_ATOM", "message": f"Missing element at index {i}"}}
+            
+            # Coord validation
+            coord = atom.get("coords")
+            if not coord or not isinstance(coord, list) or len(coord) != 3:
+                 return {"success": False, "error": {"code": "INVALID_ATOM", "message": f"Invalid coords at index {i}"}}
+                 
+            species.append(elem)
+            coords.append(coord)
+            
+        structure = Structure(lattice, species, coords)
     analyzer = SpacegroupAnalyzer(structure, symprec=symprec, angle_tolerance=angle_tolerance)
     
     spacegroup = analyzer.get_space_group_symbol()
@@ -335,8 +399,243 @@ def check_tolerance(structure: Structure, tolerance: float = 0.01) -> bool:
     """
     Check if structure maintains symmetry at given tolerance.
     """
-    try:
-        analyzer = SpacegroupAnalyzer(structure, symprec=tolerance)
-        return True
-    except:
+    if not isinstance(structure, Structure):
         return False
+    # Explicit validation instead of try-except
+    if not structure.is_valid():
+        return False
+        
+    analyzer = SpacegroupAnalyzer(structure, symprec=tolerance)
+    return True
+
+
+def validate_structure(structure: Union[Structure, Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Validate a crystal structure for physical reasonableness.
+
+    Checks:
+    1. Valid lattice parameters (positive, non-zero volume)
+    2. Valid elements
+    3. Minimum interatomic distances (no overlapping atoms)
+    4. Composition validity
+
+    Args:
+        structure: Structure (pymatgen Structure or dictionary)
+
+    Returns:
+        Validation result dictionary
+    """
+    # Handle pymatgen Structure objects directly
+    if isinstance(structure, Structure):
+        # Already a valid structure - just validate distances
+        for i in range(len(structure)):
+            neighbors = structure.get_neighbors(structure[i], 0.5)
+            if neighbors:
+                dist = neighbors[0].nn_distance
+                return {
+                    "success": True,
+                    "valid": False,
+                    "error": f"Atoms too close: site {i} ({structure[i].specie}) has neighbor at {dist:.3f} A"
+                }
+
+        return {
+            "success": True,
+            "valid": True,
+            "formula": structure.formula,
+            "density": structure.density,
+            "volume": structure.volume,
+            "n_atoms": len(structure)
+        }
+
+    # Check lattice
+    lattice = structure.get("lattice", {})
+    if not lattice:
+        return {"success": True, "valid": False, "error": "Missing lattice information"}
+        
+    a = lattice.get("a", 0)
+    b = lattice.get("b", 0)
+    c = lattice.get("c", 0)
+    
+    # Check matrix if a,b,c are missing or zero (fallback)
+    if "matrix" in lattice and (a==0 or b==0 or c==0):
+         mat = np.array(lattice["matrix"])
+         # Check matrix shape
+         if mat.shape == (3,3):
+             a = np.linalg.norm(mat[0])
+             b = np.linalg.norm(mat[1])
+             c = np.linalg.norm(mat[2])
+
+    volume = lattice.get("volume", 0)
+    if volume == 0 and "matrix" in lattice:
+         mat = np.array(lattice["matrix"])
+         if mat.shape == (3,3):
+             volume = float(abs(np.linalg.det(mat)))
+    
+    if a <= 0 or b <= 0 or c <= 0:
+        return {"success": True, "valid": False, "error": f"Invalid lattice parameters: a={a}, b={b}, c={c}"}
+    if volume <= 0:
+         return {"success": True, "valid": False, "error": f"Invalid volume: {volume}"}
+        
+    # Check atoms
+    atoms = structure.get("atoms", [])
+    if not atoms:
+         # Try sites key if atoms missing (support both formats)
+        atoms = structure.get("sites", [])
+        
+    if not atoms:
+        return {"success": True, "valid": False, "error": "Structure contains no atoms"}
+        
+    # Check elements
+    from pymatgen.core.periodic_table import Element
+    valid_symbols = {e.symbol for e in Element}
+    
+    positions = []
+    species_list = []
+    
+    for i, atom in enumerate(atoms):
+        elem = atom.get("element", "")
+        # Handle species list format
+        if not elem and atom.get("species"):
+            elem = atom["species"][0].get("element")
+        
+        if not elem or elem not in valid_symbols:
+            return {"success": True, "valid": False, "error": f"Invalid element at site {i}: {elem}"}
+        
+        # Validate coordinates
+        coords = atom.get("coords")
+        if not coords or len(coords) != 3:
+             return {"success": True, "valid": False, "error": f"Invalid coordinates at site {i}"}
+             
+        species_list.append(elem)
+        positions.append(coords)
+
+    # Check atomic overlaps
+    # We reconstruct pymatgen structure to use its neighbor finding which handles PBC efficiently
+    
+    if "matrix" in lattice:
+        mat = lattice["matrix"]
+        # Validate matrix type and shape
+        if isinstance(mat, list) and len(mat) == 3 and all(len(row) == 3 for row in mat):
+            lat = Lattice(mat)
+        else:
+             return {"success": True, "valid": False, "error": "Invalid lattice matrix format"}
+    else:
+        lat = Lattice.from_parameters(a, b, c, 
+                                    lattice.get("alpha", 90), 
+                                    lattice.get("beta", 90), 
+                                    lattice.get("gamma", 90))
+    
+    # Ensure parallel behavior for robust checking
+    # Create structure without try-except - if Lattice is valid, Structure should be
+    pmg_struct = Structure(lat, species_list, positions)
+    
+    # Check for overlaps (< 0.5 Angstrom)
+    for i in range(len(pmg_struct)):
+        neighbors = pmg_struct.get_neighbors(pmg_struct[i], 0.5)
+        if neighbors:
+                dist = neighbors[0].nn_distance
+                return {
+                "success": True, 
+                "valid": False, 
+                "error": f"Atoms too close: site {i} ({pmg_struct[i].specie}) has neighbor at {dist:.3f} A"
+            }
+
+    return {
+        "success": True,
+        "valid": True,
+        "formula": pmg_struct.formula,
+        "density": pmg_struct.density,
+        "volume": pmg_struct.volume,
+        "n_atoms": len(pmg_struct)
+    }
+
+
+def get_subgroups(space_group: int, strict: bool = False) -> Dict[str, Any]:
+    """
+    Get maximal subgroups of a space group.
+    """
+    if not PYXTAL_AVAILABLE:
+        return {"success": False, "error": {"code": "PYXTAL_MISSING", "message": "PyXtal required for subgroup analysis"}}
+
+    if not 1 <= space_group <= 230:
+         return {
+            "success": False,
+            "error": {"code": "INVALID_SPACE_GROUP", "message": f"Space group must be 1-230, got {space_group}"}
+        }
+    
+    g = Group(space_group)
+    subgroup_numbers = g.get_max_subgroup_numbers()
+    
+    unique_subgroups = sorted(list(set(subgroup_numbers)))
+    subgroups_data = []
+    
+    for num in unique_subgroups:
+        sub_g = Group(num)
+        subgroups_data.append({
+            "number": int(num),
+            "symbol": sub_g.symbol,
+            "crystal_system": sub_g.lattice_type,
+            "point_group": sub_g.point_group
+        })
+        
+    return {
+        "success": True,
+        "space_group": {
+            "number": space_group,
+            "symbol": g.symbol,
+            "hall_number": g.hall_number
+        },
+        "subgroups": subgroups_data,
+        "raw_numbers": subgroup_numbers
+    }
+
+
+def get_symmetry_path(start_spg: int, end_spg: int, max_depth: int = 5) -> Dict[str, Any]:
+    """
+    Find a path from supergroup to subgroup.
+    """
+    if not PYXTAL_AVAILABLE:
+        return {"success": False, "error": {"code": "PYXTAL_MISSING", "message": "PyXtal required for symmetry path"}}
+
+    if start_spg == end_spg:
+         return {"success": True, "path": [start_spg]}
+         
+    queue = [(start_spg, [start_spg])]
+    visited = {start_spg}
+    
+    while queue:
+        current, path = queue.pop(0)
+        
+        if len(path) > max_depth:
+            continue
+            
+        if current == end_spg:
+             formatted_path = []
+             for spg_num in path:
+                 g = Group(spg_num)
+                 formatted_path.append({
+                     "number": spg_num,
+                     "symbol": g.symbol
+                 })
+             return {
+                 "success": True, 
+                 "path": formatted_path,
+                 "length": len(path) - 1
+             }
+        
+        g = Group(current)
+        subs = g.get_max_subgroup_numbers()
+        for sub in subs:
+            if sub not in visited:
+                visited.add(sub)
+                new_path = list(path)
+                new_path.append(sub)
+                queue.append((sub, new_path))
+            
+    return {
+        "success": False, 
+        "error": {
+            "code": "PATH_NOT_FOUND", 
+            "message": f"No subgroup path found from {start_spg} to {end_spg} within depth {max_depth}"
+        }
+    }
