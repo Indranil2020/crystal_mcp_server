@@ -43,7 +43,10 @@ class TestRunner:
         self.test_files = {
             "comprehensive": "tests/testsuit/test_mcp_comprehensive.py",
             "operations": "tests/testsuit/test_operation_matrix.py",
-            "e2e": "tests/testsuit/test_mcp_e2e.py"
+            "e2e": "tests/testsuit/test_mcp_e2e.py",
+            "all_operations": "tests/testsuit/test_all_operations.py",
+            "new_modules": "tests/testsuit/test_new_modules.py",
+            "scientific": "tests/testsuit/test_scientific_accuracy.py"
         }
         
         self.profiles = {
@@ -74,24 +77,47 @@ class TestRunner:
                     "tests/testsuit/test_mcp_comprehensive.py",
                     "tests/testsuit/test_operation_matrix.py",
                     "tests/testsuit/test_mcp_e2e.py",
+                    "tests/testsuit/test_new_modules.py",
                     "-v", "--tb=short",
                     "--cov", "--cov-report=html", "--cov-report=term"
                 ],
-                "estimate": "~10-15 minutes"
+                "estimate": "~15-20 minutes"
             },
             "publish": {
                 "name": "Pre-Publish Validation",
-                "description": "Complete validation before publishing",
+                "description": "Complete validation before publishing - ALL operations",
                 "args": [
                     "tests/testsuit/test_mcp_comprehensive.py",
                     "tests/testsuit/test_operation_matrix.py",
                     "tests/testsuit/test_mcp_e2e.py",
+                    "tests/testsuit/test_all_operations.py",
+                    "tests/testsuit/test_new_modules.py",
+                    "tests/testsuit/test_scientific_accuracy.py",
                     "-v", "--tb=short",
                     "--cov", "--cov-report=html", "--cov-report=term",
                     "--junitxml=test-results.xml",
                     "--durations=20"
                 ],
-                "estimate": "~15-20 minutes"
+                "estimate": "~25-30 minutes"
+            },
+            "new-modules": {
+                "name": "New Modules Only (December 2024)",
+                "description": "Test only the newly added modules",
+                "args": [
+                    "tests/testsuit/test_new_modules.py",
+                    "-v", "--tb=short"
+                ],
+                "estimate": "~5-10 minutes"
+            },
+            "scientific": {
+                "name": "Scientific Accuracy Tests",
+                "description": "Validate structures against reference data",
+                "args": [
+                    "tests/testsuit/test_scientific_accuracy.py",
+                    "tests/testsuit/test_new_modules.py::TestScientificAccuracy",
+                    "-v", "--tb=short"
+                ],
+                "estimate": "~5 minutes"
             },
             "ci": {
                 "name": "CI/CD (Parallel)",

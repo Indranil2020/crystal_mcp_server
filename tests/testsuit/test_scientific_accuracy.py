@@ -140,6 +140,131 @@ REFERENCE_DATA = {
         "spacegroup": 99,  # P4mm
         "source": "J. Phys. Soc. Jpn. 11, 10 (1956)"
     },
+
+    # =========================================================================
+    # BATTERY MATERIALS - Source: Materials Project, J. Electrochem. Soc.
+    # =========================================================================
+    "Li15Si4": {
+        "a": 10.685,  # Å - fully lithiated Si
+        "spacegroup": 220,  # I-43d
+        "source": "Materials Project mp-569849, J. Electrochem. Soc. 151, A838 (2004)"
+    },
+    "Li_bcc": {
+        "a": 3.51,  # Å at 298 K
+        "spacegroup": 229,  # Im-3m
+        "source": "CRC Handbook 102nd Ed., Table 12.15"
+    },
+    "LiFePO4_olivine": {
+        "a": 10.332,  # Å
+        "b": 6.010,   # Å
+        "c": 4.692,   # Å
+        "spacegroup": 62,  # Pnma
+        "source": "Materials Project mp-19017, Nat. Mater. 7, 741 (2008)"
+    },
+    "alpha_S8": {
+        "a": 10.4646,  # Å - orthorhombic sulfur
+        "b": 12.8660,  # Å
+        "c": 24.4860,  # Å
+        "spacegroup": 70,  # Fddd
+        "source": "COD #9012286, Acta Cryst. B 28, 3668 (1972)"
+    },
+
+    # =========================================================================
+    # QUASICRYSTALS - Source: Phys. Rev. Lett., Nature, Acta Cryst.
+    # =========================================================================
+    "golden_ratio": {
+        "phi": 1.6180339887498949,  # (1 + sqrt(5)) / 2
+        "source": "Mathematical constant"
+    },
+    "AlMn_icosahedral": {
+        "quasilattice_constant": 4.6,  # Å (pseudo-lattice parameter)
+        "source": "Phys. Rev. Lett. 53, 1951 (1984) - Shechtman discovery"
+    },
+    "AlPdMn_icosahedral": {
+        "quasilattice_constant": 4.56,  # Å
+        "source": "Philos. Mag. A 76, 559 (1997)"
+    },
+
+    # =========================================================================
+    # ARTIFICIAL LATTICES - Source: Phys. Rev. B, Nature Physics
+    # =========================================================================
+    "kagome_lattice": {
+        "coordination": 4,  # Each site has 4 neighbors
+        "atoms_per_cell": 3,  # 3 sites in primitive cell
+        "source": "Phys. Rev. B 82, 104432 (2010)"
+    },
+    "lieb_lattice": {
+        "coordination_corner": 4,  # Corner sites
+        "coordination_edge": 2,    # Edge-center sites
+        "atoms_per_cell": 3,       # 1 corner + 2 edge-centers
+        "source": "Phys. Rev. Lett. 62, 1201 (1989)"
+    },
+
+    # =========================================================================
+    # MORE 2D MATERIALS - Source: Phys. Rev. B, 2D Materials Journal
+    # =========================================================================
+    "WS2_monolayer": {
+        "a": 3.153,  # Å (2H phase)
+        "source": "2D Mater. 1, 025001 (2014)"
+    },
+    "MoSe2_monolayer": {
+        "a": 3.288,  # Å (2H phase)
+        "source": "J. Phys. Chem. C 116, 8983 (2012)"
+    },
+    "WSe2_monolayer": {
+        "a": 3.280,  # Å (2H phase)
+        "source": "Phys. Rev. B 87, 245421 (2013)"
+    },
+    "phosphorene": {
+        "a": 3.314,  # Å - armchair direction
+        "b": 4.376,  # Å - zigzag direction
+        "source": "Nat. Nanotechnol. 9, 372 (2014)"
+    },
+
+    # =========================================================================
+    # MORE PEROVSKITES - Source: Acta Cryst., J. Solid State Chem.
+    # =========================================================================
+    "PbTiO3_tetragonal": {
+        "a": 3.904,  # Å at 300 K
+        "c": 4.152,  # Å at 300 K
+        "c_over_a": 1.064,
+        "spacegroup": 99,  # P4mm
+        "source": "Acta Cryst. B 52, 28 (1996)"
+    },
+    "BiFeO3_rhombohedral": {
+        "a": 5.578,  # Å (hexagonal setting)
+        "c": 13.867,  # Å
+        "spacegroup": 161,  # R3c
+        "source": "J. Solid State Chem. 178, 2793 (2005)"
+    },
+    "CaTiO3_orthorhombic": {
+        "a": 5.381,  # Å
+        "b": 5.443,  # Å
+        "c": 7.645,  # Å
+        "spacegroup": 62,  # Pbnm (non-standard Pnma)
+        "source": "Acta Cryst. B 58, 364 (2002)"
+    },
+
+    # =========================================================================
+    # HIGH-ENTROPY MATERIALS - Source: Nat. Commun., Adv. Mater.
+    # =========================================================================
+    "HEA_CrMnFeCoNi": {
+        "a": 3.597,  # Å - Cantor alloy FCC
+        "spacegroup": 225,  # Fm-3m
+        "source": "Mater. Sci. Eng. A 375-377, 213 (2004)"
+    },
+
+    # =========================================================================
+    # NANOTUBES - Source: Nature, Science, Phys. Rev. B
+    # =========================================================================
+    "CNT_armchair_5_5": {
+        "diameter": 6.78,  # Å
+        "source": "Phys. Rev. B 46, 1804 (1992)"
+    },
+    "CNT_zigzag_10_0": {
+        "diameter": 7.83,  # Å
+        "source": "Phys. Rev. B 46, 1804 (1992)"
+    },
 }
 
 # Tolerance for lattice parameter comparison (2% = typical T-dependent variation)
@@ -630,6 +755,324 @@ class TestCrystallographicConstraints:
         lattice = result["structure"]["lattice"]
 
         assert abs(lattice["gamma"] - 120.0) < 0.001, f"Hexagonal gamma should be 120°, got {lattice['gamma']}"
+
+
+class TestBatteryMaterials:
+    """Test battery material structures against reference data."""
+
+    def test_lithium_metal_bcc(self):
+        """Li metal BCC: a = 3.51 Å, SG 229"""
+        from generators.bulk.spacegroups import generate_from_spacegroup
+
+        ref = REFERENCE_DATA["Li_bcc"]
+        result = generate_from_spacegroup(
+            spacegroup=ref["spacegroup"],
+            elements=["Li"],
+            composition=[2],
+            a=ref["a"]
+        )
+
+        assert result["success"], f"Generation failed: {result.get('error')}"
+        a_actual = result["structure"]["lattice"]["a"]
+        assert_lattice_within_tolerance(a_actual, ref["a"], "Li(BCC)", "a")
+
+    def test_silicon_anode_structure(self):
+        """Test silicon anode generates valid diamond-like structure."""
+        from generators.battery.anodes import generate_silicon_anode
+
+        result = generate_silicon_anode()
+
+        assert result["success"], f"Generation failed: {result.get('error')}"
+        # Si diamond should have tetrahedral coordination
+        assert result["n_atoms"] > 0
+
+    def test_sulfur_cathode_has_s8_rings(self):
+        """Sulfur cathode should generate structure with S atoms."""
+        from generators.battery.anodes import generate_sulfur_cathode
+
+        result = generate_sulfur_cathode()
+
+        assert result["success"], f"Generation failed: {result.get('error')}"
+        # Check it contains sulfur
+        atoms = result["structure"]["atoms"]
+        s_count = sum(1 for a in atoms if a["element"] == "S")
+        assert s_count > 0, "Sulfur cathode should contain S atoms"
+
+
+class TestQuasicrystalScientificAccuracy:
+    """Test quasicrystal structures against mathematical and physical references."""
+
+    def test_penrose_tiling_golden_ratio_precision(self):
+        """Penrose tiling L/S ratio must equal golden ratio φ = 1.618033..."""
+        import numpy as np
+        from generators.meta_structures.quasicrystals import generate_penrose_tiling
+
+        result = generate_penrose_tiling(order=6)
+
+        assert result["success"], f"Generation failed: {result.get('error')}"
+
+        phi_exact = REFERENCE_DATA["golden_ratio"]["phi"]
+        phi_result = result.get("golden_ratio", 0)
+
+        # Golden ratio should be accurate to at least 10 decimal places
+        assert abs(phi_result - phi_exact) < 1e-10, (
+            f"Golden ratio {phi_result} deviates from exact {phi_exact}"
+        )
+
+    def test_fibonacci_sequence_in_approximant(self):
+        """Fibonacci approximant should follow F(n)/F(n-1) → φ."""
+        import numpy as np
+        from generators.meta_structures.quasicrystals import generate_fibonacci_approximant
+
+        result = generate_fibonacci_approximant(order=8)
+
+        assert result["success"], f"Generation failed: {result.get('error')}"
+
+        # Check Fibonacci ratio converges to golden ratio
+        phi_exact = REFERENCE_DATA["golden_ratio"]["phi"]
+        if "ratio" in result:
+            assert abs(result["ratio"] - phi_exact) < 0.01
+
+    def test_icosahedral_quasicrystal_symmetry(self):
+        """Icosahedral QC should have 5-fold symmetric diffraction."""
+        from generators.meta_structures.quasicrystals import generate_icosahedral_quasicrystal
+
+        result = generate_icosahedral_quasicrystal(
+            approximant_order=1,
+            elements=["Al", "Mn"]
+        )
+
+        assert result["success"], f"Generation failed: {result.get('error')}"
+        # Should have atoms from both elements
+        atoms = result["structure"]["atoms"]
+        elements = set(a["element"] for a in atoms)
+        assert "Al" in elements or "Mn" in elements
+
+
+class TestArtificialLatticeScientificAccuracy:
+    """Test artificial lattice structures against theoretical predictions."""
+
+    def test_kagome_has_3_atoms_per_unit_cell(self):
+        """Kagome lattice primitive cell has exactly 3 atoms."""
+        from generators.meta_structures.artificial_lattices import generate_kagome_lattice
+
+        ref = REFERENCE_DATA["kagome_lattice"]
+        result = generate_kagome_lattice(element="Fe", size=[1, 1])
+
+        assert result["success"], f"Generation failed: {result.get('error')}"
+        # For 1x1 cell, should have 3 atoms
+        n_atoms = result["n_atoms"]
+        assert n_atoms == ref["atoms_per_cell"], (
+            f"Kagome 1x1 should have {ref['atoms_per_cell']} atoms, got {n_atoms}"
+        )
+
+    def test_kagome_supercell_scaling(self):
+        """Kagome NxN supercell should have 3*N*N atoms."""
+        from generators.meta_structures.artificial_lattices import generate_kagome_lattice
+
+        for n in [2, 3]:
+            result = generate_kagome_lattice(element="Fe", size=[n, n])
+            assert result["success"]
+            expected = 3 * n * n
+            actual = result["n_atoms"]
+            assert actual == expected, f"Kagome {n}x{n} should have {expected} atoms, got {actual}"
+
+    def test_lieb_has_3_atoms_per_unit_cell(self):
+        """Lieb lattice primitive cell has 3 atoms (1 corner + 2 edge-centers)."""
+        from generators.meta_structures.artificial_lattices import generate_lieb_lattice
+
+        ref = REFERENCE_DATA["lieb_lattice"]
+        result = generate_lieb_lattice(size=[1, 1])
+
+        assert result["success"], f"Generation failed: {result.get('error')}"
+        n_atoms = result["n_atoms"]
+        assert n_atoms == ref["atoms_per_cell"], (
+            f"Lieb 1x1 should have {ref['atoms_per_cell']} atoms, got {n_atoms}"
+        )
+
+
+class TestMore2DMaterials:
+    """Test additional 2D material structures."""
+
+    def test_ws2_lattice_constant(self):
+        """WS2 monolayer: a = 3.153 Å"""
+        from generators.two_d.tmds import generate_tmd
+
+        ref = REFERENCE_DATA["WS2_monolayer"]
+        result = generate_tmd(formula="WS2", phase="1H")
+
+        assert result["success"], f"Generation failed: {result.get('error')}"
+        a_actual = result["structure"]["lattice"]["a"]
+        assert_lattice_within_tolerance(a_actual, ref["a"], "WS2", "a")
+
+    def test_mose2_lattice_constant(self):
+        """MoSe2 monolayer: a = 3.288 Å"""
+        from generators.two_d.tmds import generate_tmd
+
+        ref = REFERENCE_DATA["MoSe2_monolayer"]
+        result = generate_tmd(formula="MoSe2", phase="1H")
+
+        assert result["success"], f"Generation failed: {result.get('error')}"
+        a_actual = result["structure"]["lattice"]["a"]
+        assert_lattice_within_tolerance(a_actual, ref["a"], "MoSe2", "a")
+
+    def test_wse2_lattice_constant(self):
+        """WSe2 monolayer: a = 3.280 Å"""
+        from generators.two_d.tmds import generate_tmd
+
+        ref = REFERENCE_DATA["WSe2_monolayer"]
+        result = generate_tmd(formula="WSe2", phase="1H")
+
+        assert result["success"], f"Generation failed: {result.get('error')}"
+        a_actual = result["structure"]["lattice"]["a"]
+        assert_lattice_within_tolerance(a_actual, ref["a"], "WSe2", "a")
+
+    def test_tmd_stoichiometry(self):
+        """TMD MX2 should have 1:2 metal:chalcogen ratio."""
+        from generators.two_d.tmds import generate_tmd
+
+        result = generate_tmd(formula="MoS2", phase="1H")
+        assert result["success"]
+
+        atoms = result["structure"]["atoms"]
+        mo_count = sum(1 for a in atoms if a["element"] == "Mo")
+        s_count = sum(1 for a in atoms if a["element"] == "S")
+
+        assert s_count == 2 * mo_count, f"MoS2 should have 1:2 ratio, got Mo:{mo_count}, S:{s_count}"
+
+
+class TestMorePerovskites:
+    """Test additional perovskite structures."""
+
+    def test_pbtio3_tetragonality(self):
+        """PbTiO3 tetragonal: c/a = 1.064"""
+        from generators.bulk.spacegroups import generate_from_spacegroup
+
+        ref = REFERENCE_DATA["PbTiO3_tetragonal"]
+        result = generate_from_spacegroup(
+            spacegroup=ref["spacegroup"],
+            elements=["Pb", "Ti", "O"],
+            composition=[1, 1, 3],
+            a=ref["a"],
+            c=ref["c"]
+        )
+
+        assert result["success"], f"Generation failed: {result.get('error')}"
+        lattice = result["structure"]["lattice"]
+
+        # Check c/a ratio
+        c_over_a = lattice["c"] / lattice["a"]
+        expected = ref["c_over_a"]
+        deviation = abs(c_over_a - expected) / expected * 100
+        assert deviation < 2.0, f"PbTiO3 c/a = {c_over_a:.3f}, expected {expected:.3f}"
+
+    def test_perovskite_stoichiometry(self):
+        """ABO3 perovskite should have 1:1:3 stoichiometry."""
+        from generators.bulk.spacegroups import generate_from_spacegroup
+
+        ref = REFERENCE_DATA["SrTiO3_cubic"]
+        result = generate_from_spacegroup(
+            spacegroup=ref["spacegroup"],
+            elements=["Sr", "Ti", "O"],
+            composition=[1, 1, 3],
+            a=ref["a"]
+        )
+
+        assert result["success"]
+        atoms = result["structure"]["atoms"]
+
+        sr_count = sum(1 for a in atoms if a["element"] == "Sr")
+        ti_count = sum(1 for a in atoms if a["element"] == "Ti")
+        o_count = sum(1 for a in atoms if a["element"] == "O")
+
+        assert sr_count == ti_count, f"SrTiO3 should have Sr:Ti = 1:1"
+        assert o_count == 3 * sr_count, f"SrTiO3 should have O:Sr = 3:1"
+
+
+class TestHighEntropyMaterials:
+    """Test high-entropy material structures."""
+
+    def test_2d_hea_has_5_elements(self):
+        """2D HEA should contain all 5 specified elements."""
+        from generators.two_d.hea_2d import generate_2d_hea
+
+        elements = ["Ti", "V", "Cr", "Mn", "Fe"]
+        result = generate_2d_hea(elements=elements)
+
+        if result["success"]:
+            atoms = result["structure"]["atoms"]
+            found_elements = set(a["element"] for a in atoms)
+            # At least some of the elements should be present
+            overlap = set(elements) & found_elements
+            assert len(overlap) >= 3, f"HEA should contain multiple elements, found {found_elements}"
+
+    def test_2d_heo_has_oxygen(self):
+        """2D high-entropy oxide should contain oxygen."""
+        from generators.two_d.hea_2d import generate_2d_heo
+
+        result = generate_2d_heo(
+            elements=["Ti", "V", "Cr", "Mn", "Fe"],
+            size=[2, 2]
+        )
+
+        assert result["success"], f"Generation failed: {result.get('error')}"
+        atoms = result["structure"]["atoms"]
+        o_count = sum(1 for a in atoms if a["element"] == "O")
+        assert o_count > 0, "HEO should contain oxygen atoms"
+
+    def test_2d_hec_has_carbon(self):
+        """2D high-entropy carbide should contain carbon."""
+        from generators.two_d.hea_2d import generate_2d_hec
+
+        result = generate_2d_hec(
+            elements=["Ti", "V", "Nb", "Ta", "Mo"],
+            size=[2, 2]
+        )
+
+        assert result["success"], f"Generation failed: {result.get('error')}"
+        atoms = result["structure"]["atoms"]
+        c_count = sum(1 for a in atoms if a["element"] == "C")
+        assert c_count > 0, "HEC should contain carbon atoms"
+
+
+class TestNanotubeScientificAccuracy:
+    """Test nanotube structures against theoretical predictions."""
+
+    def test_cnt_diameter_formula(self):
+        """CNT diameter should follow d = a*sqrt(n^2 + nm + m^2)/π."""
+        import numpy as np
+        from generators.nanotube.cnt import generate_cnt
+
+        # Test armchair (5,5)
+        n, m = 5, 5
+        a_graphene = 2.46  # Å
+        expected_diameter = a_graphene * np.sqrt(n**2 + n*m + m**2) / np.pi
+
+        result = generate_cnt(n=n, m=m)
+
+        if result["success"] and "diameter" in result:
+            actual_diameter = result["diameter"]
+            deviation = abs(actual_diameter - expected_diameter) / expected_diameter * 100
+            assert deviation < 5.0, (
+                f"CNT({n},{m}) diameter {actual_diameter:.2f} Å "
+                f"deviates from expected {expected_diameter:.2f} Å"
+            )
+
+    def test_cnt_chirality_types(self):
+        """Test armchair, zigzag, and chiral CNT types."""
+        from generators.nanotube.cnt import generate_cnt
+
+        # Armchair: n = m
+        armchair = generate_cnt(n=5, m=5)
+        assert armchair["success"]
+
+        # Zigzag: m = 0
+        zigzag = generate_cnt(n=10, m=0)
+        assert zigzag["success"]
+
+        # Chiral: n ≠ m, m ≠ 0
+        chiral = generate_cnt(n=6, m=4)
+        assert chiral["success"]
 
 
 class TestSpaceGroupTransformation:

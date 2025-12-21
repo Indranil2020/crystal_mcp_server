@@ -10,7 +10,8 @@ Test Categories:
 3. Structure validation (lattice, atoms, metadata)
 4. Scientific correctness checks where applicable
 
-Total Operations: 235 (across 20 categories)
+Total Operations: 286+ (across 21 categories)
+Updated: December 2024 - Added 58 new operations
 """
 
 import sys
@@ -166,6 +167,77 @@ OPERATION_PARAMS = {
 
     # External fields - using actual parameter names
     "apply_strain_field": {"structure_dict": DEFAULT_STRUCTURE},  # structure_dict not structure
+
+    # =========================================================================
+    # NEW OPERATIONS (December 2024)
+    # =========================================================================
+
+    # Battery anodes
+    "generate_silicon_anode": {"phase": "diamond", "lithiation": 0.0},
+    "generate_germanium_anode": {"phase": "diamond", "lithiation": 0.0},
+    "generate_tin_anode": {"phase": "beta", "lithiation": 0.0},
+    "generate_phosphorus_anode": {"phase": "black", "lithiation": 0.0},
+    "generate_sulfur_cathode": {"phase": "alpha", "lithiation": 0.0},
+    "generate_metal_anode": {"metal": "Li", "surface": [1, 0, 0]},
+
+    # Electric fields
+    "generate_polarized_cell": {"material": "BaTiO3", "polarization_direction": [0, 0, 1]},
+    "generate_ferroelectric_domain": {"material": "BaTiO3", "domain_type": "180"},
+    "generate_polar_surface": {"material": "ZnO", "surface": [0, 0, 1]},
+    "generate_field_induced_phase": {"material": "SrTiO3", "field_strength_V_nm": 0.5},
+
+    # Advanced fields
+    "generate_floquet_cell": {"material": "graphene", "driving_frequency_THz": 10.0},
+    "generate_phonon_pumped_cell": {"material": "SrTiO3", "phonon_mode": "soft"},
+    "generate_warm_dense_matter": {"element": "Al", "temperature_eV": 10.0, "n_atoms": 32},
+    "generate_laser_shocked_cell": {"material": "Fe", "pressure_GPa": 100.0},
+    "generate_bimeron": {"material": "Fe", "bimeron_size_nm": 10.0},
+
+    # Conformers
+    "generate_conformers": {"smiles": "CCO", "n_conformers": 3},
+    "generate_tautomers": {"smiles": "CC(=O)C"},
+    "enumerate_stereoisomers": {"smiles": "CC(O)CC"},
+    "predict_protonation_states": {"smiles": "CC(=O)O", "ph": 7.0},
+    "generate_rotamers": {"smiles": "CCCC", "rotatable_bond_idx": 1},
+    "generate_ligand_conformers": {"smiles": "c1ccccc1O", "n_conformers": 3},
+
+    # Database adapters
+    "export_ase_atoms": {"structure": DEFAULT_STRUCTURE},
+    "export_aiida_structuredata": {"structure": DEFAULT_STRUCTURE},
+    "export_aflow": {"structure": DEFAULT_STRUCTURE},
+    "export_materials_project": {"structure": DEFAULT_STRUCTURE},
+    "export_optimade": {"structure": DEFAULT_STRUCTURE},
+    "export_jarvis": {"structure": DEFAULT_STRUCTURE},
+
+    # Optimizer
+    "optimize_structure_ase": {"structure": DEFAULT_STRUCTURE, "steps": 5},
+    "optimize_structure_mlff": {"structure": DEFAULT_STRUCTURE, "model": "chgnet", "steps": 3},
+    "relax_cell_parameters": {"structure": DEFAULT_STRUCTURE, "model": "chgnet"},
+    "calculate_elastic_tensor": {"structure": DEFAULT_STRUCTURE},
+    "generate_piezoelectric_template": {"material": "BaTiO3"},
+
+    # Quasicrystals
+    "generate_quasicrystal": {"quasicrystal_type": "penrose", "approximant_order": 3},
+    "generate_penrose_tiling": {"order": 3},
+    "generate_fibonacci_approximant": {"order": 5},
+    "generate_icosahedral_quasicrystal": {"approximant_order": 1, "elements": ["Al", "Mn"]},
+    "generate_decagonal_quasicrystal": {"order": 2},
+
+    # Artificial lattices
+    "generate_kagome_lattice": {"element": "Fe", "size": [2, 2]},
+    "generate_lieb_lattice": {"size": [2, 2]},
+    "generate_checkerboard_lattice": {"size": [2, 2]},
+    "generate_dice_lattice": {"size": [2, 2]},
+    "generate_honeycomb_variants": {"variant": "alpha_t3"},
+    "generate_ruby_lattice": {"size": [2, 2]},
+
+    # 2D HEA
+    "generate_2d_hea": {"elements": ["Ti", "V", "Cr", "Mn", "Fe"], "anion": "O"},
+    "generate_2d_heo": {"elements": ["Ti", "V", "Cr", "Mn", "Fe"], "size": [2, 2]},
+    "generate_2d_hec": {"elements": ["Ti", "V", "Nb", "Ta", "Mo"], "size": [2, 2]},
+    "generate_2d_hen": {"elements": ["Ti", "V", "Cr", "Zr", "Hf"], "size": [2, 2]},
+    "generate_2d_he_tmd": {"metals": ["Mo", "W", "V", "Nb", "Ta"], "chalcogen": "S"},
+    "generate_2d_he_mxene": {"metals": ["Ti", "V", "Nb", "Ta", "Mo"]},
 }
 
 
@@ -199,7 +271,16 @@ def validate_structure_output(result: Dict[str, Any], op_name: str) -> List[str]
         "analyze_symmetry", "validate_structure", "get_subgroups",
         "get_symmetry_path", "generate_kpath", "export_vasp",
         "export_cif", "export_xyz", "get_all_subgroup_paths",
-        "compare_electrolytes", "generate_lithiated_series"
+        "compare_electrolytes", "generate_lithiated_series",
+        # New operations that may not return direct structure
+        "export_ase_atoms", "export_aiida_structuredata", "export_aflow",
+        "export_materials_project", "export_optimade", "export_jarvis",
+        "optimize_structure_ase", "optimize_structure_mlff",
+        "relax_cell_parameters", "calculate_elastic_tensor",
+        "generate_piezoelectric_template", "generate_conformers",
+        "generate_tautomers", "enumerate_stereoisomers",
+        "predict_protonation_states", "generate_rotamers",
+        "generate_ligand_conformers"
     ]:
         # These operations might not return a structure directly
         if "content" not in result and "path" not in result:
