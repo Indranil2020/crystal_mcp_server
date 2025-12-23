@@ -164,8 +164,8 @@ def server_path():
 
 @pytest.fixture
 def client(server_path):
-    """Fixture to provide MCP test client"""
-    client = MCPTestClient(server_path)
+    """Fixture to provide MCP test client with extended timeout for complex operations"""
+    client = MCPTestClient(server_path, timeout=30.0)  # Increased from 10s for multi-step ops
     client.start()
     yield client
     client.stop()

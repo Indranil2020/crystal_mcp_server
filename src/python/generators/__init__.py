@@ -432,6 +432,24 @@ GENERATOR_REGISTRY: Dict[str, Dict[str, Any]] = {
                 "params": ['compound', 'n_layers'],
                 "description": "Generate Ruddlesden-Popper layered perovskite (e.g., Sr2TiO4)."
             },
+            "generate_dion_jacobson": {
+                "module": "generators.bulk.perovskites",
+                "function": "generate_dion_jacobson",
+                "params": ['compound', 'n_layers', 'a'],
+                "description": "Generate Dion-Jacobson layered perovskite (e.g., KLaNb2O7)."
+            },
+            "generate_aurivillius": {
+                "module": "generators.bulk.perovskites",
+                "function": "generate_aurivillius",
+                "params": ['compound', 'n_layers', 'a'],
+                "description": "Generate Aurivillius layered ferroelectric (e.g., Bi4Ti3O12)."
+            },
+            "get_layered_perovskite_database": {
+                "module": "generators.bulk.perovskites",
+                "function": "get_layered_perovskite_database",
+                "params": [],
+                "description": "Get database of layered perovskite phases (RP, DJ, Aurivillius)."
+            },
             "generate_polytype": {
                 "module": "generators.bulk.polytypes",
                 "function": "generate_polytype",
@@ -535,9 +553,46 @@ GENERATOR_REGISTRY: Dict[str, Dict[str, Any]] = {
                 "params": ['structure', 'scaling'],
                 "description": "Create supercell from structure."
             },
+            # Cell Settings / Transformations
+            "get_primitive_cell": {
+                "module": "generators.bulk.cell_settings",
+                "function": "get_primitive_cell",
+                "params": ['structure', 'symprec'],
+                "description": "Convert structure to primitive cell (smallest unit cell)."
+            },
+            "get_conventional_cell": {
+                "module": "generators.bulk.cell_settings",
+                "function": "get_conventional_cell",
+                "params": ['structure', 'symprec'],
+                "description": "Convert structure to conventional cell (standard crystallographic setting)."
+            },
+            "get_niggli_cell": {
+                "module": "generators.bulk.cell_settings",
+                "function": "get_niggli_cell",
+                "params": ['structure', 'eps'],
+                "description": "Convert structure to Niggli reduced cell (unique reduced form)."
+            },
+            "get_standardized_cell": {
+                "module": "generators.bulk.cell_settings",
+                "function": "get_standardized_cell",
+                "params": ['structure', 'to_primitive', 'no_idealize', 'symprec'],
+                "description": "Convert structure to ITA standard setting."
+            },
+            "transform_cell": {
+                "module": "generators.bulk.cell_settings",
+                "function": "transform_cell",
+                "params": ['structure', 'setting', 'symprec'],
+                "description": "Transform structure to specified cell setting (primitive, conventional, niggli, standardized)."
+            },
+            "compare_cell_settings": {
+                "module": "generators.bulk.cell_settings",
+                "function": "compare_cell_settings",
+                "params": ['structure', 'symprec'],
+                "description": "Compare all cell settings for a structure."
+            },
         }
     },
-    
+
     # -------------------------------------------------------------------------
     # CATALYST (Category)
     # -------------------------------------------------------------------------
@@ -721,9 +776,28 @@ GENERATOR_REGISTRY: Dict[str, Dict[str, Any]] = {
                 "params": ['element', 'void_shape', 'void_radius', 'supercell_size', 'void_position'],
                 "description": "Generate structure with void."
             },
+            # Advanced Point Defects (Trivacancy, Gradient, Clusters)
+            "generate_trivacancy": {
+                "module": "generators.defect.point_defects",
+                "function": "generate_trivacancy",
+                "params": ['host_structure', 'center_site', 'trivacancy_type'],
+                "description": "Generate trivacancy defect cluster (3 adjacent vacancies)."
+            },
+            "generate_defect_gradient": {
+                "module": "generators.defect.point_defects",
+                "function": "generate_defect_gradient",
+                "params": ['host_structure', 'defect_element', 'gradient_direction', 'min_concentration', 'max_concentration', 'gradient_profile', 'host_element', 'seed'],
+                "description": "Generate structure with spatial gradient of defect concentration."
+            },
+            "generate_vacancy_cluster": {
+                "module": "generators.defect.point_defects",
+                "function": "generate_vacancy_cluster",
+                "params": ['host_structure', 'cluster_size', 'cluster_center', 'cluster_type', 'seed'],
+                "description": "Generate vacancy cluster (2-10 vacancies)."
+            },
         }
     },
-    
+
     # -------------------------------------------------------------------------
     # ELECTRONIC (Category)
     # -------------------------------------------------------------------------
@@ -963,9 +1037,40 @@ GENERATOR_REGISTRY: Dict[str, Dict[str, Any]] = {
                 "params": ['formula', 'supercell'],
                 "description": "Generate quaternary Heusler alloy (XX'YZ, LiMgPdSn-type)."
             },
+            # Advanced Magnetic Orderings (3-q, 4-q, DMI)
+            "generate_multi_q_structure": {
+                "module": "generators.magnetic.advanced_orderings",
+                "function": "generate_multi_q_structure",
+                "params": ['material', 'q_type', 'q_vectors', 'moment_magnitude', 'supercell', 'a'],
+                "description": "Generate multi-q magnetic structure (single-q, 2q, 3q, 4q)."
+            },
+            "generate_dmi_cycloid": {
+                "module": "generators.magnetic.advanced_orderings",
+                "function": "generate_dmi_cycloid",
+                "params": ['material', 'propagation_direction', 'cycloid_period_nm', 'moment_magnitude', 'dmi_strength', 'supercell_periods', 'easy_axis'],
+                "description": "Generate DMI-induced spin cycloid structure."
+            },
+            "generate_conical_phase": {
+                "module": "generators.magnetic.advanced_orderings",
+                "function": "generate_conical_phase",
+                "params": ['material', 'cone_angle_deg', 'helix_period_nm', 'field_direction', 'moment_magnitude', 'supercell_periods'],
+                "description": "Generate conical magnetic phase."
+            },
+            "generate_skyrmion_lattice": {
+                "module": "generators.magnetic.advanced_orderings",
+                "function": "generate_skyrmion_lattice",
+                "params": ['material', 'skyrmion_type', 'lattice_type', 'skyrmion_radius_nm', 'moment_magnitude', 'supercell_size'],
+                "description": "Generate magnetic skyrmion lattice (Bloch, Neel, antiskyrmion)."
+            },
+            "get_available_advanced_orderings": {
+                "module": "generators.magnetic.advanced_orderings",
+                "function": "get_available_advanced_orderings",
+                "params": [],
+                "description": "Get list of available advanced magnetic orderings."
+            },
         }
     },
-    
+
     # -------------------------------------------------------------------------
     # MOLECULE (Category)
     # -------------------------------------------------------------------------
@@ -1291,6 +1396,43 @@ GENERATOR_REGISTRY: Dict[str, Dict[str, Any]] = {
                 "function": "export_jarvis",
                 "params": ['structure', 'jid', 'dataset'],
                 "description": "Export structure in JARVIS-compatible format."
+            },
+            # Visualization formats (NEW - December 2024)
+            "export_xsf": {
+                "module": "generators.output_formats.visualization",
+                "function": "export_xsf",
+                "params": ['structure', 'include_forces', 'forces', 'animated', 'frames'],
+                "description": "Export structure to XCrySDen XSF format."
+            },
+            "export_cube": {
+                "module": "generators.output_formats.visualization",
+                "function": "export_cube",
+                "params": ['structure', 'volumetric_data', 'grid_shape', 'data_type', 'origin'],
+                "description": "Export structure to Gaussian CUBE volumetric format."
+            },
+            "export_vesta": {
+                "module": "generators.output_formats.visualization",
+                "function": "export_vesta",
+                "params": ['structure', 'bond_search', 'bond_radius', 'polyhedral', 'style'],
+                "description": "Export structure to VESTA-optimized CIF format."
+            },
+            "export_threejs_json": {
+                "module": "generators.output_formats.visualization",
+                "function": "export_threejs_json",
+                "params": ['structure', 'include_bonds', 'bond_cutoff', 'supercell'],
+                "description": "Export structure to Three.js-ready JSON for web visualization."
+            },
+            "export_html_viewer": {
+                "module": "generators.output_formats.visualization",
+                "function": "export_html_viewer",
+                "params": ['structure', 'title', 'background_color', 'auto_rotate'],
+                "description": "Export structure as self-contained HTML file with Three.js viewer."
+            },
+            "export_visualization": {
+                "module": "generators.output_formats.visualization",
+                "function": "export_visualization",
+                "params": ['structure', 'format'],
+                "description": "Export structure to any visualization format (xsf, cube, vesta, threejs, html)."
             },
         }
     },
@@ -1924,6 +2066,151 @@ GENERATOR_REGISTRY: Dict[str, Dict[str, Any]] = {
                 "function": "generate_honeycomb_variants",
                 "params": ['variant', 'element', 'a', 'size', 'vacuum', 'alpha'],
                 "description": "Generate honeycomb lattice variants (alpha-T3, Kekulé, Haldane, etc.)."
+            },
+        }
+    },
+
+    # -------------------------------------------------------------------------
+    # WORKFLOW (Category) - Parametric Scans & Iterative Editing
+    # -------------------------------------------------------------------------
+    "workflow": {
+        "description": "Workflow tools: Parametric scans, iterative editing, trajectory generation",
+        "operations": {
+            # Parametric Scans
+            "generate_z_scan": {
+                "module": "generators.workflow.parametric_scans",
+                "function": "generate_z_scan",
+                "params": ['surface_structure', 'surface_material', 'surface_miller', 'molecule',
+                           'z_start', 'z_end', 'z_step', 'site', 'site_index', 'surface_layers',
+                           'surface_vacuum', 'supercell', 'output_format', 'include_energy_template'],
+                "description": "Generate z-direction scan of molecule on surface (e.g., binding curve)."
+            },
+            "generate_distance_scan": {
+                "module": "generators.workflow.parametric_scans",
+                "function": "generate_distance_scan",
+                "params": ['structure1', 'structure2', 'distance_start', 'distance_end',
+                           'distance_step', 'approach_axis', 'align_centers', 'output_format'],
+                "description": "Generate distance scan between two structures."
+            },
+            "generate_rotation_scan": {
+                "module": "generators.workflow.parametric_scans",
+                "function": "generate_rotation_scan",
+                "params": ['structure', 'rotation_axis', 'angle_start', 'angle_end',
+                           'angle_step', 'rotation_center', 'rotate_cell', 'output_format'],
+                "description": "Generate rotation scan of structure."
+            },
+            # Directional and spatial scans
+            "generate_directional_scan": {
+                "module": "generators.workflow.parametric_scans",
+                "function": "generate_directional_scan",
+                "params": ['structure', 'direction', 'distance_start', 'distance_end',
+                           'distance_step', 'move_indices', 'normalize_direction', 'output_format'],
+                "description": "Scan along arbitrary direction vector (reaction coordinates, diffusion paths)."
+            },
+            "generate_planar_scan": {
+                "module": "generators.workflow.parametric_scans",
+                "function": "generate_planar_scan",
+                "params": ['structure', 'plane_normal', 'x_range', 'y_range',
+                           'move_indices', 'output_format'],
+                "description": "2D planar grid scan (PES mapping, lateral optimization)."
+            },
+            "generate_radial_scan": {
+                "module": "generators.workflow.parametric_scans",
+                "function": "generate_radial_scan",
+                "params": ['structure', 'center', 'radius_start', 'radius_end',
+                           'radius_step', 'n_angles', 'plane_normal', 'move_indices'],
+                "description": "Radial scan around center point (adsorption site mapping)."
+            },
+            # Lattice and strain scans
+            "generate_lattice_scan": {
+                "module": "generators.workflow.parametric_scans",
+                "function": "generate_lattice_scan",
+                "params": ['structure', 'a_range', 'b_range', 'c_range',
+                           'alpha_range', 'beta_range', 'gamma_range', 'volume_range', 'scale_positions'],
+                "description": "Scan lattice parameters (equation of state, phase transitions)."
+            },
+            "generate_strain_tensor_scan": {
+                "module": "generators.workflow.parametric_scans",
+                "function": "generate_strain_tensor_scan",
+                "params": ['structure', 'strain_component', 'strain_range', 'strain_type'],
+                "description": "Scan strain tensor components (elastic constants, piezoelectric)."
+            },
+            # Surface/adsorption scans
+            "generate_coverage_scan": {
+                "module": "generators.workflow.parametric_scans",
+                "function": "generate_coverage_scan",
+                "params": ['surface_structure', 'adsorbate', 'coverage_range',
+                           'site_type', 'height', 'random_placement', 'seed'],
+                "description": "Scan adsorbate coverage on surface."
+            },
+            # Reaction path scans
+            "generate_neb_path": {
+                "module": "generators.workflow.parametric_scans",
+                "function": "generate_neb_path",
+                "params": ['initial_structure', 'final_structure', 'n_images',
+                           'interpolation', 'climbing_image'],
+                "description": "Generate NEB path for transition state search."
+            },
+            "generate_bond_scan": {
+                "module": "generators.workflow.parametric_scans",
+                "function": "generate_bond_scan",
+                "params": ['structure', 'atom_indices', 'bond_range', 'fix_center_of_mass'],
+                "description": "Scan bond distance between two atoms (dissociation curves)."
+            },
+            "generate_dihedral_scan": {
+                "module": "generators.workflow.parametric_scans",
+                "function": "generate_dihedral_scan",
+                "params": ['structure', 'atom_indices', 'angle_range'],
+                "description": "Scan dihedral angle (torsional barriers, conformational analysis)."
+            },
+            "generate_parameter_sweep": {
+                "module": "generators.workflow.parametric_scans",
+                "function": "generate_parameter_sweep",
+                "params": ['generator_name', 'base_params', 'sweep_param', 'sweep_values', 'output_format'],
+                "description": "Sweep single parameter for any generator function."
+            },
+            "generate_multi_parameter_scan": {
+                "module": "generators.workflow.parametric_scans",
+                "function": "generate_multi_parameter_scan",
+                "params": ['generator_name', 'base_params', 'scan_params', 'scan_type', 'output_format'],
+                "description": "Multi-parameter grid or path scan for any generator."
+            },
+            "generate_trajectory_animation": {
+                "module": "generators.workflow.parametric_scans",
+                "function": "generate_trajectory_animation",
+                "params": ['structures', 'output_format', 'frame_labels', 'include_cell'],
+                "description": "Generate animation files from structure list."
+            },
+            "generate_ptcda_nacl_zscan": {
+                "module": "generators.workflow.parametric_scans",
+                "function": "generate_ptcda_nacl_zscan",
+                "params": ['z_start', 'z_end', 'z_step', 'surface_layers', 'supercell'],
+                "description": "Convenience: PTCDA on NaCl(100) z-scan."
+            },
+            "get_available_scans": {
+                "module": "generators.workflow.parametric_scans",
+                "function": "get_available_scans",
+                "params": [],
+                "description": "List available parametric scan operations."
+            },
+            # Iterative Editing
+            "edit_structure": {
+                "module": "generators.workflow.iterative_editing",
+                "function": "edit_structure",
+                "params": ['structure', 'operations'],
+                "description": "Apply sequence of edit operations to structure."
+            },
+            "compare_structures": {
+                "module": "generators.workflow.iterative_editing",
+                "function": "compare_structures",
+                "params": ['structure1', 'structure2', 'tolerance'],
+                "description": "Compare two structures and report differences."
+            },
+            "get_available_edit_operations": {
+                "module": "generators.workflow.iterative_editing",
+                "function": "get_available_edit_operations",
+                "params": [],
+                "description": "List available structure edit operations."
             },
         }
     },

@@ -324,3 +324,313 @@ def generate_ruddlesden_popper(
         result["has_rock_salt_layer"] = True
 
     return result
+
+
+def generate_dion_jacobson(
+    compound: str = "KLaNb2O7",
+    n_layers: int = 2,
+    a: Optional[float] = None
+) -> Dict[str, Any]:
+    """
+    Generate Dion-Jacobson phase structure (A'[A_{n-1}B_nO_{3n+1}]).
+
+    Dion-Jacobson phases are layered perovskites with a single alkali metal
+    layer (typically K, Rb, Cs) separating perovskite slabs. Unlike Ruddlesden-
+    Popper phases, they have no rock-salt layer, resulting in different
+    stacking sequences.
+
+    Args:
+        compound: Compound name (KLaNb2O7, RbLaNb2O7, CsLaNb2O7, etc.)
+        n_layers: Number of perovskite layers (typically 2-4)
+        a: Lattice constant (optional, estimated if not provided)
+
+    Returns:
+        Dion-Jacobson structure dictionary
+
+    Examples:
+        >>> result = generate_dion_jacobson('KLaNb2O7')
+        >>> result["n_layers"]
+        2
+    """
+    # Database of Dion-Jacobson compounds
+    DJ_COMPOUNDS = {
+        "KLaNb2O7": {"alkali": "K", "a_site": "La", "b_site": "Nb", "n": 2, "a": 3.88, "c": 10.98},
+        "RbLaNb2O7": {"alkali": "Rb", "a_site": "La", "b_site": "Nb", "n": 2, "a": 3.88, "c": 11.43},
+        "CsLaNb2O7": {"alkali": "Cs", "a_site": "La", "b_site": "Nb", "n": 2, "a": 3.88, "c": 11.93},
+        "KCa2Nb3O10": {"alkali": "K", "a_site": "Ca", "b_site": "Nb", "n": 3, "a": 3.86, "c": 14.58},
+        "RbCa2Nb3O10": {"alkali": "Rb", "a_site": "Ca", "b_site": "Nb", "n": 3, "a": 3.86, "c": 15.01},
+        "KSr2Nb3O10": {"alkali": "K", "a_site": "Sr", "b_site": "Nb", "n": 3, "a": 3.90, "c": 15.20},
+        "KLaTa2O7": {"alkali": "K", "a_site": "La", "b_site": "Ta", "n": 2, "a": 3.88, "c": 10.96},
+    }
+
+    if compound in DJ_COMPOUNDS:
+        params = DJ_COMPOUNDS[compound]
+        alkali = params["alkali"]
+        a_site = params["a_site"]
+        b_site = params["b_site"]
+        n_layers = params["n"]
+        a_param = a or params.get("a", 3.88)
+        c_param = params.get("c", 10.0 + 3.0 * n_layers)
+    else:
+        # Default parsing
+        alkali = "K"
+        a_site = "La"
+        b_site = "Nb"
+        a_param = a or 3.88
+        c_param = 10.0 + 3.0 * n_layers
+
+    lattice = Lattice.tetragonal(a_param, c_param)
+
+    species = []
+    coords = []
+
+    # Build Dion-Jacobson structure
+    # Single alkali layer at z=0
+    species.append(alkali)
+    coords.append([0.0, 0.0, 0.0])
+
+    # Perovskite layers
+    layer_spacing = 0.8 / n_layers
+    for i in range(n_layers):
+        z_base = 0.1 + i * layer_spacing
+
+        # B-site (octahedral center)
+        species.append(b_site)
+        coords.append([0.5, 0.5, z_base])
+
+        # Apical oxygens
+        species.append("O")
+        coords.append([0.5, 0.5, z_base - 0.06])
+        species.append("O")
+        coords.append([0.5, 0.5, z_base + 0.06])
+
+        # Equatorial oxygens
+        species.append("O")
+        coords.append([0.5, 0.0, z_base])
+        species.append("O")
+        coords.append([0.0, 0.5, z_base])
+
+        # A-site between layers (if n > 1 and not last layer)
+        if i < n_layers - 1:
+            species.append(a_site)
+            coords.append([0.0, 0.0, z_base + layer_spacing / 2])
+
+    structure = Structure(lattice, species, coords)
+
+    formula = f"{alkali}{a_site}_{n_layers-1 if n_layers > 1 else ''}{b_site}_{n_layers}O_{3*n_layers+1}"
+
+    return {
+        "success": True,
+        "compound": compound,
+        "family": "dion-jacobson",
+        "n_layers": n_layers,
+        "alkali_element": alkali,
+        "a_site_element": a_site,
+        "b_site_element": b_site,
+        "formula": formula,
+        "a_angstrom": a_param,
+        "c_angstrom": c_param,
+        "is_2d_like": True,
+        "has_rock_salt_layer": False,
+        "ion_exchange_capable": True,
+        "n_atoms": len(structure),
+        "structure": structure_to_dict(structure),
+        "description": "Dion-Jacobson layered perovskite with single alkali interlayer"
+    }
+
+
+def generate_aurivillius(
+    compound: str = "Bi4Ti3O12",
+    n_layers: int = 3,
+    a: Optional[float] = None
+) -> Dict[str, Any]:
+    """
+    Generate Aurivillius phase structure ([Bi2O2][A_{n-1}B_nO_{3n+1}]).
+
+    Aurivillius phases are layered perovskites with [Bi2O2]^{2+} fluorite-like
+    layers separating perovskite slabs. They are important ferroelectric and
+    piezoelectric materials.
+
+    Args:
+        compound: Compound name (Bi4Ti3O12, SrBi2Ta2O9, Bi2WO6, etc.)
+        n_layers: Number of perovskite layers (1-5)
+        a: Lattice constant (optional)
+
+    Returns:
+        Aurivillius structure dictionary
+
+    Examples:
+        >>> result = generate_aurivillius('Bi4Ti3O12')
+        >>> result["n_layers"]
+        3
+    """
+    # Database of Aurivillius compounds
+    AURIVILLIUS_COMPOUNDS = {
+        # n=1 phases
+        "Bi2WO6": {"a_site": None, "b_site": "W", "n": 1, "a": 5.46, "c": 16.43, "ferroelectric": True},
+        "Bi2MoO6": {"a_site": None, "b_site": "Mo", "n": 1, "a": 5.49, "c": 16.96},
+        # n=2 phases
+        "SrBi2Ta2O9": {"a_site": "Sr", "b_site": "Ta", "n": 2, "a": 5.53, "c": 25.0, "ferroelectric": True, "fatigue_free": True},
+        "SrBi2Nb2O9": {"a_site": "Sr", "b_site": "Nb", "n": 2, "a": 5.51, "c": 25.1, "ferroelectric": True},
+        "CaBi2Nb2O9": {"a_site": "Ca", "b_site": "Nb", "n": 2, "a": 5.48, "c": 24.9},
+        "BaBi2Nb2O9": {"a_site": "Ba", "b_site": "Nb", "n": 2, "a": 5.56, "c": 25.5},
+        "PbBi2Nb2O9": {"a_site": "Pb", "b_site": "Nb", "n": 2, "a": 5.53, "c": 25.2},
+        # n=3 phases
+        "Bi4Ti3O12": {"a_site": "Bi", "b_site": "Ti", "n": 3, "a": 5.45, "c": 32.8, "ferroelectric": True, "high_Tc": True},
+        "SrBi4Ti4O15": {"a_site": "Sr", "b_site": "Ti", "n": 4, "a": 5.44, "c": 41.0, "ferroelectric": True},
+        # n=4 phases
+        "Sr2Bi4Ti5O18": {"a_site": "Sr", "b_site": "Ti", "n": 5, "a": 5.44, "c": 49.0},
+    }
+
+    if compound in AURIVILLIUS_COMPOUNDS:
+        params = AURIVILLIUS_COMPOUNDS[compound]
+        a_site = params.get("a_site")
+        b_site = params["b_site"]
+        n_layers = params["n"]
+        a_param = a or params.get("a", 5.45)
+        c_param = params.get("c", 16.0 + 8.0 * n_layers)
+        is_ferroelectric = params.get("ferroelectric", False)
+        is_fatigue_free = params.get("fatigue_free", False)
+    else:
+        a_site = "Sr"
+        b_site = "Ti"
+        a_param = a or 5.45
+        c_param = 16.0 + 8.0 * n_layers
+        is_ferroelectric = True
+        is_fatigue_free = False
+
+    # Aurivillius phases are typically orthorhombic
+    # Simplified as tetragonal for demonstration
+    lattice = Lattice.tetragonal(a_param, c_param)
+
+    species = []
+    coords = []
+
+    # Calculate proper z-positions based on c-axis length
+    # Bi2O2 layer takes about 4 Angstrom, perovskite layer ~4 Angstrom each
+    bi2o2_height = 4.0 / c_param  # fractional height of Bi2O2 layer
+    perov_height = 4.0 / c_param  # fractional height per perovskite layer
+
+    # Bi2O2 fluorite layer centered at z=0.5
+    bi_offset = 1.5 / c_param  # ~1.5 A from center
+    species.extend(["Bi", "Bi"])
+    coords.append([0.0, 0.0, 0.5 - bi_offset])
+    coords.append([0.5, 0.5, 0.5 + bi_offset])
+
+    # O in Bi2O2 layer
+    species.extend(["O", "O"])
+    coords.append([0.5, 0.0, 0.5])
+    coords.append([0.0, 0.5, 0.5])
+
+    # Perovskite layers below and above Bi2O2
+    # For n layers, place them symmetrically
+    if n_layers >= 1:
+        # Calculate starting z for perovskite block (below Bi2O2)
+        perov_start = 0.5 - bi2o2_height - n_layers * perov_height
+
+        for i in range(n_layers):
+            z_b = perov_start + (i + 0.5) * perov_height
+            z_b = z_b % 1.0  # Wrap to [0, 1)
+
+            # B-site
+            species.append(b_site)
+            coords.append([0.0, 0.0, z_b])
+
+            # Equatorial oxygens
+            ox_z = z_b
+            species.extend(["O", "O"])
+            coords.append([0.5, 0.0, ox_z])
+            coords.append([0.0, 0.5, ox_z])
+
+            # Apical oxygen (only between layers and at boundaries)
+            if i == 0:  # Bottom apical
+                species.append("O")
+                coords.append([0.0, 0.0, (z_b - perov_height / 2) % 1.0])
+
+            # Top apical (or between B-sites)
+            species.append("O")
+            coords.append([0.0, 0.0, (z_b + perov_height / 2) % 1.0])
+
+            # A-site (between perovskite layers)
+            if a_site and i < n_layers - 1:
+                species.append(a_site)
+                coords.append([0.5, 0.5, (z_b + perov_height / 2) % 1.0])
+
+    # Remove any duplicate coordinates
+    unique_atoms = []
+    unique_coords = []
+    for s, c in zip(species, coords):
+        is_dup = False
+        for uc in unique_coords:
+            if all(abs(c[j] - uc[j]) < 0.01 or abs(c[j] - uc[j] - 1) < 0.01 or abs(c[j] - uc[j] + 1) < 0.01 for j in range(3)):
+                is_dup = True
+                break
+        if not is_dup:
+            unique_atoms.append(s)
+            unique_coords.append(c)
+
+    species = unique_atoms
+    coords = unique_coords
+
+    structure = Structure(lattice, species, coords)
+
+    # Build formula
+    if n_layers == 1:
+        formula = f"Bi2{b_site}O6"
+    else:
+        formula = f"{a_site if a_site else 'Bi'}Bi2{b_site}{n_layers}O{3*n_layers+3}"
+
+    return {
+        "success": True,
+        "compound": compound,
+        "family": "aurivillius",
+        "n_layers": n_layers,
+        "formula": formula,
+        "a_site_element": a_site,
+        "b_site_element": b_site,
+        "a_angstrom": a_param,
+        "c_angstrom": c_param,
+        "is_ferroelectric": is_ferroelectric,
+        "is_fatigue_free": is_fatigue_free,
+        "has_bi2o2_layer": True,
+        "space_group_approx": "I4/mmm or Fmmm (orthorhombic)",
+        "n_atoms": len(structure),
+        "structure": structure_to_dict(structure),
+        "description": "Aurivillius layered ferroelectric with [Bi2O2] interlayer"
+    }
+
+
+def get_layered_perovskite_database() -> Dict[str, Any]:
+    """
+    Get database of layered perovskite phases.
+
+    Returns database organized by family (Ruddlesden-Popper, Dion-Jacobson,
+    Aurivillius) with available compounds and their properties.
+
+    Returns:
+        Database dictionary with compounds organized by family
+    """
+    return {
+        "success": True,
+        "families": {
+            "ruddlesden_popper": {
+                "formula": "A_{n+1}B_nO_{3n+1}",
+                "interlayer": "Rock-salt AO layer",
+                "compounds": ["Sr2TiO4", "Sr3Ti2O7", "La2CuO4", "Ca2MnO4", "Sr2RuO4"],
+                "properties": ["superconductivity", "magnetism", "catalysis"]
+            },
+            "dion_jacobson": {
+                "formula": "A'[A_{n-1}B_nO_{3n+1}]",
+                "interlayer": "Single alkali layer",
+                "compounds": ["KLaNb2O7", "RbLaNb2O7", "CsLaNb2O7", "KCa2Nb3O10"],
+                "properties": ["ion_exchange", "photocatalysis", "nanosheet_exfoliation"]
+            },
+            "aurivillius": {
+                "formula": "[Bi2O2][A_{n-1}B_nO_{3n+1}]",
+                "interlayer": "Bi2O2 fluorite layer",
+                "compounds": ["Bi4Ti3O12", "SrBi2Ta2O9", "Bi2WO6", "SrBi2Nb2O9"],
+                "properties": ["ferroelectricity", "piezoelectricity", "fatigue_resistance"]
+            }
+        },
+        "n_layer_range": "Typically n=1 to n=5 perovskite layers"
+    }

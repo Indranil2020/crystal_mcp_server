@@ -506,3 +506,393 @@ def generate_frenkel_pair(
         "formation_energy_estimate_eV": DEFECT_FORMATION_ENERGIES.get("NaCl", {}).get("Frenkel", 2.5),
         "structure": structure_to_dict(structure)
     }
+
+
+def generate_trivacancy(
+    host_structure: Union[Structure, Dict],
+    center_site: int = 0,
+    trivacancy_type: str = "triangular"
+) -> Dict[str, Any]:
+    """
+    Generate trivacancy defect (cluster of 3 adjacent vacancies).
+
+    Trivacancies are important in radiation damage and diffusion studies.
+    They can form different configurations: triangular (in-plane),
+    linear, or mixed orientations.
+
+    Args:
+        host_structure: Host structure dictionary or pymatgen Structure
+        center_site: Index of center vacancy site
+        trivacancy_type: Configuration type:
+            - 'triangular': Three vacancies in triangular arrangement
+            - 'linear': Three vacancies in a line
+            - 'bent': L-shaped arrangement
+
+    Returns:
+        Structure with trivacancy
+
+    Examples:
+        >>> result = generate_trivacancy(si_structure, center_site=0)
+        >>> result["n_vacancies"]
+        3
+    """
+    if isinstance(host_structure, dict):
+        atoms = [a.copy() for a in host_structure.get("atoms", [])]
+        lattice_info = host_structure.get("lattice", {})
+        matrix = lattice_info.get("matrix", [[5, 0, 0], [0, 5, 0], [0, 0, 5]])
+    else:
+        atoms = [{"element": str(s.specie), "coords": list(s.frac_coords)} for s in host_structure]
+        lattice_info = {"a": host_structure.lattice.a, "b": host_structure.lattice.b,
+                        "c": host_structure.lattice.c, "matrix": host_structure.lattice.matrix.tolist()}
+        matrix = host_structure.lattice.matrix
+
+    if center_site >= len(atoms):
+        return {"success": False, "error": {"code": "INVALID_SITE", "message": f"Site {center_site} out of range"}}
+
+    if len(atoms) < 3:
+        return {"success": False, "error": {"code": "TOO_FEW_ATOMS", "message": "Need at least 3 atoms for trivacancy"}}
+
+    # Get center position
+    center_coords = np.array(atoms[center_site]["coords"])
+    center_elem = atoms[center_site]["element"]
+
+    # Find two nearest neighbors to form trivacancy
+    distances = []
+    for i, atom in enumerate(atoms):
+        if i != center_site:
+            # Calculate distance in fractional coordinates (simplified)
+            delta = np.array(atom["coords"]) - center_coords
+            # Apply minimum image convention
+            delta = delta - np.round(delta)
+            dist = np.linalg.norm(np.dot(delta, matrix))
+            distances.append((i, dist, delta))
+
+    distances.sort(key=lambda x: x[1])
+
+    # Select two neighbors based on trivacancy type
+    if trivacancy_type == "triangular":
+        # First two nearest neighbors
+        neighbor1_idx = distances[0][0]
+        neighbor2_idx = distances[1][0]
+    elif trivacancy_type == "linear":
+        # First neighbor and the one most opposite to it
+        neighbor1_idx = distances[0][0]
+        dir1 = distances[0][2] / np.linalg.norm(distances[0][2]) if np.linalg.norm(distances[0][2]) > 0 else np.array([1, 0, 0])
+        best_idx = distances[1][0]
+        best_dot = 1.0
+        for i, dist, delta in distances[1:min(6, len(distances))]:
+            dir2 = delta / np.linalg.norm(delta) if np.linalg.norm(delta) > 0 else np.array([1, 0, 0])
+            dot = np.dot(dir1, dir2)
+            if dot < best_dot:  # Most antiparallel
+                best_dot = dot
+                best_idx = i
+        neighbor2_idx = best_idx
+    elif trivacancy_type == "bent":
+        # First neighbor and one perpendicular
+        neighbor1_idx = distances[0][0]
+        dir1 = distances[0][2] / np.linalg.norm(distances[0][2]) if np.linalg.norm(distances[0][2]) > 0 else np.array([1, 0, 0])
+        best_idx = distances[1][0]
+        best_perp = 1.0
+        for i, dist, delta in distances[1:min(6, len(distances))]:
+            dir2 = delta / np.linalg.norm(delta) if np.linalg.norm(delta) > 0 else np.array([1, 0, 0])
+            perp = abs(np.dot(dir1, dir2))
+            if perp < best_perp:  # Most perpendicular
+                best_perp = perp
+                best_idx = i
+        neighbor2_idx = best_idx
+    else:
+        return {"success": False, "error": {"code": "INVALID_TYPE", "message": f"Unknown trivacancy type",
+                "available": ["triangular", "linear", "bent"]}}
+
+    # Remove vacancies (in reverse order of index to avoid shifting issues)
+    vacancy_indices = sorted([center_site, neighbor1_idx, neighbor2_idx], reverse=True)
+    vacancy_positions = [atoms[i]["coords"] for i in sorted([center_site, neighbor1_idx, neighbor2_idx])]
+    vacancy_elements = [atoms[i]["element"] for i in sorted([center_site, neighbor1_idx, neighbor2_idx])]
+
+    for idx in vacancy_indices:
+        del atoms[idx]
+
+    # Build result structure
+    if atoms:
+        lattice = Lattice(matrix)
+        species = [a["element"] for a in atoms]
+        coords = [a["coords"] for a in atoms]
+        structure = Structure(lattice, species, coords)
+    else:
+        structure = None
+
+    return {
+        "success": True,
+        "defect_type": "trivacancy",
+        "trivacancy_type": trivacancy_type,
+        "n_vacancies": 3,
+        "vacancy_elements": vacancy_elements,
+        "vacancy_positions": vacancy_positions,
+        "formation_energy_estimate_eV": 3 * DEFECT_FORMATION_ENERGIES.get("Si", {}).get("vacancy", 3.6) * 0.85,  # ~15% binding
+        "n_atoms": len(atoms),
+        "structure": structure_to_dict(structure) if structure else {"atoms": atoms, "lattice": lattice_info}
+    }
+
+
+def generate_defect_gradient(
+    host_structure: Union[Structure, Dict],
+    defect_element: str = "N",
+    gradient_direction: List[float] = None,
+    min_concentration: float = 0.0,
+    max_concentration: float = 0.1,
+    gradient_profile: str = "linear",
+    host_element: str = None,
+    seed: int = None
+) -> Dict[str, Any]:
+    """
+    Generate structure with spatial gradient of defect concentration.
+
+    Defect gradients are important for:
+    - Functionally graded materials
+    - Diffusion profile studies
+    - Interface engineering
+    - Controlled property variation
+
+    Args:
+        host_structure: Host structure dictionary or pymatgen Structure
+        defect_element: Element to substitute as defect
+        gradient_direction: Direction of concentration gradient [x, y, z]
+        min_concentration: Minimum defect fraction at gradient start (0-1)
+        max_concentration: Maximum defect fraction at gradient end (0-1)
+        gradient_profile: 'linear', 'exponential', 'gaussian', 'step', 'sigmoid'
+        host_element: Element to replace (if None, replaces majority element)
+        seed: Random seed for reproducibility
+
+    Returns:
+        Structure with defect gradient
+
+    Examples:
+        >>> result = generate_defect_gradient(gaas, defect_element='N', max_concentration=0.1)
+        >>> result["gradient_profile"]
+        'linear'
+    """
+    if seed is not None:
+        np.random.seed(seed)
+
+    if gradient_direction is None:
+        gradient_direction = [0, 0, 1]  # Default: gradient along z
+
+    gradient_dir = np.array(gradient_direction, dtype=float)
+    gradient_dir = gradient_dir / np.linalg.norm(gradient_dir)
+
+    if isinstance(host_structure, dict):
+        atoms = [a.copy() for a in host_structure.get("atoms", [])]
+        lattice_info = host_structure.get("lattice", {})
+        matrix = lattice_info.get("matrix", [[5, 0, 0], [0, 5, 0], [0, 0, 5]])
+    else:
+        atoms = [{"element": str(s.specie), "coords": list(s.frac_coords)} for s in host_structure]
+        lattice_info = {"a": host_structure.lattice.a, "b": host_structure.lattice.b,
+                        "c": host_structure.lattice.c, "matrix": host_structure.lattice.matrix.tolist()}
+        matrix = host_structure.lattice.matrix
+
+    # Determine host element to replace
+    if host_element is None:
+        # Find majority element
+        elem_counts = {}
+        for atom in atoms:
+            elem = atom["element"]
+            elem_counts[elem] = elem_counts.get(elem, 0) + 1
+        host_element = max(elem_counts.keys(), key=lambda k: elem_counts[k])
+
+    # Get candidate sites (sites with host element)
+    candidate_indices = [i for i, atom in enumerate(atoms) if atom["element"] == host_element]
+
+    if not candidate_indices:
+        return {"success": False, "error": {"code": "NO_HOST_SITES",
+                "message": f"No sites with element {host_element} found"}}
+
+    # Calculate position along gradient for each candidate
+    positions = []
+    for idx in candidate_indices:
+        coords = np.array(atoms[idx]["coords"])
+        cart_pos = np.dot(coords, matrix)
+        # Project onto gradient direction
+        pos_along_grad = np.dot(cart_pos, gradient_dir)
+        positions.append((idx, pos_along_grad))
+
+    # Normalize positions to [0, 1]
+    pos_values = [p[1] for p in positions]
+    pos_min, pos_max = min(pos_values), max(pos_values)
+    if pos_max > pos_min:
+        positions = [(idx, (p - pos_min) / (pos_max - pos_min)) for idx, p in positions]
+    else:
+        positions = [(idx, 0.5) for idx, p in positions]
+
+    # Calculate local concentration based on profile
+    def get_concentration(normalized_pos):
+        if gradient_profile == "linear":
+            return min_concentration + (max_concentration - min_concentration) * normalized_pos
+        elif gradient_profile == "exponential":
+            return min_concentration + (max_concentration - min_concentration) * (np.exp(normalized_pos) - 1) / (np.e - 1)
+        elif gradient_profile == "gaussian":
+            # Peak in middle
+            return max_concentration * np.exp(-((normalized_pos - 0.5) ** 2) / 0.1) + min_concentration
+        elif gradient_profile == "step":
+            return max_concentration if normalized_pos > 0.5 else min_concentration
+        elif gradient_profile == "sigmoid":
+            x = 10 * (normalized_pos - 0.5)  # Scale for sharp transition
+            sigmoid = 1 / (1 + np.exp(-x))
+            return min_concentration + (max_concentration - min_concentration) * sigmoid
+        else:
+            return min_concentration + (max_concentration - min_concentration) * normalized_pos
+
+    # Apply substitutions based on local concentration
+    n_substituted = 0
+    substitution_positions = []
+
+    for idx, norm_pos in positions:
+        local_conc = get_concentration(norm_pos)
+        if np.random.random() < local_conc:
+            atoms[idx]["element"] = defect_element
+            atoms[idx]["is_defect"] = True
+            n_substituted += 1
+            substitution_positions.append(atoms[idx]["coords"])
+
+    # Build result structure
+    lattice = Lattice(matrix)
+    species = [a["element"] for a in atoms]
+    coords = [a["coords"] for a in atoms]
+    structure = Structure(lattice, species, coords)
+
+    actual_concentration = n_substituted / len(candidate_indices) if candidate_indices else 0
+
+    return {
+        "success": True,
+        "defect_type": "concentration_gradient",
+        "gradient_profile": gradient_profile,
+        "gradient_direction": gradient_direction,
+        "defect_element": defect_element,
+        "host_element": host_element,
+        "min_concentration": min_concentration,
+        "max_concentration": max_concentration,
+        "actual_mean_concentration": round(actual_concentration, 4),
+        "n_substituted": n_substituted,
+        "n_total_host_sites": len(candidate_indices),
+        "n_atoms": len(structure),
+        "structure": structure_to_dict(structure)
+    }
+
+
+def generate_vacancy_cluster(
+    host_structure: Union[Structure, Dict],
+    cluster_size: int = 4,
+    cluster_center: List[float] = None,
+    cluster_type: str = "compact",
+    seed: int = None
+) -> Dict[str, Any]:
+    """
+    Generate a cluster of vacancies.
+
+    Vacancy clusters form during radiation damage and high-temperature
+    processing. They can evolve into voids or dislocation loops.
+
+    Args:
+        host_structure: Host structure
+        cluster_size: Number of vacancies (2-10)
+        cluster_center: Center of cluster in fractional coords
+        cluster_type: 'compact' (spherical), 'planar' (disk), 'linear'
+        seed: Random seed
+
+    Returns:
+        Structure with vacancy cluster
+    """
+    if seed is not None:
+        np.random.seed(seed)
+
+    if cluster_size < 2 or cluster_size > 10:
+        return {"success": False, "error": {"code": "INVALID_SIZE",
+                "message": "Cluster size must be 2-10"}}
+
+    if isinstance(host_structure, dict):
+        atoms = [a.copy() for a in host_structure.get("atoms", [])]
+        lattice_info = host_structure.get("lattice", {})
+        matrix = np.array(lattice_info.get("matrix", [[5, 0, 0], [0, 5, 0], [0, 0, 5]]))
+    else:
+        atoms = [{"element": str(s.specie), "coords": list(s.frac_coords)} for s in host_structure]
+        lattice_info = {"a": host_structure.lattice.a, "b": host_structure.lattice.b,
+                        "c": host_structure.lattice.c, "matrix": host_structure.lattice.matrix.tolist()}
+        matrix = host_structure.lattice.matrix
+
+    if len(atoms) < cluster_size:
+        return {"success": False, "error": {"code": "TOO_FEW_ATOMS",
+                "message": f"Need at least {cluster_size} atoms"}}
+
+    # Determine cluster center
+    if cluster_center is None:
+        cluster_center = [0.5, 0.5, 0.5]
+    center = np.array(cluster_center)
+
+    # Calculate distances from center
+    distances = []
+    for i, atom in enumerate(atoms):
+        delta = np.array(atom["coords"]) - center
+        delta = delta - np.round(delta)  # Minimum image
+        cart_delta = np.dot(delta, matrix)
+        dist = np.linalg.norm(cart_delta)
+        distances.append((i, dist, cart_delta))
+
+    distances.sort(key=lambda x: x[1])
+
+    # Select atoms for cluster based on type
+    if cluster_type == "compact":
+        # Simply take nearest atoms
+        vacancy_indices = [d[0] for d in distances[:cluster_size]]
+    elif cluster_type == "planar":
+        # Select atoms close to a plane through center
+        # Filter by distance to z=center[2] plane
+        plane_distances = []
+        for i, dist, delta in distances[:min(3*cluster_size, len(distances))]:
+            plane_dist = abs(delta[2])  # Distance to xy plane through center
+            plane_distances.append((i, dist, plane_dist))
+        plane_distances.sort(key=lambda x: (x[2], x[1]))  # Sort by plane distance, then total distance
+        vacancy_indices = [d[0] for d in plane_distances[:cluster_size]]
+    elif cluster_type == "linear":
+        # Select atoms along a line through center
+        if distances:
+            direction = distances[0][2] / np.linalg.norm(distances[0][2]) if np.linalg.norm(distances[0][2]) > 0 else np.array([1, 0, 0])
+        else:
+            direction = np.array([1, 0, 0])
+        line_distances = []
+        for i, dist, delta in distances[:min(3*cluster_size, len(distances))]:
+            proj = np.dot(delta, direction)
+            perp_dist = np.linalg.norm(delta - proj * direction)
+            line_distances.append((i, dist, perp_dist))
+        line_distances.sort(key=lambda x: (x[2], x[1]))
+        vacancy_indices = [d[0] for d in line_distances[:cluster_size]]
+    else:
+        return {"success": False, "error": {"code": "INVALID_TYPE",
+                "message": f"Unknown cluster type", "available": ["compact", "planar", "linear"]}}
+
+    # Remove vacancies
+    vacancy_positions = [atoms[i]["coords"] for i in sorted(vacancy_indices)]
+    vacancy_elements = [atoms[i]["element"] for i in sorted(vacancy_indices)]
+
+    for idx in sorted(vacancy_indices, reverse=True):
+        del atoms[idx]
+
+    # Build result
+    if atoms:
+        lattice = Lattice(matrix)
+        species = [a["element"] for a in atoms]
+        coords = [a["coords"] for a in atoms]
+        structure = Structure(lattice, species, coords)
+    else:
+        structure = None
+
+    return {
+        "success": True,
+        "defect_type": "vacancy_cluster",
+        "cluster_type": cluster_type,
+        "cluster_size": cluster_size,
+        "cluster_center": cluster_center,
+        "n_vacancies": len(vacancy_indices),
+        "vacancy_elements": vacancy_elements,
+        "vacancy_positions": vacancy_positions,
+        "n_atoms": len(atoms),
+        "structure": structure_to_dict(structure) if structure else {"atoms": atoms, "lattice": lattice_info}
+    }
