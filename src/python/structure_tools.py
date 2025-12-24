@@ -810,37 +810,82 @@ def create_heterostructure(
 
 def add_adsorbate(
     structure_dict: Dict[str, Any],
-    molecule: Dict[str, Any], # Molecule dict or name?
+    molecule: Any,  # Molecule dict or name string
     site_index: int,
     distance: float = 2.0
 ) -> Dict[str, Any]:
     """
     Add an adsorbate molecule to a specific site.
-    
+
     Args:
         structure_dict: Surface structure
-        molecule: Molecule structure dict OR name string?
-                  Ideally a dict from molecule_generator.
+        molecule: Molecule structure dict OR name string (e.g., "H2O", "CO", "O2")
         site_index: Index of atom to adsorb on (top site mode)
         distance: Height above site
     """
     surface = dict_to_structure(structure_dict)
-    if "structure" in molecule:
-        mol_struct = dict_to_structure(molecule["structure"]) # If wrapper dict
-    else:
-        mol_struct = dict_to_structure(molecule) # If direct dict
-        
+
     if surface is None:
-         return {"success": False, "error": "Invalid surface structure"}
-         
+        return {"success": False, "error": {"code": "INVALID_INPUT", "message": "Invalid surface structure"}}
+
     # Validate site
     if site_index < 0 or site_index >= len(surface):
-         return {"success": False, "error": f"Invalid site index {site_index}"}
-         
-    # Handle molecule
+        return {"success": False, "error": {"code": "INVALID_INPUT", "message": f"Invalid site index {site_index}"}}
+
+    # Handle molecule - support both string names and dicts
+    mol_struct = None
+
+    if isinstance(molecule, str):
+        # Common molecules database for adsorbates
+        common_molecules = {
+            "H2O": {"species": ["O", "H", "H"], "coords": [[0, 0, 0], [0.76, 0.59, 0], [-0.76, 0.59, 0]]},
+            "CO": {"species": ["C", "O"], "coords": [[0, 0, 0], [1.13, 0, 0]]},
+            "CO2": {"species": ["C", "O", "O"], "coords": [[0, 0, 0], [-1.16, 0, 0], [1.16, 0, 0]]},
+            "O2": {"species": ["O", "O"], "coords": [[0, 0, 0], [1.21, 0, 0]]},
+            "H2": {"species": ["H", "H"], "coords": [[0, 0, 0], [0.74, 0, 0]]},
+            "N2": {"species": ["N", "N"], "coords": [[0, 0, 0], [1.10, 0, 0]]},
+            "NH3": {"species": ["N", "H", "H", "H"], "coords": [[0, 0, 0.12], [0, 0.94, -0.27], [0.81, -0.47, -0.27], [-0.81, -0.47, -0.27]]},
+            "CH4": {"species": ["C", "H", "H", "H", "H"], "coords": [[0, 0, 0], [0.63, 0.63, 0.63], [-0.63, -0.63, 0.63], [0.63, -0.63, -0.63], [-0.63, 0.63, -0.63]]},
+            "OH": {"species": ["O", "H"], "coords": [[0, 0, 0], [0.97, 0, 0]]},
+            "NO": {"species": ["N", "O"], "coords": [[0, 0, 0], [1.15, 0, 0]]},
+            "NO2": {"species": ["N", "O", "O"], "coords": [[0, 0, 0], [1.20, 0, 0], [-0.60, 1.04, 0]]},
+            "CH3": {"species": ["C", "H", "H", "H"], "coords": [[0, 0, 0], [1.09, 0, 0], [-0.55, 0.95, 0], [-0.55, -0.95, 0]]},
+        }
+
+        mol_key = molecule.upper()
+
+        # First check our common molecules database
+        if mol_key in common_molecules:
+            mol_data = common_molecules[mol_key]
+            from pymatgen.core import Molecule
+            mol_struct = Molecule(mol_data["species"], mol_data["coords"])
+        else:
+            # Check if it's a valid ASE molecule name before calling ASE
+            from ase.data import chemical_symbols
+            from ase.collections import g2
+
+            # ASE g2 database contains molecule names
+            ase_valid_names = set(g2.names)
+
+            if molecule in ase_valid_names:
+                from ase.build import molecule as ase_molecule
+                from pymatgen.io.ase import AseAtomsAdaptor
+                ase_mol = ase_molecule(molecule)
+                mol_struct = AseAtomsAdaptor.get_structure(ase_mol)
+            else:
+                supported = ", ".join(sorted(common_molecules.keys()))
+                return {"success": False, "error": {"code": "INVALID_INPUT", "message": f"Unknown molecule: {molecule}. Supported: {supported}. Also supports ASE g2 database molecules."}}
+
+    elif isinstance(molecule, dict):
+        if "structure" in molecule:
+            mol_struct = dict_to_structure(molecule["structure"])  # If wrapper dict
+        else:
+            mol_struct = dict_to_structure(molecule)  # If direct dict
+    else:
+        return {"success": False, "error": {"code": "INVALID_INPUT", "message": "Molecule must be a name string or structure dict"}}
+
     if mol_struct is None:
-         # Maybe it's just a species string?
-         return {"success": False, "error": "Invalid molecule structure"}
+        return {"success": False, "error": {"code": "INVALID_INPUT", "message": "Failed to parse molecule structure"}}
     
     # Strategy:
     # 1. Identify "anchoring atom" in molecule? (First atom?)

@@ -23,6 +23,7 @@ Total: 49 new operations
 
 import sys
 import os
+import importlib.util
 import pytest
 import numpy as np
 from typing import Dict, Any, List
@@ -36,18 +37,14 @@ from pymatgen.core import Structure, Lattice
 
 
 # Check if rdkit is available
-try:
+RDKIT_AVAILABLE = importlib.util.find_spec("rdkit") is not None
+if RDKIT_AVAILABLE:
     from rdkit import Chem
-    RDKIT_AVAILABLE = True
-except ImportError:
-    RDKIT_AVAILABLE = False
 
 # Check if chgnet is available
-try:
+CHGNET_AVAILABLE = importlib.util.find_spec("chgnet.model") is not None
+if CHGNET_AVAILABLE:
     from chgnet.model import CHGNet
-    CHGNET_AVAILABLE = True
-except ImportError:
-    CHGNET_AVAILABLE = False
 
 
 # =============================================================================

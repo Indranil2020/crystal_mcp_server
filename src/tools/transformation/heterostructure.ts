@@ -21,7 +21,9 @@ export async function createHeterostructure(input: unknown): Promise<Result<any>
         ));
     }
 
-    const params = { ...parsed.data, operation: "heterostructure" };
+    // Rename substrate/overlayer to _dict variants for Python compatibility
+    const { substrate, overlayer, ...rest } = parsed.data;
+    const params = { substrate_dict: substrate, overlayer_dict: overlayer, ...rest, operation: "heterostructure" };
 
     const result = await executePythonWithJSON<typeof params, any>(
         "structure_tools.py",

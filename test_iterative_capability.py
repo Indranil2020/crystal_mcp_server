@@ -38,11 +38,7 @@ def test_iterative_workflow():
         "vacancy_site": 0
     }
     
-    try:
-        result2 = handle_request(req2)
-    except Exception as e:
-        print(f"FAIL: Crashed during modification: {e}")
-        return False
+    result2 = handle_request(req2)
 
     if not result2.get("success"):
         print("FAIL: Step 2 modification failed in logic")
@@ -82,13 +78,14 @@ def test_categories():
         # Try to import the module of the first operation
         first_op = list(ops.values())[0]
         mod_name = first_op["module"]
-        try:
-            import importlib
-            importlib.import_module(mod_name)
-            print(" OK")
-        except Exception as e:
-            print(f" FAIL ({e})")
+        import importlib
+        import importlib.util
+        if importlib.util.find_spec(mod_name) is None:
+            print(" FAIL (module not found)")
             failures.append(cat)
+            continue
+        importlib.import_module(mod_name)
+        print(" OK")
             
     if failures:
         print(f"Failures in: {failures}")

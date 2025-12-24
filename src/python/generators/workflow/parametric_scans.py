@@ -22,8 +22,10 @@ Example usage:
 """
 
 from typing import Dict, Any, List, Optional, Tuple, Union
-import numpy as np
 from copy import deepcopy
+import importlib.util
+import inspect
+import numpy as np
 
 
 def generate_z_scan(
@@ -94,7 +96,6 @@ def generate_z_scan(
         - metadata: Scan parameters and info
     """
     from ase import Atoms
-    from ase.build import molecule as ase_molecule
 
     # Generate z-values
     z_values = np.arange(z_start, z_end + z_step/2, z_step)
@@ -496,14 +497,21 @@ def generate_parameter_sweep(
     module_path = generator_info["module"]
     func_name = generator_info["function"]
 
-    try:
-        module = importlib.import_module(module_path)
-        generator_func = getattr(module, func_name)
-    except (ImportError, AttributeError) as e:
+    if importlib.util.find_spec(module_path) is None:
         return {
             "success": False,
-            "error": f"Failed to import generator: {e}"
+            "error": f"Module '{module_path}' not found for generator '{generator_name}'"
         }
+
+    module = importlib.import_module(module_path)
+    generator_func = getattr(module, func_name, None)
+    if generator_func is None or not callable(generator_func):
+        return {
+            "success": False,
+            "error": f"Generator function '{func_name}' not found in '{module_path}'"
+        }
+
+    required, allowed, accepts_kwargs = _get_generator_spec(generator_func)
 
     # Generate structures
     structures = []
@@ -513,16 +521,18 @@ def generate_parameter_sweep(
         params = base_params.copy()
         params[sweep_param] = value
 
-        try:
-            result = generator_func(**params)
-            if isinstance(result, dict):
-                result["sweep_value"] = value
-                result["sweep_index"] = i
-                structures.append(result)
-            else:
-                errors.append({"index": i, "value": value, "error": "Unexpected result type"})
-        except Exception as e:
-            errors.append({"index": i, "value": value, "error": str(e)})
+        valid, error = _validate_generator_params(required, allowed, accepts_kwargs, params)
+        if not valid:
+            errors.append({"index": i, "value": value, "error": error})
+            continue
+
+        result = generator_func(**params)
+        if isinstance(result, dict):
+            result["sweep_value"] = value
+            result["sweep_index"] = i
+            structures.append(result)
+        else:
+            errors.append({"index": i, "value": value, "error": "Unexpected result type"})
 
     return {
         "success": True,
@@ -597,8 +607,23 @@ def generate_multi_parameter_scan(
             "error": f"Generator '{generator_name}' not found"
         }
 
-    module = importlib.import_module(generator_info["module"])
-    generator_func = getattr(module, generator_info["function"])
+    module_path = generator_info["module"]
+    func_name = generator_info["function"]
+    if importlib.util.find_spec(module_path) is None:
+        return {
+            "success": False,
+            "error": f"Module '{module_path}' not found for generator '{generator_name}'"
+        }
+
+    module = importlib.import_module(module_path)
+    generator_func = getattr(module, func_name, None)
+    if generator_func is None or not callable(generator_func):
+        return {
+            "success": False,
+            "error": f"Generator function '{func_name}' not found in '{module_path}'"
+        }
+
+    required, allowed, accepts_kwargs = _get_generator_spec(generator_func)
 
     # Generate parameter combinations
     param_names = list(scan_params.keys())
@@ -621,14 +646,16 @@ def generate_multi_parameter_scan(
         param_dict = dict(zip(param_names, combo))
         params.update(param_dict)
 
-        try:
-            result = generator_func(**params)
-            if isinstance(result, dict):
-                result["scan_params"] = param_dict
-                result["scan_index"] = i
-                structures.append(result)
-        except Exception as e:
-            errors.append({"index": i, "params": param_dict, "error": str(e)})
+        valid, error = _validate_generator_params(required, allowed, accepts_kwargs, params)
+        if not valid:
+            errors.append({"index": i, "params": param_dict, "error": error})
+            continue
+
+        result = generator_func(**params)
+        if isinstance(result, dict):
+            result["scan_params"] = param_dict
+            result["scan_index"] = i
+            structures.append(result)
 
     return {
         "success": True,
@@ -693,6 +720,55 @@ def generate_trajectory_animation(
 # =============================================================================
 # Helper Functions
 # =============================================================================
+
+def _get_generator_spec(generator_func):
+    signature = inspect.signature(generator_func)
+    required = []
+    allowed = set()
+    accepts_kwargs = False
+
+    for name, param in signature.parameters.items():
+        if param.kind == inspect.Parameter.VAR_KEYWORD:
+            accepts_kwargs = True
+        if param.kind == inspect.Parameter.VAR_POSITIONAL:
+            continue
+        allowed.add(name)
+        if param.default is inspect.Parameter.empty and param.kind in (
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            inspect.Parameter.KEYWORD_ONLY,
+        ):
+            required.append(name)
+
+    return required, allowed, accepts_kwargs
+
+
+def _validate_generator_params(required, allowed, accepts_kwargs, params):
+    missing = [name for name in required if name not in params]
+    if missing:
+        return False, f"Missing parameters: {', '.join(missing)}"
+
+    if not accepts_kwargs:
+        unknown = [name for name in params if name not in allowed]
+        if unknown:
+            return False, f"Unknown parameters: {', '.join(unknown)}"
+
+    return True, None
+
+
+def _ase_molecule_or_none(name: str):
+    from ase.collections import g2
+    import ase.build.molecule as ase_molecule_module
+
+    known = set(getattr(g2, "names", []))
+    extra = getattr(ase_molecule_module, "extra", {})
+    if isinstance(extra, dict):
+        known.update(extra.keys())
+
+    if name in known:
+        return ase_molecule_module.molecule(name)
+
+    return None
+
 
 def _dict_to_atoms(structure: Dict[str, Any]):
     """Convert structure dict to ASE Atoms object."""
@@ -789,14 +865,9 @@ def _generate_surface(
 
 def _generate_molecule(name: str):
     """Generate a molecule structure."""
-    from ase.build import molecule as ase_molecule
-    from ase import Atoms
-
-    # Try ASE's built-in molecules first
-    try:
-        return ase_molecule(name)
-    except (KeyError, ValueError):
-        pass
+    mol = _ase_molecule_or_none(name)
+    if mol is not None:
+        return mol
 
     # Extended molecule database
     molecules = {
@@ -904,30 +975,30 @@ def _build_pentacene():
 
 def _build_c60():
     """Build C60 fullerene."""
-    from ase.build import molecule
-    try:
-        return molecule('C60')
-    except:
-        # Fallback: icosahedral approximation
-        from ase import Atoms
-        import numpy as np
+    mol = _ase_molecule_or_none("C60")
+    if mol is not None:
+        return mol
 
-        # Golden ratio
-        phi = (1 + np.sqrt(5)) / 2
+    # Fallback: icosahedral approximation
+    from ase import Atoms
+    import numpy as np
 
-        # Icosahedron vertices
-        vertices = []
-        for s1 in [-1, 1]:
-            for s2 in [-1, 1]:
-                vertices.append([0, s1 * 1, s2 * phi])
-                vertices.append([s1 * 1, s2 * phi, 0])
-                vertices.append([s1 * phi, 0, s2 * 1])
+    # Golden ratio
+    phi = (1 + np.sqrt(5)) / 2
 
-        # Scale to C60 radius (~3.5 Å)
-        vertices = np.array(vertices) * 3.5 / np.linalg.norm(vertices[0])
+    # Icosahedron vertices
+    vertices = []
+    for s1 in [-1, 1]:
+        for s2 in [-1, 1]:
+            vertices.append([0, s1 * 1, s2 * phi])
+            vertices.append([s1 * 1, s2 * phi, 0])
+            vertices.append([s1 * phi, 0, s2 * 1])
 
-        atoms = Atoms('C' * len(vertices), positions=vertices)
-        return atoms
+    # Scale to C60 radius (~3.5 Å)
+    vertices = np.array(vertices) * 3.5 / np.linalg.norm(vertices[0])
+
+    atoms = Atoms('C' * len(vertices), positions=vertices)
+    return atoms
 
 
 def _build_molecule_from_formula(formula: str):
@@ -1791,10 +1862,13 @@ def generate_coverage_scan(
 
     # Get adsorbate
     if isinstance(adsorbate, str):
-        from ase.build import molecule as ase_molecule
-        try:
-            mol = ase_molecule(adsorbate)
-        except:
+        if not adsorbate.strip():
+            return {
+                "success": False,
+                "error": "Adsorbate name cannot be empty"
+            }
+        mol = _ase_molecule_or_none(adsorbate)
+        if mol is None:
             from ase import Atoms
             mol = Atoms(adsorbate)
         mol_species = mol.get_chemical_symbols()

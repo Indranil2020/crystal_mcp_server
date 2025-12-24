@@ -160,13 +160,18 @@ export function formatSpaceGroupScanOutput(results: any[]): string {
     output += `### ✅ Successfully Generated\n\n`;
     output += `| Space Group | Symbol | Crystal System | Atoms | Volume (A^3) |\n`;
     output += `|-------------|--------|----------------|-------|------------|\n`;
-    
+
     successful.forEach(result => {
-      const spg = result.structure.space_group;
-      const meta = result.structure.metadata;
-      output += `| ${spg.number} | ${spg.symbol} | ${spg.crystal_system} | ${meta.natoms} | ${result.structure.lattice.volume.toFixed(2)} |\n`;
+      // Handle both nested (structure.space_group) and flat (spacegroup_symbol) formats
+      const spgNumber = result.space_group || result.structure?.space_group?.number || '?';
+      const spgSymbol = result.spacegroup_symbol || result.structure?.space_group?.symbol || '?';
+      const crystalSystem = result.crystal_system || result.structure?.space_group?.crystal_system || '?';
+      const nAtoms = result.structure?.metadata?.natoms || result.structure?.metadata?.n_atoms || result.structure?.atoms?.length || '?';
+      const volume = result.structure?.lattice?.volume;
+      const volumeStr = volume !== undefined ? volume.toFixed(2) : '?';
+      output += `| ${spgNumber} | ${spgSymbol} | ${crystalSystem} | ${nAtoms} | ${volumeStr} |\n`;
     });
-    
+
     output += `\n`;
   }
   
@@ -174,11 +179,13 @@ export function formatSpaceGroupScanOutput(results: any[]): string {
     output += `### ❌ Failed to Generate\n\n`;
     output += `| Space Group | Error |\n`;
     output += `|-------------|-------|\n`;
-    
+
     failed.forEach(result => {
-      output += `| ${result.space_group} | ${result.error_message} |\n`;
+      const sg = result.space_group || '?';
+      const errMsg = result.error_message || result.error || 'Unknown error';
+      output += `| ${sg} | ${errMsg} |\n`;
     });
-    
+
     output += `\n`;
   }
   

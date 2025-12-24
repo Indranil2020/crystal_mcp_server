@@ -1,5 +1,6 @@
 
 import importlib
+import importlib.util
 import pkgutil
 import chgnet
 
@@ -14,14 +15,15 @@ possible_locations = [
 ]
 
 for loc in possible_locations:
-    try:
-        module = importlib.import_module(loc)
-        if hasattr(module, "CHGNetCalculator"):
-            print(f"FOUND in {loc}")
-        else:
-            print(f"Not in {loc}")
-    except ImportError:
+    if importlib.util.find_spec(loc) is None:
         print(f"Could not import {loc}")
+        continue
+
+    module = importlib.import_module(loc)
+    if hasattr(module, "CHGNetCalculator"):
+        print(f"FOUND in {loc}")
+    else:
+        print(f"Not in {loc}")
 
 # brute force check dir of chgnet
 print(f"chgnet contents: {dir(chgnet)}")

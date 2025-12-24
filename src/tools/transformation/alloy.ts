@@ -21,7 +21,9 @@ export async function createAlloy(input: unknown): Promise<Result<any>> {
         ));
     }
 
-    const params = { ...parsed.data, operation: "alloy" };
+    // Rename structure -> structure_dict for Python compatibility
+    const { structure, ...rest } = parsed.data;
+    const params = { structure_dict: structure, ...rest, operation: "alloy" };
 
     const result = await executePythonWithJSON<typeof params, any>(
         "structure_tools.py",

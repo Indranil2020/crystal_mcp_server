@@ -9,17 +9,16 @@ phase stability analysis.
 
 import json
 import sys
+import os
+import importlib.util
 from typing import Dict, Any, List, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# Import generators
-try:
-    from generators.bulk.spacegroups import generate_from_spacegroup, CRYSTAL_SYSTEMS
-except ImportError:
-    # Fallback to direct import path
-    import os
+# Import generators (no try/except; pre-check module path)
+if importlib.util.find_spec("generators.bulk.spacegroups") is None:
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    from generators.bulk.spacegroups import generate_from_spacegroup, CRYSTAL_SYSTEMS
+
+from generators.bulk.spacegroups import generate_from_spacegroup, CRYSTAL_SYSTEMS
 
 
 def scan_space_groups(
@@ -92,34 +91,40 @@ def scan_space_groups(
 
     def try_space_group(sg: int) -> Dict[str, Any]:
         """Try to generate structure in a single space group."""
-        try:
-            result = generate_from_spacegroup(
-                spacegroup=sg,
-                elements=elements,
-                composition=comp,
-                volume_factor=volume_factor,
-                max_attempts=max_attempts
-            )
-            if result.get("success"):
-                return {
-                    "space_group": sg,
-                    "success": True,
-                    "structure": result.get("structure"),
-                    "spacegroup_symbol": result.get("spacegroup_symbol", ""),
-                    "crystal_system": result.get("crystal_system", "")
-                }
-            else:
-                return {
-                    "space_group": sg,
-                    "success": False,
-                    "error": result.get("error", {}).get("message", "Generation failed")
-                }
-        except Exception as e:
+        if not isinstance(sg, int):
             return {
                 "space_group": sg,
                 "success": False,
-                "error": str(e)
+                "error": "Space group must be an integer"
             }
+        if sg < 1 or sg > 230:
+            return {
+                "space_group": sg,
+                "success": False,
+                "error": f"Space group out of range: {sg}"
+            }
+
+        result = generate_from_spacegroup(
+            spacegroup=sg,
+            elements=elements,
+            composition=comp,
+            factor=volume_factor  # Map volume_factor to factor parameter
+        )
+
+        if result.get("success"):
+            return {
+                "space_group": sg,
+                "success": True,
+                "structure": result.get("structure"),
+                "spacegroup_symbol": result.get("spacegroup_symbol", ""),
+                "crystal_system": result.get("crystal_system", "")
+            }
+
+        return {
+            "space_group": sg,
+            "success": False,
+            "error": result.get("error", {}).get("message", "Generation failed")
+        }
 
     if parallel:
         # Parallel execution
@@ -150,39 +155,46 @@ def scan_space_groups(
 
     # Save structures if output directory specified
     if output_directory and results["generated_structures"]:
-        import os
         os.makedirs(output_directory, exist_ok=True)
+        pymatgen_available = importlib.util.find_spec("pymatgen.core") is not None
 
-        for struct_info in results["generated_structures"]:
-            sg = struct_info["space_group"]
-            structure = struct_info["structure"]
+        if pymatgen_available:
+            from pymatgen.core import Structure, Lattice
 
-            # Generate filename
-            if naming_scheme:
-                formula = "".join(f"{e}{c}" for e, c in element_counts.items())
-                filename = naming_scheme.format(formula=formula, spg=sg)
-            else:
-                formula = "".join(f"{e}{c}" for e, c in element_counts.items())
-                filename = f"{formula}_sg{sg}.cif"
+            for struct_info in results["generated_structures"]:
+                sg = struct_info["space_group"]
+                structure = struct_info["structure"]
 
-            filepath = os.path.join(output_directory, filename)
+                if not structure or "lattice" not in structure:
+                    continue
 
-            # Save as CIF (basic format)
-            try:
-                from pymatgen.core import Structure, Lattice
                 lat = structure["lattice"]
+                required = ["a", "b", "c", "alpha", "beta", "gamma"]
+                if any(key not in lat for key in required):
+                    continue
+
+                sites = structure.get("sites", structure.get("atoms", []))
+                if not sites:
+                    continue
+
+                # Generate filename
+                if naming_scheme:
+                    formula = "".join(f"{e}{c}" for e, c in element_counts.items())
+                    filename = naming_scheme.format(formula=formula, spg=sg)
+                else:
+                    formula = "".join(f"{e}{c}" for e, c in element_counts.items())
+                    filename = f"{formula}_sg{sg}.cif"
+
+                filepath = os.path.join(output_directory, filename)
+
                 lattice = Lattice.from_parameters(
                     lat["a"], lat["b"], lat["c"],
                     lat["alpha"], lat["beta"], lat["gamma"]
                 )
-                sites = structure.get("sites", structure.get("atoms", []))
                 species = [s["element"] for s in sites]
                 coords = [s["coords"] for s in sites]
                 pmg_structure = Structure(lattice, species, coords)
                 pmg_structure.to(filename=filepath)
-            except Exception as e:
-                # Log but don't fail the whole scan
-                pass
 
     return results
 

@@ -81,18 +81,11 @@ class MCPTestClient:
         
         # If we timed out, check if there's anything in stderr
         if self.process.stderr:
-            import fcntl
-            import os
-            # Set stderr to non-blocking
-            fd = self.process.stderr.fileno()
-            fl = fcntl.fcntl(fd, fcntl.F_GETFL)
-            fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
-            try:
+            err_reads = [self.process.stderr.fileno()]
+            if select.select(err_reads, [], [], 0)[0]:
                 err = self.process.stderr.read()
                 if err:
                     print(f"\n[SERVER STDERR]: {err}")
-            except:
-                pass
                 
         return None
 

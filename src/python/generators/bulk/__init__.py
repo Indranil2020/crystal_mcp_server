@@ -6,7 +6,16 @@ Covers Category 1 and related items in structure_catalogue.md.
 
 # Import from submodules that exist and have the functions
 
-try:
+import importlib.util
+
+
+def _module_available(module_name: str) -> bool:
+    return importlib.util.find_spec(module_name) is not None
+
+
+_BASE_MODULE = __name__
+
+if _module_available(f"{_BASE_MODULE}.supercells"):
     from .supercells import (
         make_supercell,
         generate_random_alloy_supercell,
@@ -16,10 +25,16 @@ try:
         COMMON_SUPERCELLS,
         SPECIAL_CELLS,
     )
-except ImportError:
-    pass
+else:
+    make_supercell = None
+    generate_random_alloy_supercell = None
+    generate_graded_supercell = None
+    calculate_supercell_for_size = None
+    generate_slab_supercell = None
+    COMMON_SUPERCELLS = {}
+    SPECIAL_CELLS = {}
 
-try:
+if _module_available(f"{_BASE_MODULE}.spacegroups"):
     from .spacegroups import (
         generate_from_spacegroup,
         generate_prototype,
@@ -27,52 +42,65 @@ try:
         SPACEGROUP_DATABASE,
         PROTOTYPE_STRUCTURES,
     )
-except ImportError:
-    pass
+else:
+    generate_from_spacegroup = None
+    generate_prototype = None
+    get_spacegroup_info = None
+    SPACEGROUP_DATABASE = {}
+    PROTOTYPE_STRUCTURES = {}
 
-try:
+if _module_available(f"{_BASE_MODULE}.zeolites"):
     from .zeolites import (
         generate_zeolite,
         generate_zeolite_with_guest,
         ion_exchange_zeolite,
         ZEOLITE_DATABASE,
     )
-except ImportError:
-    pass
+else:
+    generate_zeolite = None
+    generate_zeolite_with_guest = None
+    ion_exchange_zeolite = None
+    ZEOLITE_DATABASE = {}
 
-try:
+if _module_available(f"{_BASE_MODULE}.clathrates"):
     from .clathrates import (
         generate_clathrate,
         generate_empty_clathrate,
         CLATHRATE_DATABASE,
         CAGE_TYPES,
     )
-except ImportError:
-    pass
+else:
+    generate_clathrate = None
+    generate_empty_clathrate = None
+    CLATHRATE_DATABASE = {}
+    CAGE_TYPES = {}
 
-try:
+if _module_available(f"{_BASE_MODULE}.strain"):
     from .strain import apply_strain, generate_strained_structure
-except ImportError:
-    pass
+else:
+    apply_strain = None
+    generate_strained_structure = None
 
-try:
+if _module_available(f"{_BASE_MODULE}.polytypes"):
     from .polytypes import generate_polytype, POLYTYPE_DATABASE
-except ImportError:
-    pass
+else:
+    generate_polytype = None
+    POLYTYPE_DATABASE = {}
 
-try:
+if _module_available(f"{_BASE_MODULE}.cuprates"):
     from .cuprates import generate_cuprate, CUPRATE_DATABASE
-except ImportError:
-    pass
+else:
+    generate_cuprate = None
+    CUPRATE_DATABASE = {}
 
-try:
+if _module_available(f"{_BASE_MODULE}.magnetic"):
     from .magnetic import generate_magnetic_bulk
-except ImportError:
-    pass
+else:
+    generate_magnetic_bulk = None
 
-try:
+if _module_available(f"{_BASE_MODULE}.base"):
     from .base import LATTICE_DATABASE
-except ImportError:
+else:
     LATTICE_DATABASE = {}
 
 

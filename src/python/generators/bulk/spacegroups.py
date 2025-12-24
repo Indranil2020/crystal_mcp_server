@@ -6,16 +6,19 @@ Per project requirements: Create any material in any of 230 space groups.
 """
 
 from typing import Dict, Any, List, Optional, Union
+import importlib.util
 import numpy as np
 from pymatgen.core import Structure, Lattice
+from .base import validate_space_group
 
 # Import PyXtal for space group generation
-try:
+PYXTAL_AVAILABLE = importlib.util.find_spec("pyxtal") is not None
+if PYXTAL_AVAILABLE:
     from pyxtal import pyxtal
     from pyxtal.symmetry import Group
-    PYXTAL_AVAILABLE = True
-except ImportError:
-    PYXTAL_AVAILABLE = False
+else:
+    pyxtal = None
+    Group = None
 
 
 # Crystal system to space group range mapping
@@ -94,6 +97,25 @@ def structure_to_dict(structure: Structure) -> Dict[str, Any]:
     }
 
 
+def _coerce_spacegroup(spacegroup: Any) -> Optional[int]:
+    """Convert a space group value to int if it is integer-like."""
+    if isinstance(spacegroup, bool):
+        return None
+    if isinstance(spacegroup, (int, np.integer)):
+        return int(spacegroup)
+    if isinstance(spacegroup, str):
+        cleaned = spacegroup.strip()
+        if not cleaned:
+            return None
+        sign = ""
+        if cleaned[0] in "+-":
+            sign = cleaned[0]
+            cleaned = cleaned[1:]
+        if cleaned.isdigit():
+            return int(f"{sign}{cleaned}")
+    return None
+
+
 def generate_from_spacegroup(
     spacegroup: int,
     elements: List[str],
@@ -129,14 +151,14 @@ def generate_from_spacegroup(
                       "message": "PyXtal is required for space group generation. Install with: pip install pyxtal"}
         }
     
-    try:
-        spacegroup = int(spacegroup)
-    except (ValueError, TypeError):
+    sg_number = _coerce_spacegroup(spacegroup)
+    if sg_number is None:
         return {
             "success": False,
-            "error": {"code": "INVALID_SPACEGROUP_TYPE", 
+            "error": {"code": "INVALID_SPACEGROUP_TYPE",
                       "message": f"Space group must be a number, got {type(spacegroup)}"}
         }
+    spacegroup = sg_number
 
     if not 1 <= spacegroup <= 230:
         return {
@@ -336,15 +358,12 @@ def generate_from_spacegroup_symbol(
             break
     
     if sg_number is None:
-        # Try using PyXtal's Group class
-        try:
-            group = Group(symbol)
-            sg_number = group.number
-        except:
+        is_valid, error, sg_number = validate_space_group(symbol)
+        if not is_valid:
             return {
                 "success": False,
-                "error": {"code": "INVALID_SYMBOL", 
-                          "message": f"Unknown space group symbol: {symbol}"}
+                "error": {"code": "INVALID_SYMBOL",
+                          "message": error}
             }
     
     return generate_from_spacegroup(sg_number, elements, composition, factor=factor)
@@ -417,14 +436,11 @@ def get_spacegroup_info(spacegroup: int) -> Dict[str, Any]:
     # Try to get more info from PyXtal
     wyckoff_positions = []
     if PYXTAL_AVAILABLE:
-        try:
-            group = Group(spacegroup)
-            wyckoff_positions = [
-                {"letter": wp.letter, "multiplicity": wp.multiplicity}
-                for wp in group.Wyckoff_positions
-            ]
-        except:
-            pass
+        group = Group(spacegroup)
+        wyckoff_positions = [
+            {"letter": wp.letter, "multiplicity": wp.multiplicity}
+            for wp in group.Wyckoff_positions
+        ]
     
     return {
         "success": True,
@@ -459,11 +475,7 @@ def generate_all_cubic_prototypes(element: str = "Si") -> Dict[str, Any]:
     
     results = {}
     for name, info in prototypes.items():
-        try:
-            result = generate_from_spacegroup(info["sg"], [element], info["composition"])
-            results[name] = result
-        except:
-            results[name] = {"success": False, "error": {"message": f"Failed to generate {name}"}}
+        results[name] = generate_from_spacegroup(info["sg"], [element], info["composition"])
     
     return {
         "success": True,

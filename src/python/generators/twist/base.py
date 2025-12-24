@@ -194,11 +194,12 @@ def calculate_moire_angle(n: int, m: int) -> float:
     """
     Calculate twist angle for commensurate indices (n, m).
     """
-    try:
-        cos_theta = (n**2 + 4*n*m + m**2) / (2*(n**2 + n*m + m**2))
-        return np.degrees(np.arccos(cos_theta))
-    except:
+    denom = 2 * (n**2 + n * m + m**2)
+    if denom == 0:
         return 0.0
+    cos_theta = (n**2 + 4 * n * m + m**2) / denom
+    cos_theta = min(1.0, max(-1.0, cos_theta))
+    return np.degrees(np.arccos(cos_theta))
 
 
 def calculate_moire_wavelength(theta_deg: float, a: float = 2.46) -> float:

@@ -18,6 +18,7 @@ import sys
 import os
 import pytest
 import importlib
+import importlib.util
 from typing import Dict, Any, List, Tuple
 
 # Add the Python source to path
@@ -333,12 +334,13 @@ class TestOperationRegistry:
                 module_path = op_info["module"]
                 func_name = op_info["function"]
 
-                try:
-                    module = importlib.import_module(module_path)
-                    if not hasattr(module, func_name):
-                        import_failures.append(f"{category}/{op_name}: {func_name} not in {module_path}")
-                except Exception as e:
-                    import_failures.append(f"{category}/{op_name}: {e}")
+                if importlib.util.find_spec(module_path) is None:
+                    import_failures.append(f"{category}/{op_name}: module not found {module_path}")
+                    continue
+
+                module = importlib.import_module(module_path)
+                if not hasattr(module, func_name):
+                    import_failures.append(f"{category}/{op_name}: {func_name} not in {module_path}")
 
         assert len(import_failures) == 0, f"Import failures:\n" + "\n".join(import_failures)
 

@@ -14,20 +14,24 @@ Scientific References:
 """
 
 from typing import Dict, Any, List, Optional, Union, Tuple
+import importlib.util
 import numpy as np
 
-try:
+Structure = None
+Lattice = None
+SpacegroupAnalyzer = None
+PYMATGEN_AVAILABLE = False
+if (
+    importlib.util.find_spec("pymatgen.core") is not None
+    and importlib.util.find_spec("pymatgen.symmetry.analyzer") is not None
+):
     from pymatgen.core import Structure, Lattice
     from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
     PYMATGEN_AVAILABLE = True
-except ImportError:
-    PYMATGEN_AVAILABLE = False
 
-try:
+SPGLIB_AVAILABLE = importlib.util.find_spec("spglib") is not None
+if SPGLIB_AVAILABLE:
     import spglib
-    SPGLIB_AVAILABLE = True
-except ImportError:
-    SPGLIB_AVAILABLE = False
 
 
 # Cell setting types

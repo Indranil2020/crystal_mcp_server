@@ -258,7 +258,7 @@ def main():
             
     # We deliberately let Python errors crash the script if they occur outside our logic,
     # or handle them if they are expected.
-    # But as per request "i hate try: except", we avoid wrapping the whole block.
+    # Per request to avoid exception wrappers, we keep the block direct.
     # However, for the JSON-RPC contract, we must output JSON. 
     # If the logic above crashes, the MCP wrapper will catch the stderr/exit code.
     

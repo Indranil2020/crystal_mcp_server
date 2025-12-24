@@ -25,6 +25,7 @@ Example usage:
 
 from typing import Dict, Any, List, Optional, Tuple, Union, Callable
 from copy import deepcopy
+import inspect
 import numpy as np
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -674,12 +675,18 @@ class StructureEditor:
 
         self._save_undo_state("add_adsorbate")
 
-        from ase.build import molecule as ase_molecule
+        from ase.collections import g2
+        import ase.build.molecule as ase_molecule_module
 
         # Get adsorbate
-        try:
-            mol = ase_molecule(adsorbate)
-        except:
+        known_molecules = set(getattr(g2, "names", []))
+        extra = getattr(ase_molecule_module, "extra", {})
+        if isinstance(extra, dict):
+            known_molecules.update(extra.keys())
+
+        if adsorbate in known_molecules:
+            mol = ase_molecule_module.molecule(adsorbate)
+        else:
             mol = self._build_simple_molecule(adsorbate)
 
         # Find adsorption site
@@ -783,6 +790,39 @@ class StructureEditor:
         return molecules.get(name, Atoms("H", positions=[[0, 0, 0]]))
 
 
+def _validate_operation_call(method: Callable[..., Any], params: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+    """Validate operation parameters against the method signature."""
+    signature = inspect.signature(method)
+    required = []
+    allowed = set()
+    accepts_kwargs = False
+
+    for name, param in signature.parameters.items():
+        if name == "self":
+            continue
+        if param.kind == inspect.Parameter.VAR_KEYWORD:
+            accepts_kwargs = True
+        if param.kind == inspect.Parameter.VAR_POSITIONAL:
+            continue
+        allowed.add(name)
+        if param.default is inspect.Parameter.empty and param.kind in (
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            inspect.Parameter.KEYWORD_ONLY,
+        ):
+            required.append(name)
+
+    missing = [name for name in required if name not in params]
+    if missing:
+        return False, f"Missing parameters: {', '.join(missing)}"
+
+    if not accepts_kwargs:
+        unknown = [name for name in params if name not in allowed]
+        if unknown:
+            return False, f"Unknown parameters: {', '.join(unknown)}"
+
+    return True, None
+
+
 # =============================================================================
 # Functional API for single operations
 # =============================================================================
@@ -831,15 +871,16 @@ def edit_structure(
                 "error": f"Unknown operation: {op_name}"
             }
 
-        try:
-            method(**op)
-        except Exception as e:
+        is_valid, error = _validate_operation_call(method, op)
+        if not is_valid:
             return {
                 "success": False,
-                "error": f"Operation '{op_name}' failed: {str(e)}",
+                "error": f"Operation '{op_name}' failed validation: {error}",
                 "partial_structure": editor.get_structure(),
                 "completed_operations": editor.get_history()[:-1]
             }
+
+        method(**op)
 
     return {
         "success": True,

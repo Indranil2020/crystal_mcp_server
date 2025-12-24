@@ -7,14 +7,16 @@ Comprehensive symmetry analysis per structure_catalogue.md Category 16:
 """
 
 from typing import Dict, Any, List, Optional, Tuple, Union
+import importlib.util
 import numpy as np
 from pymatgen.core import Structure, Lattice
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
-try:
+
+PYXTAL_AVAILABLE = importlib.util.find_spec("pyxtal.symmetry") is not None
+if PYXTAL_AVAILABLE:
     from pyxtal.symmetry import Group
-    PYXTAL_AVAILABLE = True
-except ImportError:
-    PYXTAL_AVAILABLE = False
+else:
+    Group = None
 
 
 # Crystal system database
@@ -198,28 +200,35 @@ def tolerance_sweep(
     if tolerances is None:
         tolerances = [0.001, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5]
     
+    if not isinstance(structure, Structure):
+        return {
+            "success": False,
+            "error": {"code": "INVALID_STRUCTURE", "message": "structure must be a pymatgen Structure"}
+        }
+
     results = []
-    
+
     for tol in tolerances:
-        try:
-            analyzer = SpacegroupAnalyzer(structure, symprec=tol)
-            sg = analyzer.get_space_group_symbol()
-            sg_num = analyzer.get_space_group_number()
-            n_ops = len(analyzer.get_symmetry_operations())
-            
-            results.append({
-                "tolerance": tol,
-                "spacegroup": sg,
-                "sg_number": sg_num,
-                "n_operations": n_ops,
-                "success": True
-            })
-        except Exception as e:
+        if not isinstance(tol, (int, float)) or tol <= 0:
             results.append({
                 "tolerance": tol,
                 "success": False,
-                "error": str(e)
+                "error": "Tolerance must be a positive number"
             })
+            continue
+
+        analyzer = SpacegroupAnalyzer(structure, symprec=tol)
+        sg = analyzer.get_space_group_symbol()
+        sg_num = analyzer.get_space_group_number()
+        n_ops = len(analyzer.get_symmetry_operations())
+
+        results.append({
+            "tolerance": tol,
+            "spacegroup": sg,
+            "sg_number": sg_num,
+            "n_operations": n_ops,
+            "success": True
+        })
     
     # Find optimal tolerance (highest symmetry with reasonable tolerance)
     valid_results = [r for r in results if r.get("success", False)]

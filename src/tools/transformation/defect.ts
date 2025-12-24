@@ -21,7 +21,9 @@ export async function createDefect(input: unknown): Promise<Result<any>> {
         ));
     }
 
-    const params = { ...parsed.data, operation: "defect" };
+    // Rename structure -> structure_dict for Python compatibility
+    const { structure, ...rest } = parsed.data;
+    const params = { structure_dict: structure, ...rest, operation: "defect" };
 
     const result = await executePythonWithJSON<typeof params, any>(
         "structure_tools.py",

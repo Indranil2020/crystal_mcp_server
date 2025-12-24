@@ -9,6 +9,7 @@ import os
 import pkgutil
 import inspect
 import importlib
+import importlib.util
 import sys
 from typing import Dict, Any, List
 
@@ -59,38 +60,34 @@ def scan_generators():
                 
             module_name = f"generators.{rel_path.replace(os.sep, '.')}.{file[:-3]}"
             
-            try:
-                module = importlib.import_module(module_name)
-                
-                # specific manual fixes for known problematic modules if import fails
-                # (handled by try/except)
-                
-                for name, obj in inspect.getmembers(module):
-                    if (inspect.isfunction(obj) and 
-                        (name.startswith("generate_") or 
-                         name.startswith("make_") or 
-                         name.startswith("create_") or
-                         name.startswith("build_") or
-                         name.startswith("apply_") or
-                         name.startswith("export_"))):
+            spec = importlib.util.find_spec(module_name)
+            if spec is None:
+                print(f"Warning: Could not import {module_name}: module not found")
+                continue
+
+            module = importlib.import_module(module_name)
+
+            for name, obj in inspect.getmembers(module):
+                if (inspect.isfunction(obj) and 
+                    (name.startswith("generate_") or 
+                     name.startswith("make_") or 
+                     name.startswith("create_") or
+                     name.startswith("build_") or
+                     name.startswith("apply_") or
+                     name.startswith("export_"))):
+                    
+                    # Verify it's defined in this module (not imported)
+                    if obj.__module__ != module_name:
+                        continue
                         
-                        # Verify it's defined in this module (not imported)
-                        if obj.__module__ != module_name:
-                            continue
-                            
-                        info = get_function_info(obj)
-                        
-                        registry[category]["operations"][name] = {
-                            "module": module_name,
-                            "function": name,
-                            "params": info["params"],
-                            "description": info["description"]
-                        }
-                        
-            except ImportError as e:
-                print(f"Warning: Could not import {module_name}: {e}")
-            except Exception as e:
-                print(f"Warning: Error inspecting {module_name}: {e}")
+                    info = get_function_info(obj)
+                    
+                    registry[category]["operations"][name] = {
+                        "module": module_name,
+                        "function": name,
+                        "params": info["params"],
+                        "description": info["description"]
+                    }
 
     return registry
 

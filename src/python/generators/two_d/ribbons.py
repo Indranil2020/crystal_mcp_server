@@ -20,12 +20,11 @@ Scientific basis:
 from typing import Dict, Any, List, Optional, Tuple
 import numpy as np
 from pymatgen.core import Structure, Lattice
+import importlib.util
 
-try:
+HAS_ASE = importlib.util.find_spec("ase.build") is not None
+if HAS_ASE:
     from ase.build import graphene_nanoribbon
-    HAS_ASE = True
-except ImportError:
-    HAS_ASE = False
 
 from .base import atoms_to_dict, structure_to_dict
 

@@ -8,6 +8,8 @@ Routes requests through the central registry in generators/__init__.py.
 import sys
 import json
 import importlib
+import importlib.util
+import inspect
 from typing import Dict, Any
 
 
@@ -62,56 +64,91 @@ def handle_request(args: Dict[str, Any]) -> Dict[str, Any]:
             module = importlib.import_module(module_path)
             func = getattr(module, function_name)
             
-            # Extract parameters (remove 'operation' and 'category' keys)
-            params = {k: v for k, v in args.items() if k not in ["operation", "category"]}
+            # Extract parameters (remove control keys that shouldn't be passed to generators)
+            control_keys = ["operation", "category", "list_available", "operation_name"]
+            params = {k: v for k, v in args.items() if k not in control_keys}
             
             # AUTO-CONVERSION: Convert dicts to Structure objects if needed
             # This enables iterative workflows where output of one tool is input to another
-            from pymatgen.core import Structure, Lattice
-            
-            for key, value in params.items():
-                if isinstance(value, dict):
-                    # Check if it looks like a structure
-                    if "lattice" in value and ("sites" in value or "atoms" in value):
-                        try:
-                            # Handle our custom dict format
-                            if "matrix" in value["lattice"] and "atoms" in value:
-                                lat = Lattice(value["lattice"]["matrix"])
-                                species = [s["element"] for s in value["atoms"]]
-                                coords = [s["coords"] for s in value["atoms"]]
+            pymatgen_available = importlib.util.find_spec("pymatgen.core") is not None
+            if pymatgen_available:
+                from pymatgen.core import Structure, Lattice
+
+                def _can_build_custom_structure(value: Dict[str, Any]) -> bool:
+                    lattice = value.get("lattice")
+                    atoms = value.get("atoms")
+                    if not isinstance(lattice, dict) or "matrix" not in lattice:
+                        return False
+                    if not isinstance(atoms, list) or not atoms:
+                        return False
+                    for atom in atoms:
+                        if not isinstance(atom, dict):
+                            return False
+                        if "element" not in atom or "coords" not in atom:
+                            return False
+                        coords = atom["coords"]
+                        if not isinstance(coords, list) or len(coords) != 3:
+                            return False
+                    return True
+
+                def _can_build_pmg_structure(value: Dict[str, Any]) -> bool:
+                    lattice = value.get("lattice")
+                    sites = value.get("sites")
+                    if not isinstance(lattice, dict) or "matrix" not in lattice:
+                        return False
+                    if not isinstance(sites, list) or not sites:
+                        return False
+                    for site in sites:
+                        if not isinstance(site, dict):
+                            return False
+                        if "abc" not in site or "species" not in site:
+                            return False
+                        abc = site["abc"]
+                        if not isinstance(abc, list) or len(abc) != 3:
+                            return False
+                    return True
+
+                for key, value in params.items():
+                    if isinstance(value, dict):
+                        if _can_build_custom_structure(value):
+                            lat = Lattice(value["lattice"]["matrix"])
+                            species = [s["element"] for s in value["atoms"]]
+                            coords = [s["coords"] for s in value["atoms"]]
+                            params[key] = Structure(lat, species, coords)
+                        elif _can_build_pmg_structure(value):
+                            lat = Lattice(value["lattice"]["matrix"])
+                            species = []
+                            coords = []
+                            for site in value["sites"]:
+                                site_species = site["species"]
+                                if isinstance(site_species, list) and site_species:
+                                    species.append(site_species[0].get("element"))
+                                elif isinstance(site_species, dict) and site_species:
+                                    species.append(next(iter(site_species.keys())))
+                                coords.append(site["abc"])
+                            if species and coords and len(species) == len(coords):
                                 params[key] = Structure(lat, species, coords)
-                            # Handle pymatgen as_dict format
-                            elif "sites" in value:
-                                params[key] = Structure.from_dict(value)
-                        except Exception as e:
-                            # If conversion fails, pass as dict (some functions might expect dict)
-                            pass
-            
-            # Call the function with error handling
-            try:
-                result = func(**params)
-            except TypeError as e:
-                # Handle missing required parameters
-                error_msg = str(e)
-                if "missing" in error_msg and "required" in error_msg:
-                    return {
-                        "success": False,
-                        "error": {
-                            "code": "MISSING_REQUIRED_PARAMETER",
-                            "message": error_msg,
-                            "operation": operation
-                        }
-                    }
-                raise
-            except Exception as e:
+
+            # Pre-check required parameters to avoid TypeError
+            missing = []
+            sig = inspect.signature(func)
+            for name, param in sig.parameters.items():
+                if param.kind in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD):
+                    continue
+                if param.default is inspect._empty and name not in params:
+                    missing.append(name)
+
+            if missing:
                 return {
                     "success": False,
                     "error": {
-                        "code": "GENERATOR_ERROR",
-                        "message": str(e),
+                        "code": "MISSING_REQUIRED_PARAMETER",
+                        "message": f"Missing required parameters: {', '.join(missing)}",
                         "operation": operation
                     }
                 }
+
+            result = func(**params)
 
             # Ensure success key exists
             if isinstance(result, dict) and "success" not in result:

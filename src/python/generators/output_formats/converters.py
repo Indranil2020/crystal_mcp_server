@@ -9,11 +9,12 @@ Converts structures to various DFT/MD input formats:
 """
 
 from typing import Dict, Any, List, Optional, Union
+import importlib.util
 import numpy as np
-try:
+
+Structure = None
+if importlib.util.find_spec("pymatgen.core") is not None:
     from pymatgen.core import Structure
-except ImportError:
-    Structure = None # Type check fallback
 
 
 # Supported output formats

@@ -66,9 +66,10 @@ class MCPTestClient:
         """Stop the MCP server gracefully"""
         if self.process:
             self.process.terminate()
-            try:
-                self.process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
+            deadline = time.time() + 5
+            while time.time() < deadline and self.process.poll() is None:
+                time.sleep(0.05)
+            if self.process.poll() is None:
                 self.process.kill()
                 self.process.wait()
     
@@ -129,22 +130,15 @@ class MCPTestClient:
         """Read available stderr without blocking"""
         if not self.process or not self.process.stderr:
             return ""
-        
-        import fcntl
-        import os
-        
-        fd = self.process.stderr.fileno()
-        fl = fcntl.fcntl(fd, fcntl.F_GETFL)
-        fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
-        
-        try:
+
+        import select
+        reads = [self.process.stderr.fileno()]
+        if select.select(reads, [], [], 0)[0]:
             stderr = self.process.stderr.read()
             if stderr:
                 self.stderr_log.append(stderr)
                 print(f"\n[SERVER STDERR]: {stderr}")
                 return stderr
-        except:
-            pass
         
         return ""
 

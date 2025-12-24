@@ -9,14 +9,14 @@ lattice = c.lattice
 print(f"Lattice type: {type(lattice)}")
 print(f"Dir of lattice: {dir(lattice)}")
 
-try:
-    print("Testing get_cartesian_coords...")
+print("Testing get_cartesian_coords...")
+if hasattr(lattice, "get_cartesian_coords"):
     print(lattice.get_cartesian_coords(np.array([0.5, 0.5, 0.5])))
-except Exception as e:
-    print(f"get_cartesian_coords failed: {e}")
+else:
+    print("get_cartesian_coords not available")
 
-try:
-    print("Testing para (matrix)...")
+print("Testing para (matrix)...")
+if hasattr(lattice, "matrix"):
     print(lattice.matrix)
-except Exception as e:
-    print(f"matrix access failed: {e}")
+else:
+    print("matrix not available")

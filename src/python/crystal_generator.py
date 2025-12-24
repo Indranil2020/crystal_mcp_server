@@ -579,7 +579,22 @@ def generate_molecular_crystal(
     success = False
     attempt = 0
     last_error = None
-    
+
+    # Convert lattice_params dict to PyXtal Lattice object if provided
+    current_lattice = None
+    if lattice_params and isinstance(lattice_params, dict):
+        req_keys = ['a', 'b', 'c', 'alpha', 'beta', 'gamma']
+        if all(k in lattice_params for k in req_keys):
+            from pyxtal.lattice import Lattice as PyXtalLattice
+            current_lattice = PyXtalLattice.from_para(
+                lattice_params['a'],
+                lattice_params['b'],
+                lattice_params['c'],
+                lattice_params['alpha'],
+                lattice_params['beta'],
+                lattice_params['gamma']
+            )
+
     while attempt < max_attempts and not success:
         attempt += 1
         crystal.from_random(
@@ -588,7 +603,7 @@ def generate_molecular_crystal(
             species=species,
             numIons=num_ions,
             factor=volume_factor,
-            lattice=lattice_params
+            lattice=current_lattice
         )
         if crystal.valid:
             success = True

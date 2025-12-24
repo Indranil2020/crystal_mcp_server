@@ -21,7 +21,9 @@ export async function applyStrain(input: unknown): Promise<Result<any>> {
         ));
     }
 
-    const params = { ...parsed.data, operation: "strain" };
+    // Rename structure -> structure_dict for Python compatibility
+    const { structure, ...rest } = parsed.data;
+    const params = { structure_dict: structure, ...rest, operation: "strain" };
 
     const result = await executePythonWithJSON<typeof params, any>(
         "structure_tools.py",

@@ -21,7 +21,10 @@ export async function generateSlab(input: unknown): Promise<Result<any>> {
     ));
   }
 
-  const params = { ...parsed.data, operation: "slab" };
+  // Rename structure -> structure_dict for Python compatibility
+  // Note: fix_atoms is filtered out as Python doesn't support it yet
+  const { structure, fix_atoms, ...rest } = parsed.data;
+  const params = { structure_dict: structure, ...rest, operation: "slab" };
 
   const result = await executePythonWithJSON<typeof params, any>(
     "structure_tools.py",

@@ -100,10 +100,13 @@ export type GenerateCrystalInput = z.infer<typeof GenerateCrystalSchema>;
  */
 export const ComprehensiveGenerateSchema = z.object({
   operation: z.string()
-    .describe("Generator operation name. Use 'list_all' to see all available operations, or 'list_category' with category param to see operations in a category."),
+    .describe("Generator operation name. Use 'list_all' to see all available operations, 'list_category' with category param, or 'operation_info' with operation_name param."),
 
   category: z.string().optional()
     .describe("Category name when using operation='list_category'. Categories: bulk, two_d, surface, molecule, twist, defect, electronic, thermoelectric, battery, catalyst, adsorption, magnetic, nanotube, quantum, photonic, quality_control, high_pressure, external_fields"),
+
+  operation_name: z.string().optional()
+    .describe("Operation name to get info for when using operation='operation_info'"),
 
   // Common parameters - passed through to the generator function
   spacegroup: z.number().int().min(1).max(230).optional()
@@ -201,6 +204,7 @@ export const MakeSupercellSchema = z.object({
 
   scaling_matrix: z.union([
     z.string().describe("Preset matrix name (e.g., 'sqrt3', 'root2', '2x2x2')"),
+    z.array(z.number()).length(3).describe("Scaling vector [nx, ny, nz]"),
     z.array(z.array(z.number())).describe("3x3 scaling matrix")
   ]).describe("3x3 transformation matrix or [nx, ny, nz] scaling factors"),
 
@@ -227,7 +231,7 @@ export const GenerateSlabSchema = z.object({
     .describe("Miller indices [h, k, l] defining the surface plane"),
 
   thickness: z.number().int().positive()
-    .describe("Number of layers in the slab"),
+    .describe("Slab thickness - used as minimum slab size in Angstroms (see min_slab_size for explicit Angstrom control)"),
 
   vacuum: z.number().positive()
     .describe("Vacuum thickness in Angstroms"),
@@ -649,6 +653,106 @@ export const ApplyStrainSchema = z.object({
 
 export type ApplyStrainInput = z.infer<typeof ApplyStrainSchema>;
 
+// ============================================================================
+// ADVANCED STRUCTURE SCHEMAS
+// ============================================================================
+
+/**
+ * Generate prototype structure (rocksalt, perovskite, etc.)
+ */
+export const GeneratePrototypeSchema = z.object({
+  prototype: z.enum([
+    "rocksalt", "zincblende", "wurtzite", "fluorite", "antifluorite",
+    "perovskite", "spinel", "heusler", "rutile", "diamond", "bcc", "fcc", "hcp"
+  ]).describe("Prototype structure type"),
+  elements: z.record(z.string(), z.string())
+    .describe("Mapping of site labels to elements, e.g., {A: 'Ca', B: 'Ti', X: 'O'}"),
+  lattice_constant: z.number().positive().optional()
+    .describe("Lattice constant 'a' in Angstroms"),
+  c_over_a: z.number().positive().default(1.0)
+    .describe("c/a ratio for non-cubic systems")
+});
+export type GeneratePrototypeInput = z.infer<typeof GeneratePrototypeSchema>;
+
+/**
+ * Generate twisted bilayer structure
+ */
+export const GenerateTwistedBilayerSchema = z.object({
+  material: z.enum(["graphene", "MoS2", "WS2", "hBN"]).default("graphene")
+    .describe("Base 2D material"),
+  twist_angle: z.number().min(0).max(60)
+    .describe("Twist angle in degrees"),
+  layers: z.number().int().min(2).default(2)
+    .describe("Number of layers"),
+  stacking: z.enum(["AA", "AB"]).default("AB")
+    .describe("Initial stacking"),
+  interlayer_distance: z.number().positive().default(3.35)
+    .describe("Interlayer spacing in Angstroms"),
+  vacuum: z.number().positive().default(15.0)
+    .describe("Vacuum padding in Angstroms")
+});
+export type GenerateTwistedBilayerInput = z.infer<typeof GenerateTwistedBilayerSchema>;
+
+/**
+ * Generate high-entropy alloy structure
+ */
+export const GenerateHighEntropyAlloySchema = z.object({
+  elements: z.array(z.string()).min(4)
+    .describe("List of 4+ elements for HEA"),
+  concentrations: z.array(z.number()).optional()
+    .describe("Concentrations (default: equimolar)"),
+  structure_type: z.enum(["fcc", "bcc", "hcp"]).default("fcc")
+    .describe("Base crystal structure"),
+  supercell: z.tuple([z.number().int(), z.number().int(), z.number().int()]).default([3, 3, 3])
+    .describe("Supercell size"),
+  lattice_constant: z.number().positive().optional()
+    .describe("Lattice constant (estimated if not provided)"),
+  seed: z.number().int().optional()
+    .describe("Random seed for reproducibility")
+});
+export type GenerateHighEntropyAlloyInput = z.infer<typeof GenerateHighEntropyAlloySchema>;
+
+/**
+ * Generate 2D material structure
+ */
+export const Generate2DMaterialSchema = z.object({
+  material: z.enum(["hBN", "MoS2", "WS2", "MoSe2", "WSe2", "phosphorene", "silicene", "MXene"])
+    .describe("2D material type"),
+  size: z.tuple([z.number().int(), z.number().int(), z.number().int()]).default([1, 1, 1])
+    .describe("Supercell size"),
+  vacuum: z.number().positive().default(15.0)
+    .describe("Vacuum padding"),
+  extra_params: z.record(z.string(), z.any()).optional()
+    .describe("Material-specific parameters")
+});
+export type Generate2DMaterialInput = z.infer<typeof Generate2DMaterialSchema>;
+
+/**
+ * Generate MOF structure
+ */
+export const GenerateMOFSchema = z.object({
+  mof_type: z.enum(["MOF-5", "HKUST-1", "UiO-66", "ZIF-8"])
+    .describe("MOF type"),
+  functionalization: z.string().optional()
+    .describe("Linker functionalization"),
+  size: z.tuple([z.number().int(), z.number().int(), z.number().int()]).default([1, 1, 1])
+    .describe("Supercell size")
+});
+export type GenerateMOFInput = z.infer<typeof GenerateMOFSchema>;
+
+/**
+ * Generate cage structure (fullerenes, clathrates)
+ */
+export const GenerateCageSchema = z.object({
+  cage_type: z.enum(["C60", "C70", "C80", "clathrate_I", "clathrate_II"])
+    .describe("Cage structure type"),
+  guest: z.string().optional()
+    .describe("Guest atom for endohedral structures"),
+  vacuum: z.number().positive().default(5.0)
+    .describe("Vacuum padding in Angstroms")
+});
+export type GenerateCageInput = z.infer<typeof GenerateCageSchema>;
+
 /**
  * All tool definitions
  */
@@ -882,6 +986,73 @@ export const TOOL_DEFINITIONS: readonly ToolMetadata[] = [
       destructiveHint: false,
       idempotentHint: true,
       openWorldHint: false
+    }
+  },
+  // Advanced structure tools
+  {
+    name: "generate_prototype",
+    description: "Generate common prototype structures (rocksalt, perovskite, zincblende, wurtzite, etc.)",
+    inputSchema: GeneratePrototypeSchema,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true
+    }
+  },
+  {
+    name: "generate_twisted_bilayer",
+    description: "Generate twisted bilayer/multilayer structures (graphene, MoS2, hBN) with specified twist angle",
+    inputSchema: GenerateTwistedBilayerSchema,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true
+    }
+  },
+  {
+    name: "generate_high_entropy_alloy",
+    description: "Generate high-entropy alloy structures with 4+ elements in FCC/BCC/HCP lattices",
+    inputSchema: GenerateHighEntropyAlloySchema,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true
+    }
+  },
+  {
+    name: "generate_2d_material",
+    description: "Generate 2D materials (hBN, MoS2, WS2, phosphorene, silicene, MXene)",
+    inputSchema: Generate2DMaterialSchema,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true
+    }
+  },
+  {
+    name: "generate_mof",
+    description: "Generate metal-organic framework structures (MOF-5, HKUST-1, UiO-66, ZIF-8)",
+    inputSchema: GenerateMOFSchema,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true
+    }
+  },
+  {
+    name: "generate_cage",
+    description: "Generate cage structures (fullerenes C60/C70/C80, clathrates)",
+    inputSchema: GenerateCageSchema,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true
     }
   }
 ] as const;

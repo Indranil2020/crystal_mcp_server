@@ -231,10 +231,14 @@ def test_mlff_calculator():
     
     # Test 3: Energy calculation (if CHGNet available)
     print("\nTest 3: Energy calculation")
-    try:
+    import importlib.util
+    if importlib.util.find_spec("chgnet") is None:
+        print("  ⚠ CHGNet not installed, skipping energy calculation test")
+        print("  Install with: pip install chgnet")
+    else:
         import chgnet
         print("  CHGNet package found, running energy calculation...")
-        
+
         # Generate test structure
         gen_result = generate_crystal(
             composition=["Si", "Si"],
@@ -243,7 +247,7 @@ def test_mlff_calculator():
             seed=42
         )
         assert gen_result.get("success"), "Failed to generate structure"
-        
+
         # Calculate energy
         result = calculate_energy(
             structure_dict=gen_result["structure"],
@@ -251,18 +255,14 @@ def test_mlff_calculator():
             calculate_forces=True,
             calculate_stress=False
         )
-        
+
         if result.get("success"):
-            print(f"✓ Energy calculation successful")
+            print("✓ Energy calculation successful")
             print(f"  Energy: {result['energy']:.4f} eV")
             # Silicon diamond should be negative energy (stable)
             assert result['energy'] < 0, "Energy should be negative for stable crystal"
         else:
             print(f"⚠ Energy calculation failed: {result.get('error', {}).get('message')}")
-        
-    except ImportError:
-        print("  ⚠ CHGNet not installed, skipping energy calculation test")
-        print("  Install with: pip install chgnet")
     
     print("\n✓✓✓ MLFF Calculator: TESTS PASSED ✓✓✓")
     return True
