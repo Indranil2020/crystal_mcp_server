@@ -38,7 +38,7 @@ export async function spaceGroupScan(input: unknown): Promise<Result<any>> {
     return createFailure(result.error);
   }
 
-  const scanResults = result.data.data;
+  const scanResults = result.data;
   return createSuccess(scanResults);
 }
 

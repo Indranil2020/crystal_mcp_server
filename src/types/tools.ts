@@ -196,10 +196,10 @@ export type SpaceGroupScanInput = z.infer<typeof SpaceGroupScanSchema>;
  * Schema for make_supercell tool
  */
 export const MakeSupercellSchema = z.object({
-  structure: z.union([z.string(), z.any()])
+  structure_dict: z.union([z.string(), z.any()])
     .describe("Crystal structure as CIF file path, JSON, or structure object"),
 
-  matrix: z.union([
+  scaling_matrix: z.union([
     z.string().describe("Preset matrix name (e.g., 'sqrt3', 'root2', '2x2x2')"),
     z.array(z.array(z.number())).describe("3x3 scaling matrix")
   ]).describe("3x3 transformation matrix or [nx, ny, nz] scaling factors"),

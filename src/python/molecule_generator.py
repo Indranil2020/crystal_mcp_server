@@ -2,12 +2,12 @@
 """
 Molecule Generator
 
-DEPRECATED: This module is maintained for backward compatibility.
-New code should use:
+Primary backend for molecule generation via MCP tools.
+Generates isolated molecular structures using ASE.
+
+Related modular generators (for advanced use):
   - generators.molecule.small_molecules.generate_molecule
   - generators.molecule.conformers.generate_conformers
-
-Generates isolated molecular structures using ASE.
 """
 
 import sys

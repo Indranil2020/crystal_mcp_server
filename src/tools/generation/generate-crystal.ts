@@ -1,6 +1,6 @@
 /**
  * Generate Crystal Tool
- * 
+ *
  * Main tool for generating crystal structures with PyXtal.
  * Follows defensive programming with Result<T> pattern.
  */
@@ -10,6 +10,7 @@ import { CrystalStructure, StructureGenerationResult } from "../../types/crystal
 import { Result, createSuccess, createFailure, createError, CrystalErrorCode } from "../../types/errors.js";
 import { executePythonWithJSON } from "../../utils/python-bridge.js";
 import { formatStructureOutput } from "../../utils/formatting.js";
+import { generateCIF, generatePOSCAR, generateXYZ, generateJSON } from "../../utils/structure-formats.js";
 
 /**
  * Generate a crystal structure with specified composition and space group.
@@ -48,7 +49,7 @@ export async function generateCrystal(input: unknown): Promise<Result<StructureG
     return createFailure(result.error);
   }
 
-  const pythonResult = result.data.data;
+  const pythonResult = result.data;
 
   // Check if Python execution succeeded
   if (!pythonResult.success) {
@@ -81,107 +82,14 @@ export async function generateCrystal(input: unknown): Promise<Result<StructureG
       generation_time_ms: metadata?.generation_time_ms || 0
     },
     files: {
-      cif: generateCIFContent(structure),
-      poscar: generatePOSCARContent(structure),
-      xyz: generateXYZContent(structure),
-      json: JSON.stringify(structure, null, 2)
+      cif: generateCIF(structure),
+      poscar: generatePOSCAR(structure),
+      xyz: generateXYZ(structure),
+      json: generateJSON(structure)
     }
   };
 
   return createSuccess(generationResult);
-}
-
-/**
- * Generate CIF file content from structure.
- */
-function generateCIFContent(structure: CrystalStructure): string {
-  const { lattice, space_group, atoms } = structure;
-  
-  let cif = `data_crystal\n`;
-  cif += `_symmetry_space_group_name_H-M '${space_group.symbol}'\n`;
-  cif += `_space_group_IT_number ${space_group.number}\n`;
-  cif += `_cell_length_a ${lattice.a.toFixed(6)}\n`;
-  cif += `_cell_length_b ${lattice.b.toFixed(6)}\n`;
-  cif += `_cell_length_c ${lattice.c.toFixed(6)}\n`;
-  cif += `_cell_angle_alpha ${lattice.alpha.toFixed(4)}\n`;
-  cif += `_cell_angle_beta ${lattice.beta.toFixed(4)}\n`;
-  cif += `_cell_angle_gamma ${lattice.gamma.toFixed(4)}\n`;
-  cif += `_cell_volume ${lattice.volume.toFixed(4)}\n`;
-  cif += `\nloop_\n`;
-  cif += `_atom_site_label\n`;
-  cif += `_atom_site_type_symbol\n`;
-  cif += `_atom_site_fract_x\n`;
-  cif += `_atom_site_fract_y\n`;
-  cif += `_atom_site_fract_z\n`;
-  
-  atoms.forEach((atom, i) => {
-    cif += `${atom.element}${i+1} ${atom.element} ${atom.coords[0].toFixed(6)} ${atom.coords[1].toFixed(6)} ${atom.coords[2].toFixed(6)}\n`;
-  });
-  
-  return cif;
-}
-
-/**
- * Generate POSCAR file content from structure.
- */
-function generatePOSCARContent(structure: CrystalStructure): string {
-  const { lattice, atoms, metadata } = structure;
-  
-  let poscar = `${metadata.formula}\n`;
-  poscar += `1.0\n`;
-  
-  // Lattice vectors
-  lattice.matrix.forEach(vec => {
-    poscar += `  ${vec[0].toFixed(12)}  ${vec[1].toFixed(12)}  ${vec[2].toFixed(12)}\n`;
-  });
-  
-  // Count atoms by element
-  const elementCounts: Record<string, number> = {};
-  const elementOrder: string[] = [];
-  
-  atoms.forEach(atom => {
-    const element = atom.element;
-    if (element) {
-      if (!elementCounts[element]) {
-        elementCounts[element] = 0;
-        elementOrder.push(element);
-      }
-      elementCounts[element]!++;
-    }
-  });
-  
-  // Element names
-  poscar += elementOrder.join(' ') + '\n';
-  
-  // Element counts
-  poscar += elementOrder.map(el => elementCounts[el]).join(' ') + '\n';
-  
-  poscar += `Direct\n`;
-  
-  // Coordinates grouped by element
-  elementOrder.forEach(element => {
-    atoms.filter(a => a.element === element).forEach(atom => {
-      poscar += `  ${atom.coords[0].toFixed(12)}  ${atom.coords[1].toFixed(12)}  ${atom.coords[2].toFixed(12)}\n`;
-    });
-  });
-  
-  return poscar;
-}
-
-/**
- * Generate XYZ file content from structure.
- */
-function generateXYZContent(structure: CrystalStructure): string {
-  const { atoms, metadata } = structure;
-  
-  let xyz = `${atoms.length}\n`;
-  xyz += `${metadata.formula}\n`;
-  
-  atoms.forEach(atom => {
-    xyz += `${atom.element}  ${atom.cartesian[0].toFixed(8)}  ${atom.cartesian[1].toFixed(8)}  ${atom.cartesian[2].toFixed(8)}\n`;
-  });
-  
-  return xyz;
 }
 
 /**

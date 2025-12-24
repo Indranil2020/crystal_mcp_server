@@ -1,12 +1,12 @@
 """
 Ground State Searcher
 
-DEPRECATED: This module is maintained for backward compatibility.
-New code should use the modular generators:
+Primary backend for ground state search via MCP tools.
+Generates structures across multiple space groups and finds the lowest energy state using MLFF.
+
+Related modular generators (for advanced use):
   - generators.bulk.spacegroups.generate_space_group_scan
   - generators.quality_control.optimizer.optimize_structure_mlff
-
-Generates structures across multiple space groups and finds the lowest energy state using MLFF.
 """
 import sys
 import json

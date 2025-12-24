@@ -48,7 +48,7 @@ def generate_html(atoms: Atoms, output_file: str, style: str = "ball-stick"):
     write(xyz_io, atoms, format='xyz')
     xyz_data = xyz_io.getvalue().replace('`', '\`') # Escape backticks if any
     
-    # 3Dmol.js template
+    # 3Dmol.js template using vanilla JavaScript for compatibility
     html_content = f"""
 <!DOCTYPE html>
 <html>
@@ -64,17 +64,17 @@ def generate_html(atoms: Atoms, output_file: str, style: str = "ball-stick"):
 <body>
     <div id="container"></div>
     <script>
-        $(function() {{
-            let element = $("#container");
+        document.addEventListener('DOMContentLoaded', function() {{
+            let element = document.getElementById('container');
             let config = {{ backgroundColor: "white" }};
             let viewer = $3Dmol.createViewer(element, config);
-            
+
             let data = `{xyz_data}`;
             viewer.addModel(data, "xyz");
-            
+
             viewer.setStyle({{}}, {{stick: {{radius: 0.15}}, sphere: {{scale: 0.25}}}});
             viewer.addUnitCell(viewer.getModel());
-            
+
             viewer.zoomTo();
             viewer.render();
         }});

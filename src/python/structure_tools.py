@@ -565,19 +565,19 @@ def create_defect(
 
 def apply_strain(
     structure_dict: Dict[str, Any],
-    strain_tensor: List[List[float]],
+    strain_tensor: Optional[List] = None,
     strain_type: Optional[str] = None,
     strain_value: Optional[float] = None
 ) -> Dict[str, Any]:
     """
     Apply strain to structure.
-    
+
     Args:
         structure_dict: Original structure
-        strain_tensor: 3x3 strain tensor
-        strain_type: Predefined strain type
-        strain_value: Strain magnitude
-    
+        strain_tensor: Strain tensor as 3x3 matrix or flattened 9-element array
+        strain_type: Predefined strain type ("biaxial", "uniaxial", "hydrostatic")
+        strain_value: Strain magnitude (e.g., 0.05 for 5% strain)
+
     Returns:
         Dictionary with strained structure
     """
@@ -592,19 +592,62 @@ def apply_strain(
                 "details": {}
             }
         }
-    
+
+    # Build strain tensor from inputs
+    if strain_tensor is not None:
+        tensor = np.array(strain_tensor)
+        # Handle flattened 9-element array
+        if tensor.ndim == 1 and len(tensor) == 9:
+            tensor = tensor.reshape(3, 3)
+        elif tensor.ndim != 2 or tensor.shape != (3, 3):
+            return {
+                "success": False,
+                "error": {
+                    "code": "INVALID_STRAIN_TENSOR",
+                    "message": "Strain tensor must be 3x3 matrix or 9-element array",
+                    "details": {"shape": list(tensor.shape)}
+                }
+            }
+    elif strain_type is not None and strain_value is not None:
+        # Build tensor from strain_type and strain_value
+        s = strain_value
+        if strain_type == "hydrostatic":
+            tensor = np.array([[s, 0, 0], [0, s, 0], [0, 0, s]])
+        elif strain_type == "biaxial":
+            tensor = np.array([[s, 0, 0], [0, s, 0], [0, 0, 0]])
+        elif strain_type == "uniaxial":
+            tensor = np.array([[s, 0, 0], [0, 0, 0], [0, 0, 0]])
+        else:
+            return {
+                "success": False,
+                "error": {
+                    "code": "INVALID_STRAIN_TYPE",
+                    "message": f"Unknown strain type: {strain_type}",
+                    "details": {"valid_types": ["biaxial", "uniaxial", "hydrostatic"]}
+                }
+            }
+    else:
+        return {
+            "success": False,
+            "error": {
+                "code": "MISSING_STRAIN_PARAMS",
+                "message": "Must provide either strain_tensor or (strain_type and strain_value)",
+                "details": {}
+            }
+        }
+
     # Apply strain
     strained = structure.copy()
-    deformation = np.eye(3) + np.array(strain_tensor)
+    deformation = np.eye(3) + tensor
     strained.apply_strain(deformation)
-    
+
     # Convert to dictionary
     strained_dict = structure_to_dict(strained)
-    
+
     return {
         "success": True,
         "strained_structure": strained_dict,
-        "strain_tensor": strain_tensor,
+        "strain_tensor": tensor.tolist(),
         "deformation_matrix": deformation.tolist()
     }
 
@@ -870,8 +913,8 @@ def main():
         params = json.load(f)
     
     # Determine operation
-    operation = params.get("operation", None)
-    
+    operation = params.pop("operation", None)  # Remove operation key before passing to functions
+
     if operation == "supercell":
         result = make_supercell(**params)
     elif operation == "slab":

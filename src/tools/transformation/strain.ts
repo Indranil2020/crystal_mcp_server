@@ -33,7 +33,7 @@ export async function applyStrain(input: unknown): Promise<Result<any>> {
         return createFailure(result.error);
     }
 
-    const pythonResult = result.data.data;
+    const pythonResult = result.data;
 
     if (!pythonResult.success) {
         return createFailure(createError(

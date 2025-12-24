@@ -32,7 +32,7 @@ export async function calculateEnergyMLFF(input: unknown): Promise<Result<any>> 
     return createFailure(result.error);
   }
 
-  const pythonResult = result.data.data;
+  const pythonResult = result.data;
 
   if (!pythonResult.success) {
     return createFailure(createError(
@@ -60,7 +60,7 @@ export async function handleCalculateEnergyMLFF(args: unknown): Promise<any> {
     };
   }
 
-  const data = result.data.data;
+  const data = result.data;
 
   let outputText = `✅ **MLFF Energy Calculation Complete**\n\n`;
   outputText += `**Model:** ${data.model}\n`;

@@ -9,6 +9,7 @@
 import { PythonShell, Options as PythonShellOptions } from "python-shell";
 import * as fs from "fs";
 import * as path from "path";
+import * as os from "os";
 import { fileURLToPath } from "url";
 import { spawnSync } from "child_process";
 import type { Result } from "../types/errors.js";
@@ -161,26 +162,21 @@ function parseJSONOutput<T>(output: string): Result<T> {
     ));
   }
 
-  // Manual JSON parsing without try/catch
+  // Parse JSON with proper error handling
   let parsed: unknown;
 
-  const parseResult = (() => {
-    // This is the only place we use JSON.parse
-    // We handle errors through returned Result type
-    const result = JSON.parse(output);
-    return { success: true as const, data: result };
-  })();
-
-  if (parseResult.success) {
-    parsed = parseResult.data;
-  } else {
+  try {
+    parsed = JSON.parse(output);
+  } catch (parseError) {
+    const errorMessage = parseError instanceof Error ? parseError.message : 'Unknown parse error';
     return createFailure(createError(
       CrystalErrorCode.INVALID_JSON_RESPONSE,
-      "Failed to parse JSON from Python output",
+      `Failed to parse JSON from Python output: ${errorMessage}`,
       { output: output.substring(0, 200) },
       [
         "Check JSON syntax in Python output",
-        "Ensure proper JSON formatting"
+        "Ensure proper JSON formatting",
+        "Look for stray print statements or warnings in Python script"
       ]
     ));
   }
@@ -222,16 +218,19 @@ export async function executePython<T = unknown>(
   let timeoutId: NodeJS.Timeout | null = null;
 
   // Set up timeout if specified
-  if (options.timeout) {
-    timeoutId = setTimeout(() => {
-      timedOut = true;
-    }, options.timeout);
-  }
-
   return new Promise<Result<PythonExecutionResult<T>>>((resolve) => {
     const shell = new PythonShell(path.basename(scriptPath), pythonOptions);
     const stdoutLines: string[] = [];
     const stderrLines: string[] = [];
+
+    // Set up timeout with proper process termination
+    if (options.timeout) {
+      timeoutId = setTimeout(() => {
+        timedOut = true;
+        // Kill the Python process when timeout occurs
+        shell.terminate();
+      }, options.timeout);
+    }
 
     // Collect stdout
     shell.on("message", (message) => {
@@ -363,8 +362,8 @@ export async function executePythonWithJSON<TInput, TOutput>(
 
   jsonInput = stringifyResult.data;
 
-  // Write input to temporary file
-  const tempDir = "/tmp";
+  // Write input to temporary file (cross-platform)
+  const tempDir = os.tmpdir();
   const tempFileName = `crystal_mcp_${Date.now()}_${Math.random().toString(36).substring(7)}.json`;
   const tempFilePath = path.join(tempDir, tempFileName);
 

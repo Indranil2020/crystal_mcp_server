@@ -1,13 +1,13 @@
 """
 Nanostructure Generator using ASE
 
-DEPRECATED: This module is maintained for backward compatibility.
-New code should use the modular generators:
+Primary backend for nanostructure generation via MCP tools.
+Supports generation of nanotubes, nanoribbons, graphene sheets, and fullerenes.
+
+Related modular generators (for advanced use):
   - generators.nanotube.cnt.generate_cnt
   - generators.two_d.graphene.generate_graphene
   - generators.molecule.cages.generate_fullerene
-
-Supports generation of nanotubes, nanoribbons, graphene sheets, and fullerenes.
 """
 import sys
 import json

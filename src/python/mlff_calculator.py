@@ -561,9 +561,9 @@ def main():
     with open(input_file, 'r') as f:
         params = json.load(f)
     
-    # Determine operation
-    operation = params.get("operation", "optimize")
-    
+    # Determine operation and remove from params before passing to functions
+    operation = params.pop("operation", "optimize")
+
     if operation == "optimize":
         result = optimize_structure(**params)
     elif operation == "energy":

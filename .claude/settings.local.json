@@ -12,7 +12,9 @@
       "Bash(ls:*)",
       "Bash(wc:*)",
       "Bash(git status:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []

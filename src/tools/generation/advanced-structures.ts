@@ -107,7 +107,7 @@ export async function generatePrototype(input: unknown): Promise<Result<any>> {
 
     if (!result.success) return createFailure(result.error);
 
-    const pythonResult = result.data.data;
+    const pythonResult = result.data;
     if (!pythonResult.success) {
         return createFailure(createError(
             CrystalErrorCode.GENERATION_FAILED,
@@ -158,7 +158,7 @@ export async function generateTwistedBilayer(input: unknown): Promise<Result<any
 
     if (!result.success) return createFailure(result.error);
 
-    const pythonResult = result.data.data;
+    const pythonResult = result.data;
     if (!pythonResult.success) {
         return createFailure(createError(
             CrystalErrorCode.GENERATION_FAILED,
@@ -210,7 +210,7 @@ export async function generateHighEntropyAlloy(input: unknown): Promise<Result<a
 
     if (!result.success) return createFailure(result.error);
 
-    const pythonResult = result.data.data;
+    const pythonResult = result.data;
     if (!pythonResult.success) {
         return createFailure(createError(
             CrystalErrorCode.GENERATION_FAILED,
@@ -262,7 +262,7 @@ export async function generate2DMaterial(input: unknown): Promise<Result<any>> {
 
     if (!result.success) return createFailure(result.error);
 
-    const pythonResult = result.data.data;
+    const pythonResult = result.data;
     if (!pythonResult.success) {
         return createFailure(createError(
             CrystalErrorCode.GENERATION_FAILED,
@@ -313,7 +313,7 @@ export async function generateMOF(input: unknown): Promise<Result<any>> {
 
     if (!result.success) return createFailure(result.error);
 
-    const pythonResult = result.data.data;
+    const pythonResult = result.data;
     if (!pythonResult.success) {
         return createFailure(createError(
             CrystalErrorCode.GENERATION_FAILED,
@@ -365,7 +365,7 @@ export async function generateCage(input: unknown): Promise<Result<any>> {
 
     if (!result.success) return createFailure(result.error);
 
-    const pythonResult = result.data.data;
+    const pythonResult = result.data;
     if (!pythonResult.success) {
         return createFailure(createError(
             CrystalErrorCode.GENERATION_FAILED,

@@ -21,7 +21,9 @@ export async function validateStructure(input: unknown): Promise<Result<any>> {
     ));
   }
 
-  const params = { structure_dict: parsed.data.structure, ...parsed.data };
+  // Extract structure and rename to structure_dict for Python, exclude original structure key
+  const { structure, ...restParams } = parsed.data;
+  const params = { structure_dict: structure, ...restParams };
 
   const result = await executePythonWithJSON<typeof params, any>(
     "validators.py",
@@ -33,7 +35,7 @@ export async function validateStructure(input: unknown): Promise<Result<any>> {
     return createFailure(result.error);
   }
 
-  const pythonResult = result.data.data;
+  const pythonResult = result.data;
   
   if (!pythonResult.success) {
     return createFailure(createError(

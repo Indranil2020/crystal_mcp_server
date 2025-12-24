@@ -66,7 +66,7 @@ export async function exploreSymmetryRelations(input: unknown): Promise<Result<a
         return createFailure(result.error);
     }
 
-    const pythonResult = result.data.data;
+    const pythonResult = result.data;
 
     if (!pythonResult.success) {
         return createFailure(createError(

@@ -10,42 +10,73 @@ import { CrystalStructure, StructureValidation } from "../types/crystal.js";
  * Format crystal structure as human-readable text.
  */
 export function formatStructureOutput(
-  structure: CrystalStructure,
+  structure: CrystalStructure | any,
   validation?: StructureValidation
 ): string {
-  const { lattice, space_group, atoms, metadata } = structure;
-  
-  let output = `## 🔬 Generated Crystal Structure\n\n`;
-  
-  // Basic information
-  output += `**Formula:** ${metadata.formula}\n`;
-  output += `**Space Group:** ${space_group.number} (${space_group.symbol})\n`;
-  output += `**Crystal System:** ${space_group.crystal_system}\n`;
-  output += `**Point Group:** ${space_group.point_group}\n`;
-  output += `**Hall Symbol:** ${space_group.hall_symbol}\n\n`;
-  
-  // Lattice parameters
-  output += `### Lattice Parameters\n\n`;
-  output += `| Parameter | Value |\n`;
-  output += `|-----------|-------|\n`;
-  output += `| a | ${lattice.a.toFixed(4)} Å |\n`;
-  output += `| b | ${lattice.b.toFixed(4)} Å |\n`;
-  output += `| c | ${lattice.c.toFixed(4)} Å |\n`;
-  output += `| α | ${lattice.alpha.toFixed(2)}° |\n`;
-  output += `| β | ${lattice.beta.toFixed(2)}° |\n`;
-  output += `| γ | ${lattice.gamma.toFixed(2)}° |\n`;
-  output += `| Volume | ${lattice.volume.toFixed(3)} ų |\n\n`;
-  
-  // Physical properties
-  output += `### Physical Properties\n\n`;
-  output += `| Property | Value |\n`;
-  output += `|----------|-------|\n`;
-  output += `| Number of Atoms | ${metadata.natoms} |\n`;
-  output += `| Density | ${metadata.density.toFixed(3)} g/cm³ |\n`;
-  if (metadata.packing_fraction !== undefined) {
-    output += `| Packing Fraction | ${metadata.packing_fraction.toFixed(3)} |\n`;
+  // Handle missing fields gracefully
+  const lattice = structure?.lattice || {};
+  const space_group = structure?.space_group || {};
+  const atoms = structure?.atoms || structure?.sites || [];
+  const metadata = structure?.metadata || {};
+
+  let output = `## Generated Crystal Structure\n\n`;
+
+  // Basic information - only show if available
+  if (metadata.formula) {
+    output += `**Formula:** ${metadata.formula}\n`;
   }
-  output += `\n`;
+  if (space_group.number !== undefined || space_group.symbol) {
+    const sgInfo = space_group.number !== undefined
+      ? `${space_group.number}${space_group.symbol ? ` (${space_group.symbol})` : ''}`
+      : space_group.symbol || 'Unknown';
+    output += `**Space Group:** ${sgInfo}\n`;
+  }
+  if (space_group.crystal_system) {
+    output += `**Crystal System:** ${space_group.crystal_system}\n`;
+  }
+  if (space_group.point_group) {
+    output += `**Point Group:** ${space_group.point_group}\n`;
+  }
+  if (space_group.hall_symbol) {
+    output += `**Hall Symbol:** ${space_group.hall_symbol}\n`;
+  }
+  output += '\n';
+
+  // Lattice parameters - only show if available
+  if (lattice.a !== undefined) {
+    output += `### Lattice Parameters\n\n`;
+    output += `| Parameter | Value |\n`;
+    output += `|-----------|-------|\n`;
+    output += `| a | ${(lattice.a ?? 0).toFixed(4)} A |\n`;
+    output += `| b | ${(lattice.b ?? 0).toFixed(4)} A |\n`;
+    output += `| c | ${(lattice.c ?? 0).toFixed(4)} A |\n`;
+    output += `| alpha | ${(lattice.alpha ?? 0).toFixed(2)} deg |\n`;
+    output += `| beta | ${(lattice.beta ?? 0).toFixed(2)} deg |\n`;
+    output += `| gamma | ${(lattice.gamma ?? 0).toFixed(2)} deg |\n`;
+    if (lattice.volume !== undefined) {
+      output += `| Volume | ${lattice.volume.toFixed(3)} A^3 |\n`;
+    }
+    output += `\n`;
+  }
+
+  // Physical properties - only show if available
+  const hasMetadata = metadata.natoms !== undefined || metadata.density !== undefined || metadata.n_atoms !== undefined;
+  if (hasMetadata) {
+    output += `### Physical Properties\n\n`;
+    output += `| Property | Value |\n`;
+    output += `|----------|-------|\n`;
+    const atomCount = metadata.natoms ?? metadata.n_atoms ?? atoms.length;
+    if (atomCount !== undefined) {
+      output += `| Number of Atoms | ${atomCount} |\n`;
+    }
+    if (metadata.density !== undefined) {
+      output += `| Density | ${metadata.density.toFixed(3)} g/cm^3 |\n`;
+    }
+    if (metadata.packing_fraction !== undefined) {
+      output += `| Packing Fraction | ${metadata.packing_fraction.toFixed(3)} |\n`;
+    }
+    output += `\n`;
+  }
   
   // Validation results
   if (validation) {
@@ -66,31 +97,49 @@ export function formatStructureOutput(
     }
   }
   
-  // Atomic positions
-  output += `### Atomic Positions\n\n`;
-  output += `| # | Element | Wyckoff | Fractional Coordinates | Cartesian (Å) |\n`;
-  output += `|---|---------|---------|------------------------|---------------|\n`;
-  
-  atoms.forEach((atom, i) => {
-    const frac = atom.coords.map(x => x.toFixed(4)).join(', ');
-    const cart = atom.cartesian.map(x => x.toFixed(3)).join(', ');
-    const wyckoff = atom.wyckoff || '-';
-    output += `| ${i+1} | ${atom.element} | ${wyckoff} | (${frac}) | (${cart}) |\n`;
-  });
-  
-  output += `\n`;
-  
-  // Lattice vectors
-  output += `### Lattice Vectors\n\n`;
-  output += `\`\`\`\n`;
-  lattice.matrix.forEach((vec, i) => {
-    const label = ['a', 'b', 'c'][i];
-    output += `${label} = [${vec.map(x => x.toFixed(6)).join(', ')}]\n`;
-  });
-  output += `\`\`\`\n\n`;
-  
-  output += `✅ Structure generated successfully!\n`;
-  
+  // Atomic positions - only show if atoms are available
+  if (atoms && atoms.length > 0) {
+    const hasCartesian = atoms.some((a: any) => a.cartesian);
+    output += `### Atomic Positions\n\n`;
+    if (hasCartesian) {
+      output += `| # | Element | Wyckoff | Fractional Coordinates | Cartesian (A) |\n`;
+      output += `|---|---------|---------|------------------------|---------------|\n`;
+    } else {
+      output += `| # | Element | Wyckoff | Fractional Coordinates |\n`;
+      output += `|---|---------|---------|------------------------|\n`;
+    }
+
+    atoms.forEach((atom: any, i: number) => {
+      const coords = atom.coords || atom.abc || [0, 0, 0];
+      const frac = coords.map((x: number) => (x ?? 0).toFixed(4)).join(', ');
+      const element = atom.element || atom.species?.[0]?.element || 'X';
+      const wyckoff = atom.wyckoff || '-';
+
+      if (hasCartesian) {
+        const cart = atom.cartesian
+          ? atom.cartesian.map((x: number) => (x ?? 0).toFixed(3)).join(', ')
+          : '-';
+        output += `| ${i + 1} | ${element} | ${wyckoff} | (${frac}) | (${cart}) |\n`;
+      } else {
+        output += `| ${i + 1} | ${element} | ${wyckoff} | (${frac}) |\n`;
+      }
+    });
+    output += `\n`;
+  }
+
+  // Lattice vectors - only show if matrix is available
+  if (lattice.matrix && Array.isArray(lattice.matrix)) {
+    output += `### Lattice Vectors\n\n`;
+    output += `\`\`\`\n`;
+    lattice.matrix.forEach((vec: number[], i: number) => {
+      const label = ['a', 'b', 'c'][i];
+      output += `${label} = [${vec.map((x: number) => (x ?? 0).toFixed(6)).join(', ')}]\n`;
+    });
+    output += `\`\`\`\n\n`;
+  }
+
+  output += `Structure generated successfully!\n`;
+
   return output;
 }
 
@@ -109,7 +158,7 @@ export function formatSpaceGroupScanOutput(results: any[]): string {
   
   if (successful.length > 0) {
     output += `### ✅ Successfully Generated\n\n`;
-    output += `| Space Group | Symbol | Crystal System | Atoms | Volume (ų) |\n`;
+    output += `| Space Group | Symbol | Crystal System | Atoms | Volume (A^3) |\n`;
     output += `|-------------|--------|----------------|-------|------------|\n`;
     
     successful.forEach(result => {

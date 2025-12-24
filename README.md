@@ -133,8 +133,8 @@ Create supercell from existing structure.
 
 ```typescript
 {
-  structure: {...},
-  scaling_matrix: [2, 2, 2]  // 2x2x2 supercell
+  structure_dict: {...},  // Structure object from generate_crystal
+  scaling_matrix: [2, 2, 2]  // 2x2x2 supercell, or [[2,0,0],[0,2,0],[0,0,2]]
 }
 ```
 
@@ -144,10 +144,10 @@ Generate surface slab for DFT calculations.
 
 ```typescript
 {
-  structure: {...},
+  structure_dict: {...},  // Structure object from generate_crystal
   miller_indices: [1, 0, 0],
-  thickness: 5,
-  vacuum: 15.0
+  thickness: 5,  // Number of atomic layers
+  vacuum: 15.0   // Vacuum padding in Angstroms
 }
 ```
 
@@ -157,9 +157,9 @@ Detect and analyze crystal symmetry.
 
 ```typescript
 {
-  structure: {...},
-  symprec: 0.001,
-  detect_primitive: true
+  structure_dict: {...},  // Structure object
+  symprec: 0.001,         // Symmetry precision tolerance
+  detect_primitive: true  // Find primitive cell
 }
 ```
 
@@ -169,23 +169,23 @@ Validate crystal structure quality.
 
 ```typescript
 {
-  structure: {...},
-  checks: ["distances", "lattice", "stoichiometry"],
-  min_distance: 1.5
+  structure_dict: {...},  // Structure object
+  checks: ["distances", "lattice", "stoichiometry"],  // Available checks
+  min_distance: 1.5  // Minimum interatomic distance in Angstroms
 }
 ```
 
 #### 7. optimize_structure_mlff
 
-Optimize structure using MLFF.
+Optimize structure using machine learning force fields (optional - requires MLFF packages).
 
 ```typescript
 {
-  structure: {...},
-  mlff_model: "chgnet",
-  optimizer: "BFGS",
-  fmax: 0.01,
-  steps: 500
+  structure_dict: {...},  // Structure object
+  mlff_model: "chgnet",   // Options: "chgnet", "m3gnet", "mace"
+  optimizer: "BFGS",      // Options: "BFGS", "FIRE", "LBFGS"
+  fmax: 0.01,             // Force convergence criterion (eV/A)
+  steps: 500              // Maximum optimization steps
 }
 ```
 
@@ -208,8 +208,9 @@ Export structure to multiple formats.
 
 ```typescript
 {
-  structure: {...},
-  formats: ["cif", "poscar", "xyz", "json"]
+  structure_dict: {...},  // Structure object
+  formats: ["cif", "poscar", "xyz", "json"],  // Output formats
+  output_directory: "./output"  // Optional output path
 }
 ```
 
@@ -236,7 +237,7 @@ const bulk = await mcpClient.callTool("generate_crystal", {
 
 // Then create (110) surface
 const slab = await mcpClient.callTool("generate_slab", {
-  structure: bulk.structure,
+  structure_dict: bulk.structure,
   miller_indices: [1, 1, 0],
   thickness: 5,
   vacuum: 15.0,
