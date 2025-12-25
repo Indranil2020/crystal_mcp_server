@@ -46,7 +46,7 @@ def generate_html(atoms: Atoms, output_file: str, style: str = "ball-stick"):
     # Convert to XYZ format string for embedding
     xyz_io = io.StringIO()
     write(xyz_io, atoms, format='xyz')
-    xyz_data = xyz_io.getvalue().replace('`', '\`') # Escape backticks if any
+    xyz_data = xyz_io.getvalue().replace('`', '\\`') # Escape backticks if any
     
     # 3Dmol.js template using vanilla JavaScript for compatibility
     html_content = f"""

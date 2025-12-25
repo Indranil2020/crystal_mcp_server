@@ -757,15 +757,21 @@ def _validate_generator_params(required, allowed, accepts_kwargs, params):
 
 def _ase_molecule_or_none(name: str):
     from ase.collections import g2
-    import ase.build.molecule as ase_molecule_module
+    import importlib
+    from ase.build import molecule as ase_molecule
 
     known = set(getattr(g2, "names", []))
-    extra = getattr(ase_molecule_module, "extra", {})
-    if isinstance(extra, dict):
-        known.update(extra.keys())
+    try:
+        ase_molecule_module = importlib.import_module("ase.build.molecule")
+        extra = getattr(ase_molecule_module, "extra", {})
+        if isinstance(extra, dict):
+            known.update(extra.keys())
+    except Exception:
+        # Fallback: extra molecule catalog is optional across ASE versions.
+        pass
 
     if name in known:
-        return ase_molecule_module.molecule(name)
+        return ase_molecule(name)
 
     return None
 
