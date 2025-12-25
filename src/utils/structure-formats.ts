@@ -9,10 +9,19 @@ import { CrystalStructure } from "../types/crystal.js";
 
 /**
  * Generate CIF file content from structure.
+ *
+ * By default, uses P1 space group to prevent CIF readers from incorrectly
+ * expanding symmetry (since we output all atoms, not asymmetric unit).
+ * Set useOriginalSpaceGroup=true only if outputting asymmetric unit positions.
+ *
+ * @param structure - The crystal structure
+ * @param useOriginalSpaceGroup - If true, use the structure's space group instead of P1
  */
-export function generateCIF(structure: CrystalStructure | any): string {
+export function generateCIF(structure: CrystalStructure | any, useOriginalSpaceGroup: boolean = false): string {
   const lattice = structure?.lattice || {};
-  const space_group = structure?.space_group || { symbol: 'P1', number: 1 };
+  // Default to P1 to prevent symmetry expansion issues when outputting all atoms
+  const original_space_group = structure?.space_group || { symbol: 'P1', number: 1 };
+  const space_group = useOriginalSpaceGroup ? original_space_group : { symbol: 'P1', number: 1 };
   const atoms = structure?.atoms || [];
   const matrix = lattice.matrix;
 

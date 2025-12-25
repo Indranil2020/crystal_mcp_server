@@ -242,7 +242,10 @@ def generate_from_spacegroup(
         b = a
     if c is None:
         c = a
-    
+
+    # Store original requested composition for transparency
+    requested_composition = list(composition)
+
     # Pre-validate composition compatibility with space group
     group = Group(spacegroup)
 
@@ -250,25 +253,25 @@ def generate_from_spacegroup(
     available_multiplicities = sorted(set([wp.multiplicity for wp in group.Wyckoff_positions]))
     min_multiplicity = min(available_multiplicities)
 
-    # Adjust composition if needed to fit Wyckoff constraints
+    # Analyze composition adjustments needed for Wyckoff constraints
     adjusted_composition = list(composition)
-    composition_adjusted = False
+    composition_warnings = []
 
     for i, (elem, count) in enumerate(zip(elements, composition)):
         if count < min_multiplicity and count != 0:
             # Find the smallest valid multiplicity >= count
             valid_count = min(m for m in available_multiplicities if m >= count)
             adjusted_composition[i] = valid_count
-            composition_adjusted = True
+            composition_warnings.append(
+                f"{elem}: requested {count}, adjusted to {valid_count} (min Wyckoff multiplicity is {min_multiplicity})"
+            )
         elif count > 0:
             # Check if count is achievable with available multiplicities
-            # Simple check: can we sum to this count using available multiplicities?
             achievable = False
             for mult in available_multiplicities:
                 if count % mult == 0 or count in available_multiplicities:
                     achievable = True
                     break
-                # Check if sum of multiplicities can reach count
                 for m1 in available_multiplicities:
                     for m2 in available_multiplicities:
                         if m1 + m2 == count or m1 * 2 == count or m2 * 2 == count:
@@ -286,22 +289,45 @@ def generate_from_spacegroup(
                         valid_counts.add(m + m2)
                 nearest = min(valid_counts, key=lambda x: abs(x - count))
                 adjusted_composition[i] = nearest
-                composition_adjusted = True
+                composition_warnings.append(
+                    f"{elem}: requested {count}, adjusted to {nearest} (not achievable with available Wyckoff multiplicities {available_multiplicities})"
+                )
 
-    composition = adjusted_composition
-    
-    # Generate the crystal - PyXtal will find valid Wyckoff assignments
+    actual_composition = adjusted_composition
+
+    # Generate the crystal with retry logic for validation
     # Set seed for reproducibility if provided
     if seed is not None:
         np.random.seed(seed)
-    
-    crystal.from_random(
-        dim=3,
-        group=spacegroup,
-        species=elements,
-        numIons=composition,
-        factor=factor,
-    )
+
+    max_attempts = 10
+    for attempt in range(max_attempts):
+        crystal.from_random(
+            dim=3,
+            group=spacegroup,
+            species=elements,
+            numIons=actual_composition,
+            factor=factor,
+        )
+
+        # Check if crystal generation was successful
+        if crystal.valid:
+            break
+    else:
+        # All attempts failed
+        return {
+            "success": False,
+            "error": {
+                "code": "GENERATION_FAILED",
+                "message": f"Failed to generate valid crystal after {max_attempts} attempts",
+                "details": {
+                    "spacegroup": spacegroup,
+                    "elements": elements,
+                    "requested_composition": requested_composition,
+                    "attempted_composition": actual_composition
+                }
+            }
+        }
     
     # Convert to pymatgen Structure
     pmg_structure = crystal.to_pymatgen()
@@ -333,14 +359,17 @@ def generate_from_spacegroup(
     
     # Get space group info
     sg_info = COMMON_SPACEGROUPS.get(spacegroup, {})
-    
-    return {
+
+    # Build result with full composition transparency
+    result = {
         "success": True,
         "spacegroup_number": spacegroup,
         "spacegroup_symbol": crystal.group.symbol,
         "crystal_system": crystal_system,
         "elements": elements,
-        "composition": composition,
+        "requested_composition": requested_composition,
+        "actual_composition": actual_composition,
+        "composition": actual_composition,  # For backward compatibility
         "formula": pmg_structure.formula,
         "n_atoms": len(pmg_structure),
         "lattice_parameters": {
@@ -354,6 +383,20 @@ def generate_from_spacegroup(
         "wyckoff_positions": [str(site.wp) for site in crystal.atom_sites] if crystal.atom_sites else [],
         "structure": structure_to_dict(pmg_structure)
     }
+
+    # Add explicit warnings if composition was adjusted
+    if composition_warnings:
+        result["composition_adjusted"] = True
+        result["composition_warnings"] = composition_warnings
+        result["warning"] = (
+            "COMPOSITION MODIFIED: The requested composition was adjusted to satisfy "
+            "Wyckoff position constraints. Review 'requested_composition' vs 'actual_composition' "
+            "to ensure this is acceptable for your scientific application."
+        )
+    else:
+        result["composition_adjusted"] = False
+
+    return result
 
 
 def generate_from_spacegroup_symbol(

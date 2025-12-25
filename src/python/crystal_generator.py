@@ -417,10 +417,22 @@ def validate_generated_structure(
     if min_distance:
         pmg_structure = crystal.to_pymatgen()
         distances = calculate_min_distances(pmg_structure)
-        
-        for pair, min_dist in min_distance.items():
-            if pair in distances:
-                actual_dist = distances[pair]
+
+        # Normalize distance keys: sort element pairs so Si-O == O-Si
+        def normalize_pair(pair_str: str) -> str:
+            parts = pair_str.split('-')
+            if len(parts) == 2:
+                return '-'.join(sorted(parts))
+            return pair_str
+
+        # Build normalized constraint dict
+        normalized_constraints = {normalize_pair(k): v for k, v in min_distance.items()}
+        # Build normalized distances dict
+        normalized_distances = {normalize_pair(k): v for k, v in distances.items()}
+
+        for pair, min_dist in normalized_constraints.items():
+            if pair in normalized_distances:
+                actual_dist = normalized_distances[pair]
                 if actual_dist < min_dist:
                     errors.append(
                         f"Distance between {pair} is {actual_dist:.3f} Angstroms, "
@@ -626,10 +638,46 @@ def generate_crystal(
     
     # Extract structure data
     structure_data = extract_structure_data(crystal)
-    
+
     # Validate generated structure
     validation = validate_generated_structure(crystal, min_distance)
-    
+
+    # HARD FAILURE: If min_distance constraints are violated, fail the generation
+    # This is scientifically critical - unphysical short contacts invalidate results
+    if not validation.is_valid:
+        # Check if any errors are min_distance related
+        min_distance_errors = [e for e in validation.errors if "Distance between" in e]
+        if min_distance_errors:
+            return {
+                "success": False,
+                "error": {
+                    "code": "MIN_DISTANCE_VIOLATION",
+                    "message": "Generated structure violates minimum distance constraints",
+                    "details": {
+                        "violations": min_distance_errors,
+                        "all_errors": validation.errors,
+                        "warnings": validation.warnings
+                    },
+                    "suggestions": [
+                        "Increase volume_factor to create more space between atoms",
+                        "Reduce the number of atoms",
+                        "Try a different space group with more available volume"
+                    ]
+                }
+            }
+        # Other validation errors still return failure
+        return {
+            "success": False,
+            "error": {
+                "code": "VALIDATION_FAILED",
+                "message": "Generated structure failed validation",
+                "details": {
+                    "errors": validation.errors,
+                    "warnings": validation.warnings
+                }
+            }
+        }
+
     return {
         "success": True,
         "structure": structure_data,

@@ -784,7 +784,7 @@ class StructureEditor:
         molecules = {
             "CO": Atoms("CO", positions=[[0, 0, 0], [0, 0, 1.13]]),
             "H2O": Atoms("H2O", positions=[[0, 0, 0], [0.76, 0.59, 0], [-0.76, 0.59, 0]]),
-            "NH3": Atoms("NH4", positions=[[0, 0, 0], [0, 0.94, 0.38], [0.81, -0.47, 0.38], [-0.81, -0.47, 0.38]]),
+            "NH3": Atoms("NH3", positions=[[0, 0, 0], [0, 0.94, 0.38], [0.81, -0.47, 0.38], [-0.81, -0.47, 0.38]]),
         }
 
         return molecules.get(name, Atoms("H", positions=[[0, 0, 0]]))

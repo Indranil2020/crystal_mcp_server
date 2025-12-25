@@ -44,6 +44,62 @@ def _normalize_structure(structure: Union[Dict, Any]) -> Dict[str, Any]:
     return structure
 
 
+def _get_lattice_matrix(lattice_info: Dict[str, Any]) -> np.ndarray:
+    """
+    Get or compute the 3x3 lattice matrix from lattice info.
+    Critical for proper coordinate transformations in non-orthogonal cells.
+    """
+    # Use matrix directly if available
+    if "matrix" in lattice_info and lattice_info["matrix"] is not None:
+        return np.array(lattice_info["matrix"])
+
+    # Otherwise compute from parameters
+    a = lattice_info.get("a", 5.0)
+    b = lattice_info.get("b", a)
+    c = lattice_info.get("c", a)
+    alpha = lattice_info.get("alpha", 90.0)
+    beta = lattice_info.get("beta", 90.0)
+    gamma = lattice_info.get("gamma", 90.0)
+
+    # Convert to radians
+    alpha_r = np.radians(alpha)
+    beta_r = np.radians(beta)
+    gamma_r = np.radians(gamma)
+
+    cos_alpha = np.cos(alpha_r)
+    cos_beta = np.cos(beta_r)
+    cos_gamma = np.cos(gamma_r)
+    sin_gamma = np.sin(gamma_r)
+
+    # Standard crystallographic convention
+    ax, ay, az = a, 0.0, 0.0
+    bx = b * cos_gamma
+    by = b * sin_gamma
+    bz = 0.0
+    cx = c * cos_beta
+    cy = c * (cos_alpha - cos_beta * cos_gamma) / sin_gamma if sin_gamma > 1e-10 else 0.0
+    cz_sq = 1 - cos_alpha**2 - cos_beta**2 - cos_gamma**2 + 2 * cos_alpha * cos_beta * cos_gamma
+    cz = c * np.sqrt(max(0, cz_sq)) / sin_gamma if sin_gamma > 1e-10 else c
+
+    return np.array([
+        [ax, ay, az],
+        [bx, by, bz],
+        [cx, cy, cz]
+    ])
+
+
+def _frac_to_cart(frac_coords: List[float], lattice_info: Dict[str, Any]) -> List[float]:
+    """
+    Convert fractional coordinates to Cartesian using proper lattice matrix.
+    Essential for non-orthogonal (triclinic, monoclinic) cells.
+    """
+    matrix = _get_lattice_matrix(lattice_info)
+    frac = np.array(frac_coords)
+    # cart = matrix.T @ frac for row-major lattice vectors
+    cart = matrix.T @ frac
+    return cart.tolist()
+
+
 def export_vasp(
     structure: Union[Dict[str, Any], Any],
     direct: bool = True,
@@ -180,9 +236,45 @@ def export_quantum_espresso(
     
     lines.append("")
     lines.append("CELL_PARAMETERS angstrom")
-    lines.append(f"  {a:.10f}  0.0000000000  0.0000000000")
-    lines.append(f"  0.0000000000  {b:.10f}  0.0000000000")
-    lines.append(f"  0.0000000000  0.0000000000  {c:.10f}")
+
+    # Use full lattice matrix if available (critical for non-orthogonal cells)
+    lattice_matrix = lattice_info.get("matrix")
+    if lattice_matrix is not None:
+        # Use actual lattice vectors for triclinic/monoclinic/etc.
+        for vec in lattice_matrix:
+            lines.append(f"  {vec[0]:.10f}  {vec[1]:.10f}  {vec[2]:.10f}")
+    else:
+        # Fallback to orthogonal approximation (only valid for cubic/orthorhombic)
+        alpha = lattice_info.get("alpha", 90.0)
+        beta = lattice_info.get("beta", 90.0)
+        gamma = lattice_info.get("gamma", 90.0)
+
+        if abs(alpha - 90) > 0.01 or abs(beta - 90) > 0.01 or abs(gamma - 90) > 0.01:
+            # Non-orthogonal cell without matrix - compute from parameters
+            import math
+            cos_alpha = math.cos(math.radians(alpha))
+            cos_beta = math.cos(math.radians(beta))
+            cos_gamma = math.cos(math.radians(gamma))
+            sin_gamma = math.sin(math.radians(gamma))
+
+            # Standard crystallographic convention for lattice vectors
+            ax, ay, az = a, 0.0, 0.0
+            bx = b * cos_gamma
+            by = b * sin_gamma
+            bz = 0.0
+            cx = c * cos_beta
+            cy = c * (cos_alpha - cos_beta * cos_gamma) / sin_gamma
+            cz = c * math.sqrt(1 - cos_alpha**2 - cos_beta**2 - cos_gamma**2 +
+                              2 * cos_alpha * cos_beta * cos_gamma) / sin_gamma
+
+            lines.append(f"  {ax:.10f}  {ay:.10f}  {az:.10f}")
+            lines.append(f"  {bx:.10f}  {by:.10f}  {bz:.10f}")
+            lines.append(f"  {cx:.10f}  {cy:.10f}  {cz:.10f}")
+        else:
+            # Orthogonal cell
+            lines.append(f"  {a:.10f}  0.0000000000  0.0000000000")
+            lines.append(f"  0.0000000000  {b:.10f}  0.0000000000")
+            lines.append(f"  0.0000000000  0.0000000000  {c:.10f}")
     
     lines.append("")
     lines.append("ATOMIC_POSITIONS crystal")
@@ -257,14 +349,56 @@ def export_lammps(
     lines.append("")
     lines.append("Atoms")
     lines.append("")
-    
+
+    # Get lattice matrix for proper fractional to Cartesian conversion
+    lattice_matrix = lattice_info.get("matrix")
+
     for i, atom in enumerate(atoms):
         elem = atom.get("element", "X")
         coord = atom.get("coords", [0, 0, 0])
-        # Convert fractional to Cartesian
-        x = coord[0] * a
-        y = coord[1] * b
-        z = coord[2] * c
+
+        # Use cartesian coords if available, otherwise convert properly
+        if "cartesian" in atom:
+            x, y, z = atom["cartesian"]
+        elif lattice_matrix is not None:
+            # Proper fractional to Cartesian: cart = matrix.T @ frac (row-major convention)
+            matrix = np.array(lattice_matrix)
+            frac = np.array(coord)
+            cart = matrix.T @ frac
+            x, y, z = cart
+        else:
+            # Fallback - compute matrix from parameters for non-orthogonal cells
+            alpha = lattice_info.get("alpha", 90.0)
+            beta = lattice_info.get("beta", 90.0)
+            gamma = lattice_info.get("gamma", 90.0)
+
+            if abs(alpha - 90) > 0.01 or abs(beta - 90) > 0.01 or abs(gamma - 90) > 0.01:
+                import math
+                cos_alpha = math.cos(math.radians(alpha))
+                cos_beta = math.cos(math.radians(beta))
+                cos_gamma = math.cos(math.radians(gamma))
+                sin_gamma = math.sin(math.radians(gamma))
+
+                # Lattice vectors
+                ax, ay, az = a, 0.0, 0.0
+                bx = b * cos_gamma
+                by = b * sin_gamma
+                bz = 0.0
+                cx = c * cos_beta
+                cy = c * (cos_alpha - cos_beta * cos_gamma) / sin_gamma
+                cz = c * math.sqrt(max(0, 1 - cos_alpha**2 - cos_beta**2 - cos_gamma**2 +
+                                  2 * cos_alpha * cos_beta * cos_gamma)) / sin_gamma
+
+                # Fractional to Cartesian
+                x = coord[0] * ax + coord[1] * bx + coord[2] * cx
+                y = coord[0] * ay + coord[1] * by + coord[2] * cy
+                z = coord[0] * az + coord[1] * bz + coord[2] * cz
+            else:
+                # Orthogonal cell
+                x = coord[0] * a
+                y = coord[1] * b
+                z = coord[2] * c
+
         lines.append(f"  {i+1} {elem_to_type[elem]} {x:.6f} {y:.6f} {z:.6f}")
     
     content = "\n".join(lines)
@@ -284,41 +418,37 @@ def export_xyz(
 ) -> Dict[str, Any]:
     """
     Export structure to XYZ format.
-    
+
     Args:
         structure: Structure dictionary
         comment: Comment line
-    
+
     Returns:
         XYZ string
     """
     structure = _normalize_structure(structure)
     atoms = structure.get("structure", structure).get("atoms", [])
     lattice_info = structure.get("structure", structure).get("lattice", {})
-    
+
     if not atoms:
         return {"success": False, "error": {"code": "NO_ATOMS", "message": "No atoms"}}
-    
-    a = lattice_info.get("a", 10.0)
-    b = lattice_info.get("b", a)
-    c = lattice_info.get("c", a)
-    
+
     lines = []
     lines.append(str(len(atoms)))
     lines.append(comment)
-    
+
     for atom in atoms:
         elem = atom.get("element", "X")
-        coord = atom.get("coords", atom.get("cartesian", [0, 0, 0]))
-        
-        # Convert to Cartesian if fractional
-        if all(0 <= c <= 1 for c in coord[:3]):
-            x = coord[0] * a
-            y = coord[1] * b
-            z = coord[2] * c
+
+        # Prefer Cartesian coords if available, otherwise convert from fractional
+        if "cartesian" in atom and atom["cartesian"]:
+            x, y, z = atom["cartesian"]
         else:
-            x, y, z = coord
-        
+            coord = atom.get("coords", [0, 0, 0])
+            # Use proper matrix conversion for non-orthogonal cells
+            cart = _frac_to_cart(coord, lattice_info)
+            x, y, z = cart
+
         lines.append(f"{elem}  {x:.6f}  {y:.6f}  {z:.6f}")
     
     content = "\n".join(lines)
