@@ -22,8 +22,7 @@ export async function generateSlab(input: unknown): Promise<Result<any>> {
   }
 
   // Rename structure -> structure_dict for Python compatibility
-  // Note: fix_atoms is filtered out as Python doesn't support it yet
-  const { structure, fix_atoms, ...rest } = parsed.data;
+  const { structure, ...rest } = parsed.data;
   const params = { structure_dict: structure, ...rest, operation: "slab" };
 
   const result = await executePythonWithJSON<typeof params, any>(
@@ -65,9 +64,9 @@ export async function handleGenerateSlab(args: unknown): Promise<any> {
   const data = result.data;
   let output = `## 📐 Surface Slab Generated\n\n`;
   output += `**Miller Indices:** (${data.miller_indices.join(' ')})\n`;
-  output += `**Slab Thickness:** ${data.slab_thickness.toFixed(3)} Å\n`;
-  output += `**Vacuum Thickness:** ${data.vacuum_thickness.toFixed(3)} Å\n`;
-  output += `**Surface Area:** ${data.surface_area.toFixed(3)} ų\n`;
+  output += `**Slab Thickness:** ${data.slab_thickness.toFixed(3)} Angstroms\n`;
+  output += `**Vacuum Thickness:** ${data.vacuum_thickness.toFixed(3)} Angstroms\n`;
+  output += `**Surface Area:** ${data.surface_area.toFixed(3)} Angstrom^2\n`;
   if (data.fixed_atoms && data.fixed_atoms.length > 0) {
     output += `**Fixed Atoms:** ${data.fixed_atoms.length} atoms (bottom layers)\n`;
   }

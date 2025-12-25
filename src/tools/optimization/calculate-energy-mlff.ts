@@ -5,7 +5,7 @@
  */
 
 import { CalculateEnergyMLFFSchema } from "../../types/tools.js";
-import { Result, createSuccess, createFailure, createError, CrystalErrorCode } from "../../types/errors.js";
+import { Result, createSuccess, createFailure, createError, CrystalErrorCode, ERROR_MESSAGES } from "../../types/errors.js";
 import { executePythonWithJSON } from "../../utils/python-bridge.js";
 
 export async function calculateEnergyMLFF(input: unknown): Promise<Result<any>> {
@@ -35,6 +35,18 @@ export async function calculateEnergyMLFF(input: unknown): Promise<Result<any>> 
   const pythonResult = result.data;
 
   if (!pythonResult.success) {
+    if (pythonResult.error?.code === "MODEL_NOT_AVAILABLE") {
+      const model = pythonResult.error.details?.mlff_model ?? parsed.data.mlff_model;
+      const messageInfo = ERROR_MESSAGES.MODEL_NOT_AVAILABLE(String(model));
+      return createFailure(createError(
+        CrystalErrorCode.MODEL_NOT_AVAILABLE,
+        messageInfo.message,
+        pythonResult.error.details ?? {},
+        [...messageInfo.suggestions],
+        false
+      ));
+    }
+
     return createFailure(createError(
       pythonResult.error.code as CrystalErrorCode,
       pythonResult.error.message,
@@ -74,7 +86,7 @@ export async function handleCalculateEnergyMLFF(args: unknown): Promise<any> {
     const maxForce = Math.max(...data.forces.map((f: number[]) =>
       Math.sqrt((f[0] ?? 0)**2 + (f[1] ?? 0)**2 + (f[2] ?? 0)**2)
     ));
-    outputText += `**Maximum force:** ${maxForce.toFixed(6)} eV/Å\n`;
+    outputText += `**Maximum force:** ${maxForce.toFixed(6)} eV/Angstrom\n`;
   }
 
   if (data.stress) {

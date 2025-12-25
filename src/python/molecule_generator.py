@@ -15,6 +15,7 @@ import json
 import numpy as np
 from ase.build import molecule
 from ase.collections import g2
+from ase.build.molecule import extra
 from typing import Dict, Any, List, Optional
 
 def generate_molecule(
@@ -35,12 +36,18 @@ def generate_molecule(
     """
     atoms = None
     
-    # Check if name is in G2 database
-    if name in g2.names:
-         atoms = molecule(name)
-    else:
-        # Try anyway, maybe it's in extra or just supported
-         atoms = molecule(name)
+    # Check if name is in known molecule databases
+    if name not in g2.names and name not in extra:
+        return {
+            "success": False,
+            "error": {
+                "code": "INVALID_MOLECULE",
+                "message": f"Unknown molecule '{name}'",
+                "details": {"available": sorted(list(g2.names))[:20]}
+            }
+        }
+
+    atoms = molecule(name)
          
     if atoms is None:
          return {
@@ -63,6 +70,16 @@ def generate_molecule(
 def atoms_to_dict(atoms) -> Dict[str, Any]:
     """Convert ASE atoms to dictionary."""
     cell = atoms.get_cell()
+    sites = [
+        {
+            "element": atom.symbol,
+            "coords": atoms.get_scaled_positions()[i].tolist(),
+            "cartesian": atom.position.tolist(),
+            "species": [{"element": atom.symbol, "occupation": 1.0}]
+        }
+        for i, atom in enumerate(atoms)
+    ]
+
     return {
         "lattice": {
             "matrix": cell.tolist(),
@@ -70,18 +87,12 @@ def atoms_to_dict(atoms) -> Dict[str, Any]:
             "a": float(np.linalg.norm(cell[0])),
             "b": float(np.linalg.norm(cell[1])),
             "c": float(np.linalg.norm(cell[2])),
-            "alpha": 90.0, # Approximate for box
+            "alpha": 90.0,  # Approximate for box
             "beta": 90.0,
             "gamma": 90.0
         },
-        "atoms": [
-            {
-                "element": atom.symbol,
-                "coords": atoms.get_scaled_positions()[i].tolist(),
-                "cartesian": atom.position.tolist()
-            }
-            for i, atom in enumerate(atoms)
-        ],
+        "atoms": sites,
+        "sites": sites,
         "metadata": {
             "formula": atoms.get_chemical_formula(),
             "natoms": len(atoms),

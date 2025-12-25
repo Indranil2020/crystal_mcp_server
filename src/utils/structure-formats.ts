@@ -14,22 +14,72 @@ export function generateCIF(structure: CrystalStructure | any): string {
   const lattice = structure?.lattice || {};
   const space_group = structure?.space_group || { symbol: 'P1', number: 1 };
   const atoms = structure?.atoms || [];
+  const matrix = lattice.matrix;
+
+  let aVal = lattice.a;
+  let bVal = lattice.b;
+  let cVal = lattice.c;
+  let alphaVal = lattice.alpha;
+  let betaVal = lattice.beta;
+  let gammaVal = lattice.gamma;
+  let volumeVal = lattice.volume;
+
+  const hasMatrix =
+    Array.isArray(matrix) &&
+    matrix.length === 3 &&
+    matrix.every((row: number[]) => Array.isArray(row) && row.length >= 3);
+
+  if (hasMatrix) {
+    const v1 = [matrix[0][0], matrix[0][1], matrix[0][2]];
+    const v2 = [matrix[1][0], matrix[1][1], matrix[1][2]];
+    const v3 = [matrix[2][0], matrix[2][1], matrix[2][2]];
+    const norm = (v: number[]) => Math.sqrt(v[0] ** 2 + v[1] ** 2 + v[2] ** 2);
+    const dot = (vA: number[], vB: number[]) => vA[0] * vB[0] + vA[1] * vB[1] + vA[2] * vB[2];
+
+    const aCalc = norm(v1);
+    const bCalc = norm(v2);
+    const cCalc = norm(v3);
+
+    const angle = (vA: number[], vB: number[]) => {
+      const denom = norm(vA) * norm(vB);
+      if (denom === 0) {
+        return undefined;
+      }
+      const cosang = Math.min(1, Math.max(-1, dot(vA, vB) / denom));
+      return (Math.acos(cosang) * 180) / Math.PI;
+    };
+
+    aVal = aVal ?? aCalc;
+    bVal = bVal ?? bCalc;
+    cVal = cVal ?? cCalc;
+    alphaVal = alphaVal ?? angle(v2, v3);
+    betaVal = betaVal ?? angle(v1, v3);
+    gammaVal = gammaVal ?? angle(v1, v2);
+
+    if (volumeVal === undefined) {
+      const det =
+        v1[0] * (v2[1] * v3[2] - v2[2] * v3[1]) -
+        v1[1] * (v2[0] * v3[2] - v2[2] * v3[0]) +
+        v1[2] * (v2[0] * v3[1] - v2[1] * v3[0]);
+      volumeVal = Math.abs(det);
+    }
+  }
 
   let cif = `data_crystal\n`;
   cif += `_symmetry_space_group_name_H-M '${space_group.symbol || 'P1'}'\n`;
   cif += `_space_group_IT_number ${space_group.number || 1}\n`;
 
-  if (lattice.a !== undefined) {
-    cif += `_cell_length_a ${lattice.a.toFixed(6)}\n`;
-    cif += `_cell_length_b ${(lattice.b || lattice.a).toFixed(6)}\n`;
-    cif += `_cell_length_c ${(lattice.c || lattice.a).toFixed(6)}\n`;
-    cif += `_cell_angle_alpha ${(lattice.alpha || 90).toFixed(4)}\n`;
-    cif += `_cell_angle_beta ${(lattice.beta || 90).toFixed(4)}\n`;
-    cif += `_cell_angle_gamma ${(lattice.gamma || 90).toFixed(4)}\n`;
+  if (aVal !== undefined) {
+    cif += `_cell_length_a ${aVal.toFixed(6)}\n`;
+    cif += `_cell_length_b ${(bVal ?? aVal).toFixed(6)}\n`;
+    cif += `_cell_length_c ${(cVal ?? aVal).toFixed(6)}\n`;
+    cif += `_cell_angle_alpha ${((alphaVal ?? 90)).toFixed(4)}\n`;
+    cif += `_cell_angle_beta ${((betaVal ?? 90)).toFixed(4)}\n`;
+    cif += `_cell_angle_gamma ${((gammaVal ?? 90)).toFixed(4)}\n`;
   }
 
-  if (lattice.volume !== undefined) {
-    cif += `_cell_volume ${lattice.volume.toFixed(4)}\n`;
+  if (volumeVal !== undefined) {
+    cif += `_cell_volume ${volumeVal.toFixed(4)}\n`;
   }
 
   cif += `\nloop_\n`;

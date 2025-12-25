@@ -76,7 +76,14 @@ def scan_space_groups(
     for elem in composition:
         element_counts[elem] = element_counts.get(elem, 0) + 1
     elements = list(element_counts.keys())
-    comp = list(element_counts.values())
+    if num_atoms:
+        total_ratio = sum(element_counts.values())
+        comp = [int(element_counts[e] * num_atoms / total_ratio) for e in elements]
+        diff = num_atoms - sum(comp)
+        if diff != 0:
+            comp[0] += diff
+    else:
+        comp = list(element_counts.values())
 
     results = {
         "success": True,

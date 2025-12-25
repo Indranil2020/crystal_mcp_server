@@ -10,7 +10,8 @@ from typing import Dict, List, Optional, Any, Tuple
 import json
 import sys
 import numpy as np
-from pymatgen.core import Structure
+import spglib
+from pymatgen.core import Structure, Element
 
 
 class ValidationResult:
@@ -89,12 +90,12 @@ def validate_lattice_parameters(
 
     # Check for unusual values
     if a < 2.0 or b < 2.0 or c < 2.0:
-        warnings.append("Very small lattice parameters (< 2.0 Å)")
+        warnings.append("Very small lattice parameters (< 2.0 Angstroms)")
     if a > 50.0 or b > 50.0 or c > 50.0:
-        warnings.append("Very large lattice parameters (> 50.0 Å)")
+        warnings.append("Very large lattice parameters (> 50.0 Angstroms)")
 
     if alpha < 30 or alpha > 150 or beta < 30 or beta > 150 or gamma < 30 or gamma > 150:
-        warnings.append("Unusual lattice angles (< 30° or > 150°)")
+        warnings.append("Unusual lattice angles (< 30 deg or > 150 deg)")
 
     is_valid = len(errors) == 0
     return is_valid, errors, warnings
@@ -249,7 +250,7 @@ def validate_structure(
     
     # Default checks
     if checks is None:
-        checks = ["distances", "lattice", "stoichiometry"]
+        checks = ["distances", "symmetry", "overlaps"]
     
     # Validate structure format
     if not structure_dict or not isinstance(structure_dict, dict):
@@ -260,12 +261,12 @@ def validate_structure(
         result.add_error("Structure missing lattice information")
         return {"success": True, **result.to_dict()}
     
-    if "atoms" not in structure_dict:
+    if "atoms" not in structure_dict and "sites" not in structure_dict:
         result.add_error("Structure missing atoms information")
         return {"success": True, **result.to_dict()}
     
     lattice = structure_dict["lattice"]
-    atoms = structure_dict["atoms"]
+    atoms = structure_dict.get("atoms") or structure_dict.get("sites")
     
     # Check distances
     if "distances" in checks:
@@ -279,9 +280,18 @@ def validate_structure(
             result.add_metric("min_distance", distance_result["metrics"]["min_distance"])
         if "avg_distance" in distance_result.get("metrics", {}):
             result.add_metric("avg_distance", distance_result["metrics"]["avg_distance"])
+
+    # Check overlaps (reuse distance logic with overlap threshold)
+    if "overlaps" in checks and "distances" not in checks:
+        overlap_result = check_interatomic_distances(atoms, lattice, min_distance or 0.5)
+        if not overlap_result["valid"]:
+            for error in overlap_result["errors"]:
+                result.add_error(error["message"], error["severity"], error.get("details"))
+        for warning in overlap_result.get("warnings", []):
+            result.add_warning(warning)
     
     # Check lattice parameters
-    if "lattice" in checks:
+    if "lattice" in checks or "cell_parameters" in checks:
         lattice_result = check_lattice_parameters(lattice)
         if not lattice_result["valid"]:
             for error in lattice_result["errors"]:
@@ -294,6 +304,28 @@ def validate_structure(
         stoich_result = check_stoichiometry(atoms)
         for warning in stoich_result.get("warnings", []):
             result.add_warning(warning)
+
+    # Check symmetry
+    if "symmetry" in checks:
+        symmetry_result = check_symmetry(atoms, lattice, expected_space_group)
+        if not symmetry_result["valid"]:
+            for error in symmetry_result["errors"]:
+                result.add_error(error["message"], error["severity"], error.get("details"))
+        for warning in symmetry_result.get("warnings", []):
+            result.add_warning(warning)
+        for metric, value in symmetry_result.get("metrics", {}).items():
+            result.add_metric(metric, value)
+
+    # Check charge balance
+    if "charge_balance" in checks:
+        charge_result = check_charge_balance(atoms)
+        if not charge_result["valid"]:
+            for error in charge_result["errors"]:
+                result.add_error(error["message"], error["severity"], error.get("details"))
+        for warning in charge_result.get("warnings", []):
+            result.add_warning(warning)
+        for metric, value in charge_result.get("metrics", {}).items():
+            result.add_metric(metric, value)
     
     # Calculate density
     density = calculate_density(atoms, lattice)
@@ -301,9 +333,9 @@ def validate_structure(
         result.add_metric("density", density)
         
         if density < 0.1:
-            result.add_warning(f"Very low density: {density:.3f} g/cm³")
+            result.add_warning(f"Very low density: {density:.3f} g/cm^3")
         elif density > 30:
-            result.add_warning(f"Very high density: {density:.3f} g/cm³")
+            result.add_warning(f"Very high density: {density:.3f} g/cm^3")
     
     # Calculate packing fraction
     packing = calculate_packing_fraction(atoms, lattice)
@@ -383,19 +415,19 @@ def check_interatomic_distances(
     if min_distance is not None and min_dist < min_distance:
         elem1, elem2, idx1, idx2 = min_pair
         result.add_error(
-            f"Atoms {idx1} ({elem1}) and {idx2} ({elem2}) too close: {min_dist:.3f} Å < {min_distance:.3f} Å",
+            f"Atoms {idx1} ({elem1}) and {idx2} ({elem2}) too close: {min_dist:.3f} Angstroms < {min_distance:.3f} Angstroms",
             "error",
             {"min_distance": min_dist, "threshold": min_distance}
         )
     elif min_dist < 0.5:
         elem1, elem2, idx1, idx2 = min_pair
         result.add_error(
-            f"Atoms {idx1} ({elem1}) and {idx2} ({elem2}) overlapping: {min_dist:.3f} Å",
+            f"Atoms {idx1} ({elem1}) and {idx2} ({elem2}) overlapping: {min_dist:.3f} Angstroms",
             "error",
             {"min_distance": min_dist}
         )
     elif min_dist < 1.0:
-        result.add_warning(f"Very short interatomic distance: {min_dist:.3f} Å")
+        result.add_warning(f"Very short interatomic distance: {min_dist:.3f} Angstroms")
     
     return result.to_dict()
 
@@ -430,23 +462,23 @@ def check_lattice_parameters(lattice: Dict) -> Dict[str, Any]:
         )
     
     if a < 1.0 or b < 1.0 or c < 1.0:
-        result.add_warning(f"Very small lattice parameters: a={a:.3f}, b={b:.3f}, c={c:.3f} Å")
+        result.add_warning(f"Very small lattice parameters: a={a:.3f}, b={b:.3f}, c={c:.3f} Angstroms")
     
     if a > 100 or b > 100 or c > 100:
-        result.add_warning(f"Very large lattice parameters: a={a:.3f}, b={b:.3f}, c={c:.3f} Å")
+        result.add_warning(f"Very large lattice parameters: a={a:.3f}, b={b:.3f}, c={c:.3f} Angstroms")
     
     # Check angles
     if not (0 < alpha < 180 and 0 < beta < 180 and 0 < gamma < 180):
         result.add_error(
-            f"Lattice angles must be in (0, 180): α={alpha}, β={beta}, γ={gamma}",
+            f"Lattice angles must be in (0, 180): alpha={alpha}, beta={beta}, gamma={gamma}",
             "error"
         )
     
     if alpha < 20 or beta < 20 or gamma < 20:
-        result.add_warning(f"Very acute angles: α={alpha:.1f}°, β={beta:.1f}°, γ={gamma:.1f}°")
+        result.add_warning(f"Very acute angles: alpha={alpha:.1f} deg, beta={beta:.1f} deg, gamma={gamma:.1f} deg")
     
     if alpha > 160 or beta > 160 or gamma > 160:
-        result.add_warning(f"Very obtuse angles: α={alpha:.1f}°, β={beta:.1f}°, γ={gamma:.1f}°")
+        result.add_warning(f"Very obtuse angles: alpha={alpha:.1f} deg, beta={beta:.1f} deg, gamma={gamma:.1f} deg")
     
     # Check volume
     if "volume" in lattice:
@@ -454,10 +486,96 @@ def check_lattice_parameters(lattice: Dict) -> Dict[str, Any]:
         if volume <= 0:
             result.add_error(f"Volume must be positive: {volume}", "error")
         elif volume < 10:
-            result.add_warning(f"Very small unit cell volume: {volume:.3f} ų")
+            result.add_warning(f"Very small unit cell volume: {volume:.3f} A^3")
         elif volume > 100000:
-            result.add_warning(f"Very large unit cell volume: {volume:.3f} ų")
+            result.add_warning(f"Very large unit cell volume: {volume:.3f} A^3")
     
+    return result.to_dict()
+
+
+def check_symmetry(
+    atoms: List[Dict],
+    lattice: Dict,
+    expected_space_group: Optional[int] = None
+) -> Dict[str, Any]:
+    """
+    Check symmetry using spglib and compare with expected space group if provided.
+    """
+    result = ValidationResult()
+
+    if "matrix" not in lattice:
+        result.add_error("Lattice missing matrix")
+        return result.to_dict()
+
+    if not atoms:
+        result.add_error("No atoms provided for symmetry check")
+        return result.to_dict()
+
+    coords = []
+    numbers = []
+    for atom in atoms:
+        if "coords" not in atom or "element" not in atom:
+            continue
+        coords.append(atom["coords"])
+        element = atom["element"]
+        if Element.is_valid_symbol(element):
+            numbers.append(Element(element).Z)
+        else:
+            numbers.append(0)
+
+    if not coords:
+        result.add_error("No valid coordinates for symmetry check")
+        return result.to_dict()
+
+    cell = (np.array(lattice["matrix"]), np.array(coords), np.array(numbers))
+    dataset = spglib.get_symmetry_dataset(cell, symprec=1e-3)
+    if dataset is None:
+        result.add_warning("Symmetry detection failed (spglib returned no dataset)")
+        return result.to_dict()
+
+    sg_number = dataset.get("number")
+    sg_symbol = dataset.get("international", "")
+    result.add_metric("space_group_number", int(sg_number) if sg_number is not None else None)
+    result.add_metric("space_group_symbol", sg_symbol)
+
+    if expected_space_group is not None and sg_number is not None:
+        if int(sg_number) != int(expected_space_group):
+            result.add_error(
+                f"Expected space group {expected_space_group}, got {sg_number}",
+                "error",
+                {"expected": expected_space_group, "actual": int(sg_number)}
+            )
+
+    return result.to_dict()
+
+
+def check_charge_balance(atoms: List[Dict]) -> Dict[str, Any]:
+    """
+    Check charge balance if per-atom charges are provided.
+    """
+    result = ValidationResult()
+    charges = []
+
+    for atom in atoms:
+        if "charge" in atom:
+            charges.append(float(atom["charge"]))
+        elif "oxidation_state" in atom:
+            charges.append(float(atom["oxidation_state"]))
+
+    if not charges:
+        result.add_warning("Charge balance check skipped (no per-atom charges provided)")
+        return result.to_dict()
+
+    total_charge = float(np.sum(charges))
+    result.add_metric("total_charge", total_charge)
+
+    if abs(total_charge) > 1e-3:
+        result.add_error(
+            f"Structure is not charge balanced (total charge {total_charge:.3f})",
+            "error",
+            {"total_charge": total_charge}
+        )
+
     return result.to_dict()
 
 
@@ -501,14 +619,14 @@ def check_stoichiometry(atoms: List[Dict]) -> Dict[str, Any]:
 
 def calculate_density(atoms: List[Dict], lattice: Dict) -> Optional[float]:
     """
-    Calculate crystal density in g/cm³.
+    Calculate crystal density in g/cm^3.
     
     Args:
         atoms: List of atoms
         lattice: Lattice parameters
     
     Returns:
-        Density in g/cm³ or None
+        Density in g/cm^3 or None
     """
     if not atoms or "volume" not in lattice:
         return None
@@ -544,7 +662,7 @@ def calculate_density(atoms: List[Dict], lattice: Dict) -> Optional[float]:
         mass = atomic_masses.get(element, 1.0)  # Default to 1.0 for unknown
         total_mass += mass
     
-    volume_cm3 = lattice["volume"] * 1e-24  # ų to cm³
+    volume_cm3 = lattice["volume"] * 1e-24  # A^3 to cm^3
     avogadro = 6.022e23
     
     density = (total_mass / avogadro) / volume_cm3
@@ -565,35 +683,19 @@ def calculate_packing_fraction(atoms: List[Dict], lattice: Dict) -> Optional[flo
     if not atoms or "volume" not in lattice:
         return None
     
-    # Complete covalent radii (in Angstroms)
-    covalent_radii = {
-        'H': 0.31, 'He': 0.28, 'Li': 1.28, 'Be': 0.96, 'B': 0.84,
-        'C': 0.76, 'N': 0.71, 'O': 0.66, 'F': 0.57, 'Ne': 0.58,
-        'Na': 1.66, 'Mg': 1.41, 'Al': 1.21, 'Si': 1.11, 'P': 1.07,
-        'S': 1.05, 'Cl': 1.02, 'Ar': 1.06, 'K': 2.03, 'Ca': 1.76,
-        'Sc': 1.70, 'Ti': 1.60, 'V': 1.53, 'Cr': 1.39, 'Mn': 1.39,
-        'Fe': 1.32, 'Co': 1.26, 'Ni': 1.24, 'Cu': 1.32, 'Zn': 1.22,
-        'Ga': 1.22, 'Ge': 1.20, 'As': 1.19, 'Se': 1.20, 'Br': 1.20,
-        'Kr': 1.16, 'Rb': 2.20, 'Sr': 1.95, 'Y': 1.90, 'Zr': 1.75,
-        'Nb': 1.64, 'Mo': 1.54, 'Tc': 1.47, 'Ru': 1.46, 'Rh': 1.42,
-        'Pd': 1.39, 'Ag': 1.45, 'Cd': 1.44, 'In': 1.42, 'Sn': 1.39,
-        'Sb': 1.39, 'Te': 1.38, 'I': 1.39, 'Xe': 1.40, 'Cs': 2.44,
-        'Ba': 2.15, 'La': 2.07, 'Ce': 2.04, 'Pr': 2.03, 'Nd': 2.01,
-        'Pm': 1.99, 'Sm': 1.98, 'Eu': 1.98, 'Gd': 1.96, 'Tb': 1.94,
-        'Dy': 1.92, 'Ho': 1.92, 'Er': 1.89, 'Tm': 1.90, 'Yb': 1.87,
-        'Lu': 1.87, 'Hf': 1.75, 'Ta': 1.70, 'W': 1.62, 'Re': 1.51,
-        'Os': 1.44, 'Ir': 1.41, 'Pt': 1.36, 'Au': 1.36, 'Hg': 1.32,
-        'Tl': 1.45, 'Pb': 1.46, 'Bi': 1.48, 'Po': 1.40, 'At': 1.50,
-        'Rn': 1.50, 'Fr': 2.60, 'Ra': 2.21, 'Ac': 2.15, 'Th': 2.06,
-        'Pa': 2.00, 'U': 1.96, 'Np': 1.90, 'Pu': 1.87, 'Am': 1.80
-    }
+    def atomic_radius(element: str) -> Optional[float]:
+        if not Element.is_valid_symbol(element):
+            return None
+        el = Element(element)
+        radius = el.atomic_radius or el.van_der_waals_radius or el.covalent_radius
+        return float(radius) if radius else None
 
     total_volume = 0.0
     for atom in atoms:
         if "element" not in atom:
             continue
         element = atom["element"]
-        radius = covalent_radii.get(element, 1.0)  # Default to 1.0 A for unknown
+        radius = atomic_radius(element) or 1.0  # Default to 1.0 Angstrom for unknown
         atom_volume = (4.0 / 3.0) * np.pi * radius ** 3
         total_volume += atom_volume
     

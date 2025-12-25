@@ -40,7 +40,13 @@ export async function exportStructure(input: unknown): Promise<Result<any>> {
     } else if (format === 'json') {
       content = generateJSON(structure);
     } else {
-      continue;
+      return createFailure(createError(
+        CrystalErrorCode.INVALID_FORMAT,
+        `Unsupported export format: ${format}`,
+        { format },
+        ["Use one of: cif, poscar, xyz, json"],
+        true
+      ));
     }
 
     exportedFiles[format] = content;

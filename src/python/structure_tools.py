@@ -11,8 +11,65 @@ from typing import Dict, List, Optional, Any, Tuple
 import json
 import sys
 import numpy as np
+import spglib
 from pymatgen.core import Structure, Lattice
 from pymatgen.core.surface import SlabGenerator
+
+CRYSTAL_SYSTEM_RANGES = [
+    (1, 2, "triclinic"),
+    (3, 15, "monoclinic"),
+    (16, 74, "orthorhombic"),
+    (75, 142, "tetragonal"),
+    (143, 167, "trigonal"),
+    (168, 194, "hexagonal"),
+    (195, 230, "cubic")
+]
+
+
+def crystal_system_from_number(number: Optional[int]) -> str:
+    """Map space group number to crystal system."""
+    if number is None:
+        return ""
+    for start, end, name in CRYSTAL_SYSTEM_RANGES:
+        if start <= number <= end:
+            return name
+    return ""
+
+
+def get_space_group_info(structure: Structure, symprec: float = 1e-3) -> Dict[str, Any]:
+    """Extract space group info using spglib dataset."""
+    if structure is None or len(structure) == 0:
+        return {"number": None, "symbol": "", "hall_symbol": "", "point_group": "", "crystal_system": ""}
+
+    cell = (
+        structure.lattice.matrix,
+        structure.frac_coords,
+        structure.atomic_numbers
+    )
+    dataset = spglib.get_symmetry_dataset(cell, symprec=symprec)
+    if dataset is None:
+        return {"number": None, "symbol": "", "hall_symbol": "", "point_group": "", "crystal_system": ""}
+
+    number = dataset.get("number")
+    number_int = int(number) if number is not None else None
+    symbol = dataset.get("international", "") or ""
+    hall_symbol = dataset.get("hall", "") or ""
+    point_group = dataset.get("pointgroup", "") or ""
+
+    return {
+        "number": number_int,
+        "symbol": symbol,
+        "hall_symbol": hall_symbol,
+        "point_group": point_group,
+        "crystal_system": crystal_system_from_number(number_int)
+    }
+
+
+def apply_deformation(structure: Structure, deformation: np.ndarray) -> Structure:
+    """Apply a lattice deformation matrix to a structure."""
+    new_matrix = np.dot(deformation, structure.lattice.matrix)
+    new_lattice = Lattice(new_matrix)
+    return Structure(new_lattice, structure.species, structure.frac_coords, coords_are_cartesian=False)
 
 
 def validate_supercell_matrix(scaling: Any) -> Tuple[bool, Optional[str]]:
@@ -96,7 +153,7 @@ def dict_to_structure(structure_dict: Dict[str, Any]) -> Optional[Structure]:
     if not structure_dict or not isinstance(structure_dict, dict):
         return None
     
-    if "lattice" not in structure_dict or "atoms" not in structure_dict:
+    if "lattice" not in structure_dict or ("atoms" not in structure_dict and "sites" not in structure_dict):
         return None
     
     lattice_data = structure_dict["lattice"]
@@ -106,20 +163,30 @@ def dict_to_structure(structure_dict: Dict[str, Any]) -> Optional[Structure]:
     lattice_matrix = lattice_data["matrix"]
     lattice = Lattice(lattice_matrix)
     
-    atoms_data = structure_dict["atoms"]
+    atoms_data = structure_dict.get("atoms") or structure_dict.get("sites")
     if not atoms_data:
         return None
     
     species = []
-    coords = []
+    frac_coords = []
     
     for atom in atoms_data:
-        if "element" not in atom or "coords" not in atom:
+        element = atom.get("element")
+        if element is None and "species" in atom:
+            species_list = atom.get("species")
+            if isinstance(species_list, list) and species_list:
+                element = species_list[0].get("element")
+
+        atom_coords = atom.get("coords") or atom.get("abc")
+        if atom_coords is None and "cartesian" in atom:
+            atom_coords = lattice.get_fractional_coords(atom["cartesian"])
+
+        if element is None or atom_coords is None:
             return None
-        species.append(atom["element"])
-        coords.append(atom["coords"])
+        species.append(element)
+        frac_coords.append(atom_coords)
     
-    structure = Structure(lattice, species, coords, coords_are_cartesian=False)
+    structure = Structure(lattice, species, frac_coords, coords_are_cartesian=False)
     return structure
 
 
@@ -135,6 +202,19 @@ def structure_to_dict(structure: Structure) -> Dict[str, Any]:
     """
     lattice = structure.lattice
     
+    reciprocal = lattice.reciprocal_lattice.matrix.tolist()
+    space_group = get_space_group_info(structure)
+
+    sites = []
+    for site in structure:
+        element = str(site.specie)
+        sites.append({
+            "element": element,
+            "coords": site.frac_coords.tolist(),
+            "cartesian": site.coords.tolist(),
+            "species": [{"element": element, "occupation": 1.0}]
+        })
+
     result = {
         "lattice": {
             "a": float(lattice.a),
@@ -144,22 +224,18 @@ def structure_to_dict(structure: Structure) -> Dict[str, Any]:
             "beta": float(lattice.beta),
             "gamma": float(lattice.gamma),
             "matrix": lattice.matrix.tolist(),
+            "reciprocal_matrix": reciprocal,
             "volume": float(lattice.volume)
         },
-        "atoms": [],
+        "atoms": sites,
+        "sites": sites,
+        "space_group": space_group,
         "metadata": {
             "natoms": len(structure),
             "formula": structure.composition.formula
         }
     }
-    
-    for site in structure:
-        result["atoms"].append({
-            "element": str(site.specie),
-            "coords": site.frac_coords.tolist(),
-            "cartesian": site.coords.tolist()
-        })
-    
+
     return result
 
 
@@ -282,7 +358,7 @@ def make_supercell(
                 "success": False,
                 "error": {
                     "code": "ATOMS_TOO_CLOSE",
-                    "message": f"Minimum distance {min_dist:.3f} Å is too small",
+                    "message": f"Minimum distance {min_dist:.3f} Angstroms is too small",
                     "details": {"min_distance": min_dist},
                     "suggestion": "Check scaling matrix or original structure"
                 }
@@ -290,19 +366,21 @@ def make_supercell(
     
     # Convert to dictionary
     supercell_dict = structure_to_dict(supercell)
-    
-    # Note: Space group detection would require spglib integration
-    # For now, we assume symmetry is lost
-    original_spg = structure_dict.get("space_group", {}).get("number", None)
-    
+    original_info = get_space_group_info(structure)
+    new_info = supercell_dict.get("space_group", {})
+    preserved_symmetry = (
+        original_info.get("number") is not None
+        and original_info.get("number") == new_info.get("number")
+    )
+
     return {
         "success": True,
         "supercell": supercell_dict,
         "transformation_matrix": scaling_array.tolist(),
-        "original_space_group": original_spg,
-        "new_space_group": 1,  # Typically P1 after supercell
+        "original_space_group": original_info.get("number"),
+        "new_space_group": new_info.get("number"),
         "volume_multiplier": volume_multiplier,
-        "preserved_symmetry": False
+        "preserved_symmetry": preserved_symmetry
     }
 
 
@@ -438,6 +516,7 @@ def generate_slab(
     
     # Convert to dictionary
     slab_dict = structure_to_dict(slab)
+    original_info = get_space_group_info(structure)
     
     # Calculate surface area
     a = slab.lattice.a
@@ -455,8 +534,8 @@ def generate_slab(
         "miller_indices": miller_indices,
         "fixed_atoms": fixed_atoms,
         "metadata": {
-            "original_space_group": structure_dict.get("space_group", {}).get("number", None),
-            "slab_space_group": 1,  # Typically P1
+            "original_space_group": original_info.get("number"),
+            "slab_space_group": slab_dict.get("space_group", {}).get("number"),
             "n_original_atoms": len(structure),
             "n_slab_atoms": len(slab)
         }
@@ -546,9 +625,13 @@ def create_defect(
                     "details": {}
                 }
             }
-        # Add interstitial at nearby position (simplified)
-        site = structure[defect_site]
-        new_coords = site.frac_coords + np.array([0.1, 0.1, 0.1])
+        # Add interstitial at a low-overlap position (grid search)
+        grid = np.linspace(0.1, 0.9, 4)
+        candidates = np.array([(x, y, z) for x in grid for y in grid for z in grid])
+        distances = structure.lattice.get_all_distances(candidates, structure.frac_coords)
+        min_distances = distances.min(axis=1)
+        best_index = int(np.argmax(min_distances))
+        new_coords = candidates[best_index]
         defected.append(defect_species, new_coords)
     
     # Convert to dictionary
@@ -636,20 +719,47 @@ def apply_strain(
             }
         }
 
-    # Apply strain
-    strained = structure.copy()
+    # Validate strain tensor values
+    warnings = []
+    max_strain = float(np.max(np.abs(tensor)))
+
+    # Check for unrealistic strain values (> 50% is typically unphysical)
+    if max_strain > 0.5:
+        return {
+            "success": False,
+            "error": {
+                "code": "STRAIN_TOO_LARGE",
+                "message": f"Strain magnitude {max_strain:.1%} exceeds 50% - this is typically unphysical",
+                "details": {"max_strain": max_strain, "limit": 0.5}
+            }
+        }
+
+    if max_strain > 0.1:
+        warnings.append(f"Large strain magnitude detected: {max_strain:.1%} (> 10%)")
+    elif max_strain > 0.05:
+        warnings.append(f"Moderate strain magnitude: {max_strain:.1%} (> 5%)")
+
+    # Check for asymmetry in tensor (shear strains)
+    if not np.allclose(tensor, tensor.T, atol=1e-10):
+        warnings.append("Strain tensor is asymmetric - includes rotational component")
+
+    # Apply strain using full deformation matrix
     deformation = np.eye(3) + tensor
-    strained.apply_strain(deformation)
+    strained = apply_deformation(structure, deformation)
 
     # Convert to dictionary
     strained_dict = structure_to_dict(strained)
 
-    return {
+    result = {
         "success": True,
         "strained_structure": strained_dict,
         "strain_tensor": tensor.tolist(),
         "deformation_matrix": deformation.tolist()
     }
+    if warnings:
+        result["warnings"] = warnings
+
+    return result
 
 
 def create_alloy(
@@ -748,6 +858,14 @@ def create_heterostructure(
     warnings = []
     if mismatch_a > 0.05 or mismatch_b > 0.05:
         warnings.append(f"High lattice mismatch: a={mismatch_a:.1%}, b={mismatch_b:.1%}")
+    else:
+        scale_a = a1 / a2
+        scale_b = b1 / b2
+        if abs(scale_a - 1.0) > 1e-3 or abs(scale_b - 1.0) > 1e-3:
+            deformation = np.array([[scale_a, 0, 0], [0, scale_b, 0], [0, 0, 1.0]])
+            over = apply_deformation(over, deformation)
+            warnings.append(f"Applied in-plane scaling to overlayer: scale_a={scale_a:.4f}, scale_b={scale_b:.4f}")
+            a2, b2, _ = over.lattice.abc
         
     # Stack
     # We essentially put 'over' on top of 'sub'
@@ -887,54 +1005,64 @@ def add_adsorbate(
     if mol_struct is None:
         return {"success": False, "error": {"code": "INVALID_INPUT", "message": "Failed to parse molecule structure"}}
     
-    # Strategy:
-    # 1. Identify "anchoring atom" in molecule? (First atom?)
-    # 2. Translate molecule so anchor is at site_coords + [0, 0, distance]
-    #    (Assuming Z is normal)
-    
     target_site = surface[site_index]
     target_coords = target_site.coords
-    
-    # Molecule center/anchor
-    # We'll validly assume the molecule is centered or user wants CoM?
-    # Let's align CoM to target? Or bottom-most atom?
-    # Bottom-most is safer for adsorption.
-    mol_coords = mol_struct.cart_coords
+
+    mol_coords = np.array(mol_struct.cart_coords, dtype=float)
     min_z_mol = np.min(mol_coords[:, 2])
-    
-    # Shift molecule so min_z is at 0
     mol_coords = mol_coords - np.array([0, 0, min_z_mol])
-    
-    # Now shift to target (+ distance)
-    # We assume 'distance' is bond length approx.
-    final_origin = target_coords + np.array([0, 0, distance])
-    
-    # Center molecule horizontally relative to target?
-    # Assume molecule CoM (x,y) should match target (x,y)
-    mol_com = np.mean(mol_coords, axis=0)
-    shift_xy = final_origin[:2] - mol_com[:2]
-    
-    # Apply shift
-    total_shift = np.array([shift_xy[0], shift_xy[1], final_origin[2]])
-    # Note: final_origin[2] is target_z + distance. 
-    # Current mol min_z is 0. So adding final_origin[2] puts bottom at target+dist.
-    
-    mol_coords = mol_coords + np.array([shift_xy[0], shift_xy[1], final_origin[2]]) # Wait, shift_xy plus Z move
-    
-    # Wait, mol_coords was zeroed at Z.
-    # We want min_z to be at target_z + distance.
-    # So Z shift = (target_z + distance) - (original_min_z=0) => target_z + distance.
-    # Yes.
-    
-    # Add atoms to surface
+
+    surface_coords = surface.cart_coords
+    angles = [0, 90, 180, 270] if len(mol_coords) > 1 else [0]
+    best_coords = None
+    best_min_dist = -1.0
+    best_angle = 0
+
+    for angle in angles:
+        theta = np.deg2rad(angle)
+        rot = np.array([
+            [np.cos(theta), -np.sin(theta), 0],
+            [np.sin(theta), np.cos(theta), 0],
+            [0, 0, 1]
+        ])
+        rotated = mol_coords.dot(rot.T)
+        mol_com = np.mean(rotated, axis=0)
+        shift = np.array([
+            target_coords[0] - mol_com[0],
+            target_coords[1] - mol_com[1],
+            target_coords[2] + distance
+        ])
+        placed = rotated + shift
+
+        if len(surface_coords) > 0:
+            deltas = placed[:, None, :] - surface_coords[None, :, :]
+            min_dist = float(np.min(np.linalg.norm(deltas, axis=2)))
+        else:
+            min_dist = float("inf")
+
+        if min_dist > best_min_dist:
+            best_min_dist = min_dist
+            best_coords = placed
+            best_angle = angle
+
+    warnings = []
+    if best_min_dist < 1.0:
+        warnings.append(f"Adsorbate is very close to surface (min distance {best_min_dist:.2f} Angstroms)")
+    if len(angles) > 1:
+        warnings.append(f"Selected rotation {best_angle} degrees around surface normal")
+
     new_surface = surface.copy()
     for i, spec in enumerate(mol_struct.species):
-        new_surface.append(spec, mol_coords[i], coords_are_cartesian=True)
-        
-    return {
+        new_surface.append(spec, best_coords[i], coords_are_cartesian=True)
+
+    result = {
         "success": True,
         "structure": structure_to_dict(new_surface)
     }
+    if warnings:
+        result["warnings"] = warnings
+
+    return result
 
 
 def main():

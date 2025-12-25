@@ -9,6 +9,7 @@ from typing import Dict, Any, List, Optional, Union
 import importlib.util
 import numpy as np
 from pymatgen.core import Structure, Lattice
+from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from .base import validate_space_group
 
 # Import PyXtal for space group generation
@@ -73,26 +74,56 @@ COMMON_SPACEGROUPS = {
     1: {"symbol": "P1", "system": "triclinic", "examples": ["no symmetry"]},
 }
 
+SPACEGROUP_DATABASE = COMMON_SPACEGROUPS
+
+PROTOTYPE_STRUCTURES = {
+    "rocksalt": {"sg": 225, "elements_order": ["cation", "anion"], "composition": [4, 4]},
+    "perovskite": {"sg": 221, "elements_order": ["A", "B", "O"], "composition": [1, 1, 3]},
+    "zincblende": {"sg": 216, "elements_order": ["cation", "anion"], "composition": [4, 4]},
+    "wurtzite": {"sg": 186, "elements_order": ["cation", "anion"], "composition": [2, 2]},
+    "rutile": {"sg": 136, "elements_order": ["M", "O"], "composition": [2, 4]},
+    "fluorite": {"sg": 225, "elements_order": ["cation", "anion"], "composition": [4, 8]},
+    "spinel": {"sg": 227, "elements_order": ["A", "B", "O"], "composition": [8, 16, 32]},
+    "bcc": {"sg": 229, "elements_order": ["element"], "composition": [2]},
+    "fcc": {"sg": 225, "elements_order": ["element"], "composition": [4]},
+    "hcp": {"sg": 194, "elements_order": ["element"], "composition": [2]},
+    "diamond": {"sg": 227, "elements_order": ["element"], "composition": [8]},
+}
+
 
 def structure_to_dict(structure: Structure) -> Dict[str, Any]:
     """Convert pymatgen Structure to dict with both 'sites' and 'atoms' keys."""
     lattice = structure.lattice
     sites_data = []
     for s in structure:
+        element = str(s.specie)
         site_info = {
-            "element": str(s.specie),
+            "element": element,
             "coords": list(s.frac_coords),
+            "cartesian": list(s.coords),
             "species": [{"element": str(s.specie), "occupation": 1.0}]  # For test compatibility
         }
         sites_data.append(site_info)
+
+    sga = SpacegroupAnalyzer(structure, symprec=1e-3)
+    space_group = {
+        "number": sga.get_space_group_number(),
+        "symbol": sga.get_space_group_symbol(),
+        "hall_symbol": sga.get_hall(),
+        "point_group": sga.get_point_group_symbol(),
+        "crystal_system": sga.get_crystal_system()
+    }
+
     return {
         "lattice": {
             "a": lattice.a, "b": lattice.b, "c": lattice.c,
             "alpha": lattice.alpha, "beta": lattice.beta, "gamma": lattice.gamma,
-            "matrix": lattice.matrix.tolist()
+            "matrix": lattice.matrix.tolist(),
+            "reciprocal_matrix": lattice.reciprocal_lattice.matrix.tolist()
         },
         "sites": sites_data,  # Standard key expected by tests
         "atoms": sites_data,  # Alias for user convenience
+        "space_group": space_group,
         "metadata": {"formula": structure.formula, "n_atoms": len(structure)}
     }
 
@@ -503,20 +534,8 @@ def generate_prototype(
     Returns:
         Prototype structure
     """
-    prototypes = {
-        "rocksalt": {"sg": 225, "elements_order": ["cation", "anion"], "composition": [4, 4]},
-        "perovskite": {"sg": 221, "elements_order": ["A", "B", "O"], "composition": [1, 1, 3]},
-        "zincblende": {"sg": 216, "elements_order": ["cation", "anion"], "composition": [4, 4]},
-        "wurtzite": {"sg": 186, "elements_order": ["cation", "anion"], "composition": [2, 2]},
-        "rutile": {"sg": 136, "elements_order": ["M", "O"], "composition": [2, 4]},
-        "fluorite": {"sg": 225, "elements_order": ["cation", "anion"], "composition": [4, 8]},
-        "spinel": {"sg": 227, "elements_order": ["A", "B", "O"], "composition": [8, 16, 32]},
-        "bcc": {"sg": 229, "elements_order": ["element"], "composition": [2]},
-        "fcc": {"sg": 225, "elements_order": ["element"], "composition": [4]},
-        "hcp": {"sg": 194, "elements_order": ["element"], "composition": [2]},
-        "diamond": {"sg": 227, "elements_order": ["element"], "composition": [8]},
-    }
-    
+    prototypes = PROTOTYPE_STRUCTURES
+
     if prototype.lower() not in prototypes:
         return {
             "success": False,

@@ -54,7 +54,10 @@ export interface PythonExecutionResult<T = unknown> {
  */
 export class PythonConfig {
   private static instance: PythonConfig | null = null;
-  private pythonPath: string = "python3";
+  private pythonPath: string =
+    process.env.PYTHON_PATH ??
+    process.env.PYTHON ??
+    (process.platform === "win32" ? "python" : "python3");
   private scriptsDirectory: string;
 
   private constructor() {
@@ -182,6 +185,17 @@ function parseJSONOutput<T>(output: string): Result<T> {
   }
 
   return createSuccess(parsed as T);
+}
+
+function isPythonResult(value: unknown): value is { success: boolean; error?: unknown } {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  if (!("success" in value)) {
+    return false;
+  }
+  const successValue = (value as { success?: unknown }).success;
+  return typeof successValue === "boolean";
 }
 
 /**
@@ -406,14 +420,24 @@ export async function executePythonWithJSON<TInput, TOutput>(
       ["Ensure script prints JSON output"]
     ));
   }
+  if (!isPythonResult(execResult.data.data)) {
+    return createFailure(createError(
+      CrystalErrorCode.INVALID_JSON_RESPONSE,
+      "Python response missing required 'success' flag",
+      { scriptName, response: execResult.data.data },
+      ["Ensure Python scripts return {'success': true|false, ...}"]
+    ));
+  }
 
-  return createSuccess(execResult.data.data);
+  return createSuccess(execResult.data.data as TOutput);
 }
 
 /**
  * Check if Python is available
  */
-export function checkPythonAvailable(pythonPath: string = "python3"): Result<string> {
+export function checkPythonAvailable(
+  pythonPath: string = PythonConfig.getInstance().getPythonPath()
+): Result<string> {
   // Check if python executable exists
   const result = spawnSync(pythonPath, ["--version"], {
     encoding: "utf-8",
@@ -441,6 +465,50 @@ export function checkPythonAvailable(pythonPath: string = "python3"): Result<str
   }
 
   const version = checkResult.stdout || checkResult.stderr || "";
+
+  const requiredModules = ["numpy", "pymatgen", "ase", "pyxtal", "spglib", "matplotlib"];
+  const moduleCheck = spawnSync(
+    pythonPath,
+    [
+      "-c",
+      `import importlib.util, json; mods=${JSON.stringify(requiredModules)}; missing=[m for m in mods if importlib.util.find_spec(m) is None]; print(json.dumps(missing))`
+    ],
+    { encoding: "utf-8", timeout: 5000 }
+  );
+
+  if (moduleCheck.status !== 0) {
+    return createFailure(createError(
+      CrystalErrorCode.PYTHON_EXECUTION_FAILED,
+      "Failed to verify Python dependencies",
+      { pythonPath, stderr: moduleCheck.stderr },
+      ["Ensure required Python packages are installed"]
+    ));
+  }
+
+  const missingRaw = moduleCheck.stdout.trim();
+  let missing: string[] = [];
+  if (missingRaw.length > 0) {
+    try {
+      missing = JSON.parse(missingRaw);
+    } catch {
+      return createFailure(createError(
+        CrystalErrorCode.PYTHON_EXECUTION_FAILED,
+        "Failed to parse Python dependency check output",
+        { output: missingRaw },
+        ["Re-run dependency check or verify Python output"]
+      ));
+    }
+  }
+
+  if (missing.length > 0) {
+    return createFailure(createError(
+      CrystalErrorCode.PYTHON_EXECUTION_FAILED,
+      `Missing Python dependencies: ${missing.join(", ")}`,
+      { missing },
+      ["Install missing packages with pip", "Verify active Python environment"]
+    ));
+  }
+
   return createSuccess(version.trim());
 }
 

@@ -13,7 +13,7 @@ import sys
 import time
 import numpy as np
 from ase import Atoms
-from ase.optimize import BFGS, FIRE, LBFGS
+from ase.optimize import BFGS, FIRE, LBFGS, GPMin
 from ase.constraints import FixAtoms, UnitCellFilter
 
 
@@ -56,7 +56,7 @@ def validate_optimizer(optimizer_name: str) -> Tuple[bool, Optional[str]]:
     Returns:
         Tuple of (is_valid, error_message)
     """
-    valid_optimizers = ["BFGS", "FIRE", "LBFGS", "GPMin"]
+    valid_optimizers = ["BFGS", "FIRE", "LBFGS"]
     
     if not optimizer_name or not isinstance(optimizer_name, str):
         return False, "Optimizer name must be a non-empty string"
@@ -385,16 +385,9 @@ def optimize_structure(
     initial_forces = atoms.get_forces()
     max_force_initial = float(np.max(np.linalg.norm(initial_forces, axis=1)))
     
-    # Set up optimizer
+    warnings = []
     if constrain_symmetry:
-        return {
-            "success": False,
-            "error": {
-                "code": "NOT_IMPLEMENTED",
-                "message": "Symmetry-constrained optimization not yet implemented",
-                "details": {}
-            }
-        }
+        warnings.append("Symmetry-constrained optimization not implemented; proceeding without constraints")
     
     # Choose what to optimize
     if fix_lattice:
@@ -409,13 +402,15 @@ def optimize_structure(
         opt = FIRE(opt_atoms, trajectory=trajectory_file)
     elif optimizer == "LBFGS":
         opt = LBFGS(opt_atoms, trajectory=trajectory_file)
+    elif optimizer == "GPMin":
+        opt = GPMin(opt_atoms, trajectory=trajectory_file)
     else:
         return {
             "success": False,
             "error": {
                 "code": "INVALID_OPTIMIZER",
-                "message": f"Optimizer {optimizer} not implemented",
-                "details": {"optimizer": optimizer}
+                "message": f"Optimizer {optimizer} not implemented. Available: BFGS, FIRE, LBFGS, GPMin",
+                "details": {"optimizer": optimizer, "available": ["BFGS", "FIRE", "LBFGS", "GPMin"]}
             }
         }
     
@@ -436,7 +431,7 @@ def optimize_structure(
     
     total_time = time.time() - start_time
     
-    return {
+    result = {
         "success": True,
         "optimized_structure": optimized_structure,
         "initial_energy": float(initial_energy),
@@ -453,6 +448,10 @@ def optimize_structure(
             "total_time_ms": total_time * 1000
         }
     }
+    if warnings:
+        result["warnings"] = warnings
+
+    return result
 
 
 def calculate_energy(

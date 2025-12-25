@@ -12,6 +12,7 @@ import {
   Tool
 } from "@modelcontextprotocol/sdk/types.js";
 import { zodToJsonSchema } from "zod-to-json-schema";
+import pkg from "../package.json" assert { type: "json" };
 
 // Import tool handlers
 import { handleComprehensiveGenerate } from "./tools/generation/comprehensive-generator.js";
@@ -52,10 +53,11 @@ import { TOOL_DEFINITIONS } from "./types/tools.js";
  * Create and configure the MCP server.
  */
 export function createServer(): Server {
+  const serverVersion = pkg.version;
   const server = new Server(
     {
       name: "crystal-structure-generator",
-      version: "2.0.0"
+      version: serverVersion
     },
     {
       capabilities: {
@@ -65,12 +67,30 @@ export function createServer(): Server {
   );
 
   // Register ListTools handler
+  const isToolInputSchema = (value: unknown): value is Tool["inputSchema"] => {
+    if (!value || typeof value !== "object") {
+      return false;
+    }
+    if ("type" in value) {
+      const typeValue = (value as { type?: unknown }).type;
+      return typeValue === "object";
+    }
+    return "anyOf" in value || "oneOf" in value;
+  };
+
   server.setRequestHandler(ListToolsRequestSchema, async () => {
-    const tools = TOOL_DEFINITIONS.map(tool => ({
-      name: tool.name,
-      description: tool.description,
-      inputSchema: zodToJsonSchema(tool.inputSchema as any) as any
-    }));
+    const tools = TOOL_DEFINITIONS.map(tool => {
+      const inputSchema = zodToJsonSchema(tool.inputSchema);
+      if (!isToolInputSchema(inputSchema)) {
+        throw new Error(`Invalid input schema for tool: ${tool.name}`);
+      }
+      return {
+        name: tool.name,
+        description: tool.description,
+        inputSchema,
+        annotations: tool.annotations
+      };
+    });
 
     return {
       tools: tools as Tool[]
@@ -83,7 +103,7 @@ export function createServer(): Server {
 
     switch (name) {
       case "comprehensive_generate":
-        return await handleComprehensiveGenerate(args as any);
+        return await handleComprehensiveGenerate(args);
 
       case "generate_crystal":
         return await handleGenerateCrystal(args);
@@ -188,6 +208,6 @@ export async function startServer(): Promise<void> {
   await server.connect(transport);
 
   console.error("Crystal Structure Generator MCP Server running on stdio");
-  console.error("Version: 2.0.0");
+  console.error(`Version: ${pkg.version}`);
   console.error("Available tools:", TOOL_DEFINITIONS.length);
 }

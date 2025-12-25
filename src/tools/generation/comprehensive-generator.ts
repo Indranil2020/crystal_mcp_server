@@ -2,6 +2,9 @@ import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { ComprehensiveGenerateSchema } from "../../types/tools.js";
 import { executePythonWithJSON } from "../../utils/python-bridge.js";
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === "object" && value !== null;
+
 /**
  * Handle comprehensive_generate tool execution
  *
@@ -46,8 +49,18 @@ export async function handleComprehensiveGenerate(
     }
 
     // Handle errors returned from Python
-    // Type assertion needed as result.data is generic unknown type
-    const data = result.data as any;
+    const data = result.data;
+    if (!isRecord(data)) {
+        return {
+            content: [
+                {
+                    type: "text",
+                    text: "Python execution returned an unexpected response shape."
+                }
+            ],
+            isError: true
+        };
+    }
 
     if (data.success === false) {
         // Return JSON with success: false for proper API response
@@ -71,13 +84,13 @@ export async function handleComprehensiveGenerate(
     let summary = `Successfully executed operation '${operation}'`;
 
     // Add operation-specific details if available
-    if (structure.formula) {
+    if (typeof structure.formula === "string") {
         summary += `\nGenerated structure: ${structure.formula}`;
     }
-    if (structure.n_atoms) {
+    if (typeof structure.n_atoms === "number") {
         summary += `\nNumber of atoms: ${structure.n_atoms}`;
     }
-    if (structure.spacegroup_symbol) {
+    if (typeof structure.spacegroup_symbol === "string") {
         summary += `\nSpace Group: ${structure.spacegroup_symbol}`;
     }
 

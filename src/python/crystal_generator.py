@@ -17,10 +17,19 @@ from typing import Dict, List, Optional, Tuple, Any, Union
 import json
 import sys
 import numpy as np
+from monty.serialization import loadfn
 from pyxtal import pyxtal
 from pyxtal.lattice import Lattice as PyXtalLattice
-from pyxtal.symmetry import Group
-from pymatgen.core import Structure, Element, Lattice as PMGLattice
+from pyxtal.symmetry import Group, rf
+from pymatgen.core import Structure, Element
+
+GROUP_SYMBOL_KEYS = {
+    3: "space_group",
+    2: "layer_group",
+    1: "rod_group",
+    0: "point_group"
+}
+GROUP_SYMBOLS = loadfn(rf("pyxtal", "database/symbols.json"))
 
 
 class ValidationResult:
@@ -39,6 +48,46 @@ class ValidationResult:
         }
 
 
+def resolve_space_group(
+    space_group: Union[int, str],
+    dimensionality: int = 3
+) -> Tuple[Optional[int], Optional[str], Optional[str]]:
+    """
+    Normalize a space group input to (number, symbol).
+
+    Args:
+        space_group: Space group number or Hermann-Mauguin symbol
+        dimensionality: 0=0D, 1=1D, 2=2D, 3=3D
+
+    Returns:
+        Tuple of (number, symbol, error_message)
+    """
+    if isinstance(space_group, bool):
+        return None, None, "Space group must be int or str, got bool"
+
+    key = GROUP_SYMBOL_KEYS.get(dimensionality)
+    if key is None:
+        return None, None, f"Dimensionality must be 0-3, got {dimensionality}"
+
+    symbols = GROUP_SYMBOLS[key]
+    max_number = len(symbols)
+
+    if isinstance(space_group, int):
+        if space_group < 1 or space_group > max_number:
+            return None, None, f"Space group number must be 1-{max_number} for dim={dimensionality}, got {space_group}"
+        return space_group, symbols[space_group - 1], None
+
+    if isinstance(space_group, str):
+        cleaned = space_group.strip()
+        if not cleaned:
+            return None, None, "Space group symbol cannot be empty"
+        if cleaned not in symbols:
+            return None, None, f"Unknown space group symbol '{cleaned}' for dim={dimensionality}"
+        return symbols.index(cleaned) + 1, cleaned, None
+
+    return None, None, f"Space group must be int or str, got {type(space_group).__name__}"
+
+
 def validate_space_group(space_group: Union[int, str], dimensionality: int = 3) -> Tuple[bool, Optional[str]]:
     """
     Validate space group number or symbol for given dimensionality.
@@ -50,25 +99,8 @@ def validate_space_group(space_group: Union[int, str], dimensionality: int = 3) 
     Returns:
         Tuple of (is_valid, error_message)
     """
-    if isinstance(space_group, int):
-        if dimensionality == 3:
-            if space_group < 1 or space_group > 230:
-                return False, f"Space group number must be 1-230 for 3D, got {space_group}"
-        elif dimensionality == 2:
-            if space_group < 1 or space_group > 80:
-                return False, f"Layer group number must be 1-80 for 2D, got {space_group}"
-        elif dimensionality == 1:
-            if space_group < 1 or space_group > 75:
-                 return False, f"Rod group number must be 1-75 for 1D, got {space_group}"
-        # 0D point groups range is complex, usually strings. For ints, maybe not strictly checked here.
-        
-    elif isinstance(space_group, str):
-        if not space_group or len(space_group.strip()) == 0:
-            return False, "Space group symbol cannot be empty"
-    else:
-        return False, f"Space group must be int or str, got {type(space_group).__name__}"
-
-    return True, None
+    _, _, error = resolve_space_group(space_group, dimensionality)
+    return error is None, error
 
 
 def validate_composition(composition: List[str]) -> Tuple[bool, Optional[str]]:
@@ -84,14 +116,6 @@ def validate_composition(composition: List[str]) -> Tuple[bool, Optional[str]]:
     if not composition or len(composition) == 0:
         return False, "Composition cannot be empty"
 
-    # Valid element symbols (simplified set)
-    valid_elements = {
-        "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne",
-        "Na", "Mg", "Al", "Si", "P", "S", "Cl", "Ar", "K", "Ca",
-        "Sc", "Ti", "V", "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Zn",
-        "Ga", "Ge", "As", "Se", "Br", "Kr"
-    }
-
     for i, elem in enumerate(composition):
         if not elem or not isinstance(elem, str):
             return False, f"Invalid element at index {i}: {elem}"
@@ -100,21 +124,91 @@ def validate_composition(composition: List[str]) -> Tuple[bool, Optional[str]]:
         if len(elem_clean) == 0:
             return False, f"Empty element at index {i}"
 
-        if elem_clean not in valid_elements:
-            # Try to get element from pymatgen to check if valid
-            is_valid = False
-            if hasattr(Element, elem_clean):
-                is_valid = True
-            else:
-                # Check if it's in Element's internal list
-                all_elements = [e.symbol for e in Element]
-                if elem_clean in all_elements:
-                    is_valid = True
-
-            if not is_valid:
-                return False, f"Unknown element '{elem_clean}' at index {i}"
+        if not Element.is_valid_symbol(elem_clean):
+            return False, f"Unknown element '{elem_clean}' at index {i}"
 
     return True, None
+
+
+def normalize_wyckoff_letter(value: str) -> Optional[str]:
+    """Extract the Wyckoff letter from a label like '4a' or 'a'."""
+    if not isinstance(value, str):
+        return None
+    for char in value:
+        if char.isalpha():
+            return char.lower()
+    return None
+
+
+def validate_wyckoff_positions(
+    wyckoff_positions: Optional[List[Dict[str, Any]]],
+    group_obj: Group,
+    species: List[str]
+) -> Tuple[bool, Optional[str]]:
+    """
+    Validate user-specified Wyckoff positions against the space group.
+    """
+    if wyckoff_positions is None:
+        return True, None
+
+    if not isinstance(wyckoff_positions, list):
+        return False, "wyckoff_positions must be a list of position objects"
+
+    valid_letters = {wp.letter.lower() for wp in group_obj.Wyckoff_positions}
+
+    for index, entry in enumerate(wyckoff_positions):
+        if not isinstance(entry, dict):
+            return False, f"Wyckoff entry at index {index} must be an object"
+
+        element = entry.get("element")
+        if not element or element not in species:
+            return False, f"Wyckoff entry {index} uses unknown element '{element}'"
+
+        wyckoff = entry.get("wyckoff")
+        if not isinstance(wyckoff, str) or not wyckoff.strip():
+            return False, f"Wyckoff entry {index} is missing a valid wyckoff label"
+
+        letter = normalize_wyckoff_letter(wyckoff)
+        if not letter or letter not in valid_letters:
+            return False, f"Wyckoff entry {index} has invalid letter '{wyckoff}' for this space group"
+
+        coords = entry.get("coords")
+        if coords is not None:
+            if not isinstance(coords, (list, tuple)) or len(coords) != 3:
+                return False, f"Wyckoff entry {index} coords must be a length-3 list"
+
+    return True, None
+
+
+def build_wyckoff_sites(
+    wyckoff_positions: List[Dict[str, Any]],
+    species: List[str]
+) -> List[Optional[List[Any]]]:
+    """
+    Convert user wyckoff_positions to PyXtal sites format.
+    """
+    sites_by_element: Dict[str, List[Any]] = {element: [] for element in species}
+
+    for entry in wyckoff_positions:
+        element = entry.get("element")
+        wyckoff = entry.get("wyckoff")
+        coords = entry.get("coords")
+
+        if element not in sites_by_element:
+            continue
+
+        if coords is not None:
+            x, y, z = coords
+            sites_by_element[element].append((wyckoff, x, y, z))
+        else:
+            sites_by_element[element].append(wyckoff)
+
+    sites: List[Optional[List[Any]]] = []
+    for element in species:
+        entries = sites_by_element.get(element, [])
+        sites.append(entries if entries else None)
+
+    return sites
 
 
 def get_covalent_radius(element: str) -> float:
@@ -170,13 +264,13 @@ def calculate_min_distances(structure: Structure) -> Dict[str, float]:
 
 def calculate_density(crystal: pyxtal) -> float:
     """
-    Calculate crystal density in g/cm³.
+    Calculate crystal density in g/cm^3.
     
     Args:
         crystal: PyXtal crystal object
     
     Returns:
-        Density in g/cm³
+        Density in g/cm^3
     """
     if crystal is None or not crystal.valid:
         return 0.0
@@ -199,7 +293,58 @@ def extract_structure_data(crystal: pyxtal) -> Dict[str, Any]:
     # Convert to Pymatgen structure for consistent handling of atoms
     pmg_struct = crystal.to_pymatgen()
     lattice = pmg_struct.lattice
-    
+    reciprocal = lattice.reciprocal_lattice.matrix.tolist()
+
+    atoms: List[Dict[str, Any]] = []
+    atom_sites = getattr(crystal, "atom_sites", None)
+
+    if atom_sites:
+        for atom_site in atom_sites:
+            element = str(atom_site.specie)
+            wp = getattr(atom_site, "wp", None)
+            wyckoff = ""
+            multiplicity = int(getattr(atom_site, "multiplicity", 1))
+            site_symmetry = ""
+
+            if wp is not None:
+                if hasattr(wp, "letter") and wp.letter:
+                    wyckoff = str(wp.letter)
+                if hasattr(wp, "get_site_symmetry_object"):
+                    symm_obj = wp.get_site_symmetry_object()
+                    if symm_obj is not None and hasattr(symm_obj, "name"):
+                        site_symmetry = str(symm_obj.name)
+
+            coords_array = np.array(getattr(atom_site, "coords", []), dtype=float)
+            if coords_array.ndim == 1 and coords_array.size == 3:
+                coords_iter = [coords_array]
+            else:
+                coords_iter = coords_array
+
+            for coord in coords_iter:
+                frac_coords = np.array(coord, dtype=float).tolist()
+                cart_coords = lattice.get_cartesian_coords(frac_coords).tolist()
+                atoms.append({
+                    "element": element,
+                    "coords": frac_coords,
+                    "cartesian": cart_coords,
+                    "wyckoff": wyckoff,
+                    "multiplicity": multiplicity,
+                    "site_symmetry": site_symmetry,
+                    "species": [{"element": element, "occupation": 1.0}]
+                })
+    else:
+        for site in pmg_struct:
+            element = str(site.specie)
+            atoms.append({
+                "element": element,
+                "coords": site.frac_coords.tolist(),
+                "cartesian": site.coords.tolist(),
+                "wyckoff": "",
+                "multiplicity": 1,
+                "site_symmetry": "",
+                "species": [{"element": element, "occupation": 1.0}]
+            })
+
     structure_data = {
         "lattice": {
             "a": float(lattice.a),
@@ -209,9 +354,11 @@ def extract_structure_data(crystal: pyxtal) -> Dict[str, Any]:
             "beta": float(lattice.beta),
             "gamma": float(lattice.gamma),
             "matrix": lattice.matrix.tolist(),
+            "reciprocal_matrix": reciprocal,
             "volume": float(lattice.volume)
         },
-        "atoms": [],
+        "atoms": atoms,
+        "sites": atoms,
         "space_group": {
             "number": int(crystal.group.number),
             "symbol": str(crystal.group.symbol),
@@ -221,23 +368,12 @@ def extract_structure_data(crystal: pyxtal) -> Dict[str, Any]:
         },
         "metadata": {
             "formula": str(crystal.formula),
-            "natoms": len(pmg_struct),
+            "natoms": len(atoms),
             "volume": float(lattice.volume),
             "density": calculate_density(crystal)
         }
     }
-    
-    # Extract atomic positions from Pymatgen structure
-    for site in pmg_struct:
-        structure_data["atoms"].append({
-            "element": str(site.specie),
-            "coords": site.frac_coords.tolist(),
-            "cartesian": site.coords.tolist(),
-            "wyckoff": "", # Wyckoff info lost in Pymatgen conversion
-            "multiplicity": 1,
-            "site_symmetry": ""
-        })
-        
+
     return structure_data
 
 
@@ -268,14 +404,14 @@ def validate_generated_structure(
     
     for i, (param, name) in enumerate(zip(params, ['a', 'b', 'c'])):
         if param < 2.0:
-            warnings.append(f"Lattice parameter {name} = {param:.2f} Å is very small (< 2 Å)")
+            warnings.append(f"Lattice parameter {name} = {param:.2f} Angstroms is very small (< 2 Angstroms)")
         if param > 50.0:
-            warnings.append(f"Lattice parameter {name} = {param:.2f} Å is very large (> 50 Å)")
+            warnings.append(f"Lattice parameter {name} = {param:.2f} Angstroms is very large (> 50 Angstroms)")
     
     angles = [lattice.alpha, lattice.beta, lattice.gamma]
     for angle, name in zip(angles, ['alpha', 'beta', 'gamma']):
         if angle < 30 or angle > 150:
-            warnings.append(f"Angle {name} = {angle:.1f}° is unusual (< 30° or > 150°)")
+            warnings.append(f"Angle {name} = {angle:.1f} deg is unusual (< 30 deg or > 150 deg)")
     
     # Check minimum distances if specified
     if min_distance:
@@ -287,8 +423,8 @@ def validate_generated_structure(
                 actual_dist = distances[pair]
                 if actual_dist < min_dist:
                     errors.append(
-                        f"Distance between {pair} is {actual_dist:.3f} Å, "
-                        f"less than minimum {min_dist:.3f} Å"
+                        f"Distance between {pair} is {actual_dist:.3f} Angstroms, "
+                        f"less than minimum {min_dist:.3f} Angstroms"
                     )
     
     return ValidationResult(len(errors) == 0, errors, warnings)
@@ -325,8 +461,8 @@ def generate_crystal(
         Dictionary containing structure data and validation results
     """
     # Validate inputs
-    spg_valid, spg_error = validate_space_group(space_group, dimensionality)
-    if not spg_valid:
+    space_group_number, _, spg_error = resolve_space_group(space_group, dimensionality)
+    if spg_error:
         return {
             "success": False,
             "error": {
@@ -390,7 +526,7 @@ def generate_crystal(
     # PyXtal's Group(space_group) is valid for 1-230.
     # We assume space_group is valid int from validate_space_group.
     
-    group_obj = Group(space_group, dim=dimensionality)
+    group_obj = Group(space_group_number, dim=dimensionality)
     
     # check_compatible returns (bool, bool)
     is_compatible = group_obj.check_compatible(num_ions)[0]
@@ -400,10 +536,26 @@ def generate_crystal(
             "success": False,
             "error": {
                 "code": "INCOMPATIBLE_COMPOSITION",
-                "message": f"Composition {num_ions} not compatible with space group {space_group} (dim={dimensionality})",
-                "details": {"num_ions": num_ions, "space_group": space_group}
+            "message": f"Composition {num_ions} not compatible with space group {space_group_number} (dim={dimensionality})",
+                "details": {"num_ions": num_ions, "space_group": space_group_number}
             }
         }
+
+    sites = None
+    if wyckoff_positions:
+        wyckoff_valid, wyckoff_error = validate_wyckoff_positions(
+            wyckoff_positions, group_obj, species
+        )
+        if not wyckoff_valid:
+            return {
+                "success": False,
+                "error": {
+                    "code": "INVALID_WYCKOFF_POSITIONS",
+                    "message": wyckoff_error or "Invalid Wyckoff positions",
+                    "details": {"wyckoff_positions": wyckoff_positions}
+                }
+            }
+        sites = build_wyckoff_sites(wyckoff_positions, species)
 
     while attempt < max_attempts and not success:
         attempt += 1
@@ -415,34 +567,36 @@ def generate_crystal(
         # Prepare lattice object if params provided
         current_lattice = None
         if lattice_params and isinstance(lattice_params, dict):
-            # Check for required keys
             req_keys = ['a', 'b', 'c', 'alpha', 'beta', 'gamma']
-            if all(k in lattice_params for k in req_keys):
-                # PyXtal Lattice.from_para expects radians usually for angles?
-                # Let's try degrees first as is standard for "parameters" function signatures.
-                # If PyXtal fails or produces wrong result, we might need radians.
-                # Usage: Lattice.from_para(a, b, c, alpha, beta, gamma, ltype)
-                # But we don't know ltype easily without mapping SG.
-                # PyXtal infers type or we pass generic.
-                    current_lattice = PyXtalLattice.from_para(
-                        lattice_params['a'],
-                        lattice_params['b'],
-                        lattice_params['c'],
-                        lattice_params['alpha'],
-                        lattice_params['beta'],
-                        lattice_params['gamma']
-                    )
+            missing = [k for k in req_keys if k not in lattice_params or lattice_params[k] is None]
+            if missing:
+                return {
+                    "success": False,
+                    "error": {
+                        "code": "INCOMPLETE_LATTICE_PARAMS",
+                        "message": "lattice_params must include a, b, c, alpha, beta, gamma",
+                        "details": {"missing": missing, "lattice_params": lattice_params}
+                    }
+                }
+            current_lattice = PyXtalLattice.from_para(
+                lattice_params['a'],
+                lattice_params['b'],
+                lattice_params['c'],
+                lattice_params['alpha'],
+                lattice_params['beta'],
+                lattice_params['gamma']
+            )
 
         # Call PyXtal's from_random method
         # We rely on pre-validation and library stability
         result = crystal.from_random(
             dim=dimensionality,
-            group=space_group,
+            group=space_group_number,
             species=species,
             numIons=num_ions,
             factor=volume_factor,
             lattice=current_lattice,
-            sites=wyckoff_positions
+            sites=sites
         )
         
         # Check if generation succeeded
@@ -510,7 +664,7 @@ def validate_molecules(molecules: List[str]) -> Tuple[bool, Optional[str]]:
 
 def generate_molecular_crystal(
     molecules: List[str],
-    space_group: int,
+    space_group: Union[int, str],
     num_molecules: Optional[int] = None,
     lattice_params: Optional[Dict[str, float]] = None,
     volume_factor: float = 1.0,
@@ -535,8 +689,8 @@ def generate_molecular_crystal(
         Dictionary with structure data
     """
     # Validate inputs
-    spg_valid, spg_error = validate_space_group(space_group)
-    if not spg_valid:
+    space_group_number, _, spg_error = resolve_space_group(space_group)
+    if spg_error:
         return {
             "success": False,
             "error": {
@@ -584,22 +738,31 @@ def generate_molecular_crystal(
     current_lattice = None
     if lattice_params and isinstance(lattice_params, dict):
         req_keys = ['a', 'b', 'c', 'alpha', 'beta', 'gamma']
-        if all(k in lattice_params for k in req_keys):
-            from pyxtal.lattice import Lattice as PyXtalLattice
-            current_lattice = PyXtalLattice.from_para(
-                lattice_params['a'],
-                lattice_params['b'],
-                lattice_params['c'],
-                lattice_params['alpha'],
-                lattice_params['beta'],
-                lattice_params['gamma']
-            )
+        missing = [k for k in req_keys if k not in lattice_params or lattice_params[k] is None]
+        if missing:
+            return {
+                "success": False,
+                "error": {
+                    "code": "INCOMPLETE_LATTICE_PARAMS",
+                    "message": "lattice_params must include a, b, c, alpha, beta, gamma",
+                    "details": {"missing": missing, "lattice_params": lattice_params}
+                }
+            }
+        from pyxtal.lattice import Lattice as PyXtalLattice
+        current_lattice = PyXtalLattice.from_para(
+            lattice_params['a'],
+            lattice_params['b'],
+            lattice_params['c'],
+            lattice_params['alpha'],
+            lattice_params['beta'],
+            lattice_params['gamma']
+        )
 
     while attempt < max_attempts and not success:
         attempt += 1
         crystal.from_random(
             dim=3,
-            group=space_group,
+            group=space_group_number,
             species=species,
             numIons=num_ions,
             factor=volume_factor,

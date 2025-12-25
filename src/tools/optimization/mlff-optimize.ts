@@ -5,7 +5,7 @@
  */
 
 import { OptimizeStructureMLFFSchema } from "../../types/tools.js";
-import { Result, createSuccess, createFailure, createError, CrystalErrorCode } from "../../types/errors.js";
+import { Result, createSuccess, createFailure, createError, CrystalErrorCode, ERROR_MESSAGES } from "../../types/errors.js";
 import { executePythonWithJSON } from "../../utils/python-bridge.js";
 import { formatOptimizationOutput } from "../../utils/formatting.js";
 
@@ -36,6 +36,18 @@ export async function optimizeStructureMLFF(input: unknown): Promise<Result<any>
   const pythonResult = result.data;
   
   if (!pythonResult.success) {
+    if (pythonResult.error?.code === "MODEL_NOT_AVAILABLE") {
+      const model = pythonResult.error.details?.mlff_model ?? parsed.data.mlff_model;
+      const messageInfo = ERROR_MESSAGES.MODEL_NOT_AVAILABLE(String(model));
+      return createFailure(createError(
+        CrystalErrorCode.MODEL_NOT_AVAILABLE,
+        messageInfo.message,
+        pythonResult.error.details ?? {},
+        [...messageInfo.suggestions],
+        false
+      ));
+    }
+
     return createFailure(createError(
       pythonResult.error.code as CrystalErrorCode,
       pythonResult.error.message,
