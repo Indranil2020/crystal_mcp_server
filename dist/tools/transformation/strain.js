@@ -12,12 +12,14 @@ export async function applyStrain(input) {
     if (!parsed.success) {
         return createFailure(createError(CrystalErrorCode.INVALID_INPUT, "Invalid input parameters", { zodErrors: parsed.error.errors }, [], true));
     }
-    const params = { ...parsed.data, operation: "strain" };
+    // Rename structure -> structure_dict for Python compatibility
+    const { structure, ...rest } = parsed.data;
+    const params = { structure_dict: structure, ...rest, operation: "strain" };
     const result = await executePythonWithJSON("structure_tools.py", params, { timeout: 60000 });
     if (!result.success) {
         return createFailure(result.error);
     }
-    const pythonResult = result.data.data;
+    const pythonResult = result.data;
     if (!pythonResult.success) {
         return createFailure(createError(pythonResult.error?.code || CrystalErrorCode.EXECUTION_ERROR, pythonResult.error?.message || "Strain application failed", pythonResult.error?.details));
     }

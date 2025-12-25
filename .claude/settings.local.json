@@ -14,7 +14,14 @@
       "Bash(git status:*)",
       "Bash(git log:*)",
       "Bash(find:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(cat:*)",
+      "Bash(timeout 10 node:*)",
+      "Bash(pip3 show:*)",
+      "Bash(pip3 install:*)",
+      "Bash(./tests/testsuit/run_tests.py:*)",
+      "Bash(pgrep:*)",
+      "Bash(timeout 60 pytest:*)"
     ],
     "deny": [],
     "ask": []

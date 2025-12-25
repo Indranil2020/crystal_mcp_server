@@ -46,7 +46,9 @@ class TestRunner:
             "e2e": "tests/testsuit/test_mcp_e2e.py",
             "all_operations": "tests/testsuit/test_all_operations.py",
             "new_modules": "tests/testsuit/test_new_modules.py",
-            "scientific": "tests/testsuit/test_scientific_accuracy.py"
+            "scientific": "tests/testsuit/test_scientific_accuracy.py",
+            "phase3": "tests/testsuit/test_phase3_implementations.py",
+            "workflow": "tests/testsuit/test_workflow_module.py"
         }
         
         self.profiles = {
@@ -93,12 +95,14 @@ class TestRunner:
                     "tests/testsuit/test_all_operations.py",
                     "tests/testsuit/test_new_modules.py",
                     "tests/testsuit/test_scientific_accuracy.py",
+                    "tests/testsuit/test_phase3_implementations.py",
+                    "tests/testsuit/test_workflow_module.py",
                     "-v", "--tb=short",
-                    "--cov", "--cov-report=html", "--cov-report=term",
+                    "--cov=src/python", "--cov-report=html", "--cov-report=term",
                     "--junitxml=test-results.xml",
                     "--durations=20"
                 ],
-                "estimate": "~25-30 minutes"
+                "estimate": "~30-40 minutes"
             },
             "new-modules": {
                 "name": "New Modules Only (December 2024)",
@@ -154,15 +158,23 @@ class TestRunner:
                 ],
                 "estimate": "~3 minutes"
             },
-            "scientific": {
-                "name": "Scientific Correctness",
-                "description": "Validate physical and chemical accuracy",
+            "phase3": {
+                "name": "Phase 3 Implementations",
+                "description": "Test Phase 3 advanced implementations",
                 "args": [
-                    "tests/testsuit/test_mcp_comprehensive.py::TestScientificCorrectness",
-                    "tests/testsuit/test_operation_matrix.py::TestBulkStructures",
-                    "-v"
+                    "tests/testsuit/test_phase3_implementations.py",
+                    "-v", "--tb=short"
                 ],
-                "estimate": "~5 minutes"
+                "estimate": "~10 minutes"
+            },
+            "workflow": {
+                "name": "Workflow Module Tests",
+                "description": "Test workflow and iterative editing modules",
+                "args": [
+                    "tests/testsuit/test_workflow_module.py",
+                    "-v", "--tb=short"
+                ],
+                "estimate": "~10 minutes"
             }
         }
         
@@ -310,7 +322,8 @@ Examples:
     
     parser.add_argument(
         "--profile", "-p",
-        choices=["dev", "pre-commit", "full", "publish", "ci", "protocol", "performance", "scientific"],
+        choices=["dev", "pre-commit", "full", "publish", "ci", "protocol", "performance",
+                 "scientific", "new-modules", "phase3", "workflow"],
         help="Run a predefined test profile"
     )
     

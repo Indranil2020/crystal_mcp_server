@@ -52,14 +52,17 @@ class MCPTestClient:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            bufsize=0
+            bufsize=1  # Line buffered for text mode
         )
         # Wait for server to initialize
-        time.sleep(1.0)
-        
+        time.sleep(1.5)
+
+        # Drain any startup stderr messages without blocking
+        self._read_stderr()
+
         # Check if server crashed immediately
         if self.process.poll() is not None:
-            stderr = self.process.stderr.read()
+            stderr = "\n".join(self.stderr_log)
             raise Exception(f"Server failed to start. Stderr: {stderr}")
     
     def stop(self):
@@ -132,14 +135,20 @@ class MCPTestClient:
             return ""
 
         import select
+        import os
+
         reads = [self.process.stderr.fileno()]
         if select.select(reads, [], [], 0)[0]:
-            stderr = self.process.stderr.read()
-            if stderr:
-                self.stderr_log.append(stderr)
-                print(f"\n[SERVER STDERR]: {stderr}")
-                return stderr
-        
+            # Use os.read to get available bytes without blocking
+            try:
+                stderr_bytes = os.read(self.process.stderr.fileno(), 4096)
+                stderr = stderr_bytes.decode('utf-8', errors='replace')
+                if stderr:
+                    self.stderr_log.append(stderr)
+                    return stderr
+            except (OSError, IOError):
+                pass
+
         return ""
 
 

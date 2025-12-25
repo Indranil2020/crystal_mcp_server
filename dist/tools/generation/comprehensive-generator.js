@@ -1,4 +1,6 @@
+import { ComprehensiveGenerateSchema } from "../../types/tools.js";
 import { executePythonWithJSON } from "../../utils/python-bridge.js";
+const isRecord = (value) => typeof value === "object" && value !== null;
 /**
  * Handle comprehensive_generate tool execution
  *
@@ -6,8 +8,22 @@ import { executePythonWithJSON } from "../../utils/python-bridge.js";
  * which then delegates to the specific generator module.
  */
 export async function handleComprehensiveGenerate(args) {
+    // Validate input with Zod schema
+    const parsed = ComprehensiveGenerateSchema.safeParse(args);
+    if (!parsed.success) {
+        return {
+            content: [
+                {
+                    type: "text",
+                    text: `Invalid input parameters:\n${parsed.error.errors.map(e => `- ${e.path.join('.')}: ${e.message}`).join('\n')}`
+                }
+            ],
+            isError: true
+        };
+    }
+    const validatedArgs = parsed.data;
     // Execute Python script
-    const result = await executePythonWithJSON("comprehensive_structures.py", args);
+    const result = await executePythonWithJSON("comprehensive_structures.py", validatedArgs);
     if (!result.success) {
         return {
             content: [
@@ -20,8 +36,18 @@ export async function handleComprehensiveGenerate(args) {
         };
     }
     // Handle errors returned from Python
-    // Type assertion needed as result.data is generic unknown type
     const data = result.data;
+    if (!isRecord(data)) {
+        return {
+            content: [
+                {
+                    type: "text",
+                    text: "Python execution returned an unexpected response shape."
+                }
+            ],
+            isError: true
+        };
+    }
     if (data.success === false) {
         // Return JSON with success: false for proper API response
         // This allows clients to parse and check the error details
@@ -37,21 +63,21 @@ export async function handleComprehensiveGenerate(args) {
     }
     // Structure generation successful
     const structure = data;
-    const operation = args.operation;
+    const operation = validatedArgs.operation;
     // Format success message
     let summary = `Successfully executed operation '${operation}'`;
     // Add operation-specific details if available
-    if (structure.formula) {
+    if (typeof structure.formula === "string") {
         summary += `\nGenerated structure: ${structure.formula}`;
     }
-    if (structure.n_atoms) {
+    if (typeof structure.n_atoms === "number") {
         summary += `\nNumber of atoms: ${structure.n_atoms}`;
     }
-    if (structure.spacegroup_symbol) {
+    if (typeof structure.spacegroup_symbol === "string") {
         summary += `\nSpace Group: ${structure.spacegroup_symbol}`;
     }
     // Handle listing operations
-    if (operation === "list_all" || operation === "list_category" || args.list_available) {
+    if (operation === "list_all" || operation === "list_category" || validatedArgs.list_available) {
         return {
             content: [
                 {

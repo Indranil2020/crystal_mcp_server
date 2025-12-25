@@ -9,7 +9,28 @@ import { z } from "zod";
  * Common schema components
  */
 const Vector3Schema = z.tuple([z.number(), z.number(), z.number()]);
-// const Matrix3x3Schema // Removed unused schema
+const IntVector3Schema = z.tuple([z.number().int(), z.number().int(), z.number().int()]);
+const Matrix3x3Schema = z.tuple([Vector3Schema, Vector3Schema, Vector3Schema]);
+const ElementSymbolSchema = z.string().regex(/^[A-Z][a-z]?$/, "Invalid element symbol");
+const ElementPairKeySchema = z.string().regex(/^[A-Z][a-z]?-[A-Z][a-z]?$/, "Expected element pair like 'Si-O'");
+const StructureInputSchema = z.union([z.string(), z.any()]);
+const SpaceGroupSchema = z.union([
+    z.number().int().min(1).max(230),
+    z.string().min(1)
+]);
+const LatticeParamsSchema = z.object({
+    a: z.number().positive(),
+    b: z.number().positive(),
+    c: z.number().positive(),
+    alpha: z.number().min(0).max(180),
+    beta: z.number().min(0).max(180),
+    gamma: z.number().min(0).max(180)
+});
+const CompositionSchema = z.array(ElementSymbolSchema).min(1);
+const StrainTensorSchema = z.union([
+    Matrix3x3Schema,
+    z.array(z.number()).length(9)
+]);
 const CrystalSystemSchema = z.enum([
     "triclinic",
     "monoclinic",
@@ -23,30 +44,21 @@ const CrystalSystemSchema = z.enum([
  * Schema for generate_crystal tool
  */
 export const GenerateCrystalSchema = z.object({
-    composition: z.array(z.string()).min(1)
+    composition: CompositionSchema
         .describe("Chemical composition as array of element symbols, e.g., ['Si', 'Si'] or ['Na', 'Cl']"),
-    space_group: z.union([
-        z.number().int().min(1).max(230),
-        z.string()
-    ]).describe("Space group number (1-230) or Hermann-Mauguin symbol"),
+    space_group: SpaceGroupSchema
+        .describe("Space group number (1-230) or Hermann-Mauguin symbol"),
     num_atoms: z.number().int().positive().optional()
         .describe("Total number of atoms in the unit cell"),
-    lattice_params: z.object({
-        a: z.number().positive().optional(),
-        b: z.number().positive().optional(),
-        c: z.number().positive().optional(),
-        alpha: z.number().min(0).max(180).optional(),
-        beta: z.number().min(0).max(180).optional(),
-        gamma: z.number().min(0).max(180).optional()
-    }).optional()
+    lattice_params: LatticeParamsSchema.optional()
         .describe("Optional lattice parameters in Angstroms and degrees"),
     volume_factor: z.number().positive().default(1.0)
         .describe("Relative volume factor (1.0 = standard, >1.0 = larger)"),
-    min_distance: z.record(z.string(), z.number().positive()).optional()
+    min_distance: z.record(ElementPairKeySchema, z.number().positive()).optional()
         .describe("Minimum distances between element pairs, e.g., {'Si-Si': 2.0, 'Si-O': 1.6}"),
     wyckoff_positions: z.array(z.object({
-        element: z.string(),
-        wyckoff: z.string(),
+        element: ElementSymbolSchema,
+        wyckoff: z.string().min(1),
         coords: Vector3Schema.optional()
     })).optional()
         .describe("Specify exact Wyckoff positions for atoms"),
@@ -72,9 +84,11 @@ export const GenerateCrystalSchema = z.object({
  */
 export const ComprehensiveGenerateSchema = z.object({
     operation: z.string()
-        .describe("Generator operation name. Use 'list_all' to see all available operations, or 'list_category' with category param to see operations in a category."),
+        .describe("Generator operation name. Use 'list_all' to see all available operations, 'list_category' with category param, or 'operation_info' with operation_name param."),
     category: z.string().optional()
         .describe("Category name when using operation='list_category'. Categories: bulk, two_d, surface, molecule, twist, defect, electronic, thermoelectric, battery, catalyst, adsorption, magnetic, nanotube, quantum, photonic, quality_control, high_pressure, external_fields"),
+    operation_name: z.string().optional()
+        .describe("Operation name to get info for when using operation='operation_info'"),
     // Common parameters - passed through to the generator function
     spacegroup: z.number().int().min(1).max(230).optional()
         .describe("Space group number (1-230) for bulk generation"),
@@ -115,7 +129,7 @@ export const ComprehensiveGenerateSchema = z.object({
  * Schema for space_group_scan tool
  */
 export const SpaceGroupScanSchema = z.object({
-    composition: z.array(z.string()).min(1)
+    composition: CompositionSchema
         .describe("Chemical composition as array of element symbols"),
     space_groups: z.array(z.number().int().min(1).max(230)).optional()
         .describe("Specific space groups to test, or all 230 if not provided"),
@@ -138,11 +152,12 @@ export const SpaceGroupScanSchema = z.object({
  * Schema for make_supercell tool
  */
 export const MakeSupercellSchema = z.object({
-    structure: z.union([z.string(), z.any()])
+    structure: StructureInputSchema
         .describe("Crystal structure as CIF file path, JSON, or structure object"),
-    matrix: z.union([
+    scaling_matrix: z.union([
         z.string().describe("Preset matrix name (e.g., 'sqrt3', 'root2', '2x2x2')"),
-        z.array(z.array(z.number())).describe("3x3 scaling matrix")
+        IntVector3Schema.describe("Scaling vector [nx, ny, nz]"),
+        Matrix3x3Schema.describe("3x3 scaling matrix")
     ]).describe("3x3 transformation matrix or [nx, ny, nz] scaling factors"),
     wrap_atoms: z.boolean().default(true)
         .describe("Wrap atoms back into unit cell"),
@@ -155,20 +170,18 @@ export const MakeSupercellSchema = z.object({
  * Schema for generate_slab tool
  */
 export const GenerateSlabSchema = z.object({
-    structure: z.union([z.string(), z.any()])
+    structure: StructureInputSchema
         .describe("Crystal structure as input"),
     miller_indices: Vector3Schema
         .describe("Miller indices [h, k, l] defining the surface plane"),
     thickness: z.number().int().positive()
-        .describe("Number of layers in the slab"),
+        .describe("Slab thickness - used as minimum slab size in Angstroms (see min_slab_size for explicit Angstrom control)"),
     vacuum: z.number().positive()
         .describe("Vacuum thickness in Angstroms"),
     center_slab: z.boolean().default(true)
         .describe("Center the slab in the cell"),
     fix_bottom_layers: z.number().int().nonnegative().optional()
         .describe("Number of bottom layers to fix for DFT relaxation"),
-    fix_atoms: z.array(z.number().int().nonnegative()).optional()
-        .describe("Specific atom indices to fix"),
     orthogonalize: z.boolean().default(false)
         .describe("Create an orthogonal cell"),
     min_slab_size: z.number().positive().optional()
@@ -180,7 +193,7 @@ export const GenerateSlabSchema = z.object({
  * Schema for analyze_symmetry tool
  */
 export const AnalyzeSymmetrySchema = z.object({
-    structure: z.union([z.string(), z.any()])
+    structure: StructureInputSchema
         .describe("Crystal structure to analyze"),
     symprec: z.number().positive().default(1e-3)
         .describe("Symmetry precision tolerance"),
@@ -195,7 +208,7 @@ export const AnalyzeSymmetrySchema = z.object({
  * Schema for validate_structure tool
  */
 export const ValidateStructureSchema = z.object({
-    structure: z.union([z.string(), z.any()])
+    structure: StructureInputSchema
         .describe("Crystal structure to validate"),
     checks: z.array(z.enum([
         "distances",
@@ -217,11 +230,11 @@ export const ValidateStructureSchema = z.object({
  * Schema for optimize_structure_mlff tool
  */
 export const OptimizeStructureMLFFSchema = z.object({
-    structure: z.union([z.string(), z.any()])
+    structure: StructureInputSchema
         .describe("Crystal structure to optimize"),
     mlff_model: z.enum(["chgnet", "m3gnet", "mace"])
         .describe("Machine learning force field model to use"),
-    optimizer: z.enum(["BFGS", "FIRE", "LBFGS", "GPMin"]).default("BFGS")
+    optimizer: z.enum(["BFGS", "FIRE", "LBFGS"]).default("BFGS")
         .describe("Optimization algorithm"),
     fmax: z.number().positive().default(0.01)
         .describe("Force convergence criterion in eV/Angstrom"),
@@ -242,7 +255,7 @@ export const OptimizeStructureMLFFSchema = z.object({
  * Schema for calculate_energy_mlff tool
  */
 export const CalculateEnergyMLFFSchema = z.object({
-    structure: z.union([z.string(), z.any()])
+    structure: StructureInputSchema
         .describe("Crystal structure for energy calculation"),
     mlff_model: z.enum(["chgnet", "m3gnet", "mace"])
         .describe("Machine learning force field model"),
@@ -255,7 +268,7 @@ export const CalculateEnergyMLFFSchema = z.object({
  * Schema for ground_state_search tool
  */
 export const GroundStateSearchSchema = z.object({
-    composition: z.array(z.string()).min(1)
+    composition: CompositionSchema
         .describe("Chemical composition"),
     space_groups: z.array(z.number().int().min(1).max(230)).optional()
         .describe("Specific space groups to search, or all 230 if not provided"),
@@ -282,19 +295,13 @@ export const GroundStateSearchSchema = z.object({
  * Schema for export_structure tool
  */
 export const ExportStructureSchema = z.object({
-    structure: z.union([z.string(), z.any()])
+    structure: StructureInputSchema
         .describe("Crystal structure to export"),
     formats: z.array(z.enum([
         "cif",
         "poscar",
-        "contcar",
         "xyz",
-        "extxyz",
-        "json",
-        "pdb",
-        "pwscf",
-        "castep",
-        "lammps"
+        "json"
     ])).min(1)
         .describe("Output file formats"),
     include_metadata: z.boolean().default(true)
@@ -311,7 +318,7 @@ export const ExportStructureSchema = z.object({
  * Schema for generate_visualization tool
  */
 export const VisualizationSchema = z.object({
-    structure: z.any().describe("Structure object returned by generate_crystal"),
+    structure: StructureInputSchema.describe("Structure object returned by generate_crystal"),
     format: z.enum(["html", "png"]).optional().default("html").describe("Output format: 'html' for interactive 3D, 'png' for static image"),
     output_file: z.string().optional().describe("Path to save the visualization file")
 });
@@ -319,13 +326,13 @@ export const VisualizationSchema = z.object({
  * Schema for create_defect tool
  */
 export const CreateDefectSchema = z.object({
-    structure: z.union([z.string(), z.any()])
+    structure: StructureInputSchema
         .describe("Crystal structure to modify"),
     defect_type: z.enum(["vacancy", "substitution", "interstitial"])
         .describe("Type of defect to create"),
     defect_site: z.number().int().nonnegative()
         .describe("Index of the atom site to modify (0-indexed)"),
-    defect_species: z.string().optional()
+    defect_species: ElementSymbolSchema.optional()
         .describe("Element symbol for substitution or interstitial (required for these types)"),
     concentration: z.number().positive().default(1.0)
         .describe("Defect concentration (currently unused)")
@@ -336,24 +343,15 @@ export const CreateDefectSchema = z.object({
 export const GenerateMolecularCrystalSchema = z.object({
     molecules: z.array(z.string()).min(1)
         .describe("List of molecules (formulas or names), e.g., ['H2O']"),
-    space_group: z.union([
-        z.number().int().min(1).max(230),
-        z.string()
-    ]).describe("Space group number (1-230) or Hermann-Mauguin symbol"),
+    space_group: SpaceGroupSchema
+        .describe("Space group number (1-230) or Hermann-Mauguin symbol"),
     num_molecules: z.number().int().positive().optional()
         .describe("Total number of molecules in the unit cell"),
-    lattice_params: z.object({
-        a: z.number().positive().optional(),
-        b: z.number().positive().optional(),
-        c: z.number().positive().optional(),
-        alpha: z.number().min(0).max(180).optional(),
-        beta: z.number().min(0).max(180).optional(),
-        gamma: z.number().min(0).max(180).optional()
-    }).optional()
+    lattice_params: LatticeParamsSchema.optional()
         .describe("Optional lattice parameters"),
     volume_factor: z.number().positive().default(1.0)
         .describe("Relative volume factor"),
-    min_distance: z.record(z.string(), z.number().positive()).optional()
+    min_distance: z.record(ElementPairKeySchema, z.number().positive()).optional()
         .describe("Minimum distances"),
     seed: z.number().int().optional()
         .describe("Random seed")
@@ -361,30 +359,73 @@ export const GenerateMolecularCrystalSchema = z.object({
 /**
  * Schema for generate_nanostructure tool
  */
-export const GenerateNanostructureSchema = z.object({
-    type: z.enum(["nanotube", "graphene", "nanoribbon", "fullerene", "mos2", "nanowire"])
-        .describe("Type of nanostructure to generate"),
-    params: z.object({
-        // Nanotube params
-        n: z.number().int().positive().optional().describe("Chiral index n"),
-        m: z.number().int().nonnegative().optional().describe("Chiral index m"),
-        length: z.number().int().positive().optional().describe("Number of unit cells along tube"),
-        bond: z.number().positive().optional().describe("Bond length (default 1.42)"),
-        // Graphene/MoS2 params
-        formula: z.string().optional().describe("Chemical formula (e.g. 'C2', 'MoS2')"),
-        size: z.tuple([z.number(), z.number(), z.number()]).optional().describe("Supercell size [x, y, z]"),
-        vacuum: z.number().positive().optional().describe("Vacuum padding in Angstroms"),
-        // Nanoribbon params
-        width: z.number().int().positive().optional(),
-        ribbon_type: z.enum(["armchair", "zigzag"]).optional(),
-        saturated: z.boolean().optional(),
-        // Fullerene params
-        name: z.string().optional().describe("Molecule name (e.g. 'C60')"),
-        // MoS2 params
-        kind: z.string().optional().describe("Polytype (e.g. '2H')"),
-        thickness: z.number().positive().optional()
-    }).describe("Specific parameters for the structure type")
+const NanotubeParamsSchema = z.object({
+    n: z.number().int().positive().optional().describe("Chiral index n"),
+    m: z.number().int().nonnegative().optional().describe("Chiral index m"),
+    length: z.number().int().positive().optional().describe("Number of unit cells along tube"),
+    bond: z.number().positive().optional().describe("Bond length (default 1.42)"),
+    vacuum: z.number().positive().optional().describe("Vacuum padding in Angstroms")
 });
+const GrapheneParamsSchema = z.object({
+    formula: z.string().optional().describe("Element symbol or formula (e.g. 'C')"),
+    size: IntVector3Schema.optional().describe("Supercell size [x, y, z]"),
+    a: z.number().positive().optional().describe("Lattice constant a in Angstroms"),
+    c: z.number().positive().optional().describe("Out-of-plane separation in Angstroms"),
+    vacuum: z.number().positive().optional().describe("Vacuum padding in Angstroms")
+});
+const NanoribbonParamsSchema = z.object({
+    width: z.number().int().positive().optional(),
+    length: z.number().int().positive().optional(),
+    type: z.enum(["armchair", "zigzag"]).optional(),
+    ribbon_type: z.enum(["armchair", "zigzag"]).optional(),
+    saturated: z.boolean().optional(),
+    vacuum: z.number().positive().optional()
+}).refine(data => !(data.type && data.ribbon_type), {
+    message: "Use either type or ribbon_type, not both"
+});
+const FullereneParamsSchema = z.object({
+    name: z.string().optional().describe("Molecule name (e.g. 'C60')")
+});
+const Mos2ParamsSchema = z.object({
+    formula: z.string().optional().describe("Chemical formula (e.g. 'MoS2')"),
+    kind: z.string().optional().describe("Polytype (e.g. '2H')"),
+    a: z.number().positive().optional().describe("Lattice constant a in Angstroms"),
+    thickness: z.number().positive().optional().describe("Layer thickness in Angstroms"),
+    vacuum: z.number().positive().optional().describe("Vacuum padding in Angstroms"),
+    size: IntVector3Schema.optional().describe("Supercell size [x, y, z]")
+});
+const NanowireParamsSchema = z.object({
+    formula: z.string().optional().describe("Bulk formula to carve from"),
+    radius: z.number().positive().optional().describe("Wire radius in Angstroms"),
+    length: z.number().int().positive().optional().describe("Number of unit cells along axis"),
+    vacuum: z.number().positive().optional().describe("Vacuum padding in Angstroms")
+});
+export const GenerateNanostructureSchema = z.discriminatedUnion("type", [
+    z.object({
+        type: z.literal("nanotube").describe("Carbon nanotube"),
+        params: NanotubeParamsSchema
+    }),
+    z.object({
+        type: z.literal("graphene").describe("Graphene sheet"),
+        params: GrapheneParamsSchema
+    }),
+    z.object({
+        type: z.literal("nanoribbon").describe("Graphene nanoribbon"),
+        params: NanoribbonParamsSchema
+    }),
+    z.object({
+        type: z.literal("fullerene").describe("Fullerene cage"),
+        params: FullereneParamsSchema
+    }),
+    z.object({
+        type: z.literal("mos2").describe("MoS2 2D sheet"),
+        params: Mos2ParamsSchema
+    }),
+    z.object({
+        type: z.literal("nanowire").describe("Nanowire carved from bulk"),
+        params: NanowireParamsSchema
+    })
+]);
 /**
  * Schema for explore_symmetry_relations tool
  */
@@ -405,16 +446,16 @@ export const ExploreSymmetryRelationsSchema = z.object({
 });
 export const BuildMoleculeSchema = z.object({
     name: z.string().describe("Name of the molecule (e.g., 'H2O', 'C60', 'Benzene')"),
-    vacuum: z.number().default(10.0).optional().describe("Vacuum padding around the molecule (Å)")
+    vacuum: z.number().default(10.0).optional().describe("Vacuum padding around the molecule (Angstroms)")
 });
 /**
  * Schema for create_alloy tool
  */
 export const CreateAlloySchema = z.object({
-    structure: z.union([z.string(), z.any()])
+    structure: StructureInputSchema
         .describe("Base crystal structure"),
-    substitutions: z.record(z.string(), z.object({
-        element: z.string().describe("Element to substitute with"),
+    substitutions: z.record(ElementSymbolSchema, z.object({
+        element: ElementSymbolSchema.describe("Element to substitute with"),
         concentration: z.number().min(0).max(1).describe("Concentration of substitution (0-1)")
     })).describe("Substitution rules, e.g. {'Si': {element: 'Ge', concentration: 0.5}}"),
     seed: z.number().int().optional()
@@ -424,9 +465,9 @@ export const CreateAlloySchema = z.object({
  * Schema for create_heterostructure tool
  */
 export const CreateHeterostructureSchema = z.object({
-    substrate: z.union([z.string(), z.any()])
+    substrate: StructureInputSchema
         .describe("Substrate structure"),
-    overlayer: z.union([z.string(), z.any()])
+    overlayer: StructureInputSchema
         .describe("Overlayer structure to stack on top"),
     interface_distance: z.number().positive().default(3.0)
         .describe("Distance between substrate and overlayer (Angstroms)"),
@@ -437,9 +478,9 @@ export const CreateHeterostructureSchema = z.object({
  * Schema for add_adsorbate tool
  */
 export const AddAdsorbateSchema = z.object({
-    structure: z.union([z.string(), z.any()])
+    structure: StructureInputSchema
         .describe("Surface structure"),
-    molecule: z.union([z.string(), z.any()])
+    molecule: StructureInputSchema
         .describe("Molecule to adsorb (name or structure object)"),
     site_index: z.number().int().nonnegative()
         .describe("Index of the surface atom to adsorb on"),
@@ -450,12 +491,106 @@ export const AddAdsorbateSchema = z.object({
  * Schema for apply_strain tool
  */
 export const ApplyStrainSchema = z.object({
-    structure: z.union([z.string(), z.any()])
+    structure: StructureInputSchema
         .describe("Crystal structure to strain"),
-    strain_tensor: z.array(z.number()).length(9).optional()
-        .describe("3x3 strain tensor flattened array [e11, e12, e13, e21...]"),
+    strain_tensor: StrainTensorSchema.optional()
+        .describe("3x3 strain tensor matrix or flattened array [e11, e12, e13, e21...]"),
     strain_type: z.enum(["biaxial", "uniaxial", "hydrostatic"]).optional(),
     strain_value: z.number().optional().describe("Strain percentage (e.g. 0.05 for 5%)")
+}).refine(data => {
+    if (data.strain_tensor) {
+        return true;
+    }
+    return data.strain_type !== undefined && data.strain_value !== undefined;
+}, {
+    message: "Must provide either strain_tensor or both strain_type and strain_value"
+});
+// ============================================================================
+// ADVANCED STRUCTURE SCHEMAS
+// ============================================================================
+/**
+ * Generate prototype structure (rocksalt, perovskite, etc.)
+ */
+export const GeneratePrototypeSchema = z.object({
+    prototype: z.enum([
+        "rocksalt", "zincblende", "wurtzite", "fluorite", "antifluorite",
+        "perovskite", "spinel", "heusler", "rutile", "diamond", "bcc", "fcc", "hcp"
+    ]).describe("Prototype structure type"),
+    elements: z.record(z.string(), ElementSymbolSchema)
+        .describe("Mapping of site labels to elements, e.g., {A: 'Ca', B: 'Ti', X: 'O'}"),
+    lattice_constant: z.number().positive().optional()
+        .describe("Lattice constant 'a' in Angstroms"),
+    c_over_a: z.number().positive().default(1.0)
+        .describe("c/a ratio for non-cubic systems")
+});
+/**
+ * Generate twisted bilayer structure
+ */
+export const GenerateTwistedBilayerSchema = z.object({
+    material: z.enum(["graphene", "MoS2", "WS2", "hBN"]).default("graphene")
+        .describe("Base 2D material"),
+    twist_angle: z.number().min(0).max(60)
+        .describe("Twist angle in degrees"),
+    layers: z.number().int().min(2).default(2)
+        .describe("Number of layers"),
+    stacking: z.enum(["AA", "AB"]).default("AB")
+        .describe("Initial stacking"),
+    interlayer_distance: z.number().positive().default(3.35)
+        .describe("Interlayer spacing in Angstroms"),
+    vacuum: z.number().positive().default(15.0)
+        .describe("Vacuum padding in Angstroms")
+});
+/**
+ * Generate high-entropy alloy structure
+ */
+export const GenerateHighEntropyAlloySchema = z.object({
+    elements: z.array(ElementSymbolSchema).min(4)
+        .describe("List of 4+ elements for HEA"),
+    concentrations: z.array(z.number()).optional()
+        .describe("Concentrations (default: equimolar)"),
+    structure_type: z.enum(["fcc", "bcc", "hcp"]).default("fcc")
+        .describe("Base crystal structure"),
+    supercell: IntVector3Schema.default([3, 3, 3])
+        .describe("Supercell size"),
+    lattice_constant: z.number().positive().optional()
+        .describe("Lattice constant (estimated if not provided)"),
+    seed: z.number().int().optional()
+        .describe("Random seed for reproducibility")
+});
+/**
+ * Generate 2D material structure
+ */
+export const Generate2DMaterialSchema = z.object({
+    material: z.enum(["hBN", "MoS2", "WS2", "MoSe2", "WSe2", "phosphorene", "silicene", "MXene"])
+        .describe("2D material type"),
+    size: IntVector3Schema.default([1, 1, 1])
+        .describe("Supercell size"),
+    vacuum: z.number().positive().default(15.0)
+        .describe("Vacuum padding"),
+    extra_params: z.record(z.string(), z.any()).optional()
+        .describe("Material-specific parameters")
+});
+/**
+ * Generate MOF structure
+ */
+export const GenerateMOFSchema = z.object({
+    mof_type: z.enum(["MOF-5", "HKUST-1", "UiO-66", "ZIF-8"])
+        .describe("MOF type"),
+    functionalization: z.string().optional()
+        .describe("Linker functionalization"),
+    size: IntVector3Schema.default([1, 1, 1])
+        .describe("Supercell size")
+});
+/**
+ * Generate cage structure (fullerenes, clathrates)
+ */
+export const GenerateCageSchema = z.object({
+    cage_type: z.enum(["C60", "C70", "C80", "clathrate_I", "clathrate_II"])
+        .describe("Cage structure type"),
+    guest: z.string().optional()
+        .describe("Guest atom for endohedral structures"),
+    vacuum: z.number().positive().default(5.0)
+        .describe("Vacuum padding in Angstroms")
 });
 /**
  * All tool definitions
@@ -690,6 +825,73 @@ export const TOOL_DEFINITIONS = [
             destructiveHint: false,
             idempotentHint: true,
             openWorldHint: false
+        }
+    },
+    // Advanced structure tools
+    {
+        name: "generate_prototype",
+        description: "Generate common prototype structures (rocksalt, perovskite, zincblende, wurtzite, etc.)",
+        inputSchema: GeneratePrototypeSchema,
+        annotations: {
+            readOnlyHint: false,
+            destructiveHint: false,
+            idempotentHint: true,
+            openWorldHint: true
+        }
+    },
+    {
+        name: "generate_twisted_bilayer",
+        description: "Generate twisted bilayer/multilayer structures (graphene, MoS2, hBN) with specified twist angle",
+        inputSchema: GenerateTwistedBilayerSchema,
+        annotations: {
+            readOnlyHint: false,
+            destructiveHint: false,
+            idempotentHint: true,
+            openWorldHint: true
+        }
+    },
+    {
+        name: "generate_high_entropy_alloy",
+        description: "Generate high-entropy alloy structures with 4+ elements in FCC/BCC/HCP lattices",
+        inputSchema: GenerateHighEntropyAlloySchema,
+        annotations: {
+            readOnlyHint: false,
+            destructiveHint: false,
+            idempotentHint: true,
+            openWorldHint: true
+        }
+    },
+    {
+        name: "generate_2d_material",
+        description: "Generate 2D materials (hBN, MoS2, WS2, phosphorene, silicene, MXene)",
+        inputSchema: Generate2DMaterialSchema,
+        annotations: {
+            readOnlyHint: false,
+            destructiveHint: false,
+            idempotentHint: true,
+            openWorldHint: true
+        }
+    },
+    {
+        name: "generate_mof",
+        description: "Generate metal-organic framework structures (MOF-5, HKUST-1, UiO-66, ZIF-8)",
+        inputSchema: GenerateMOFSchema,
+        annotations: {
+            readOnlyHint: false,
+            destructiveHint: false,
+            idempotentHint: true,
+            openWorldHint: true
+        }
+    },
+    {
+        name: "generate_cage",
+        description: "Generate cage structures (fullerenes C60/C70/C80, clathrates)",
+        inputSchema: GenerateCageSchema,
+        annotations: {
+            readOnlyHint: false,
+            destructiveHint: false,
+            idempotentHint: true,
+            openWorldHint: true
         }
     }
 ];

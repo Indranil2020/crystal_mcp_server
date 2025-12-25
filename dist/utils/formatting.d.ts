@@ -7,7 +7,7 @@ import { CrystalStructure, StructureValidation } from "../types/crystal.js";
 /**
  * Format crystal structure as human-readable text.
  */
-export declare function formatStructureOutput(structure: CrystalStructure, validation?: StructureValidation): string;
+export declare function formatStructureOutput(structure: CrystalStructure | any, validation?: StructureValidation): string;
 /**
  * Format space group scan results.
  */

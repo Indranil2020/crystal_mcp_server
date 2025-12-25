@@ -12,12 +12,14 @@ export async function generateSlab(input) {
     if (!parsed.success) {
         return createFailure(createError(CrystalErrorCode.INVALID_INPUT, "Invalid input parameters", { zodErrors: parsed.error.errors }, ["Check miller_indices format: [h, k, l]", "Ensure thickness >= 1 and vacuum >= 0"], true));
     }
-    const params = { ...parsed.data, operation: "slab" };
+    // Rename structure -> structure_dict for Python compatibility
+    const { structure, ...rest } = parsed.data;
+    const params = { structure_dict: structure, ...rest, operation: "slab" };
     const result = await executePythonWithJSON("structure_tools.py", params, { timeout: 120000 });
     if (!result.success) {
         return createFailure(result.error);
     }
-    const pythonResult = result.data.data;
+    const pythonResult = result.data;
     if (!pythonResult.success) {
         return createFailure(createError(pythonResult.error.code, pythonResult.error.message, pythonResult.error.details));
     }
@@ -37,9 +39,9 @@ export async function handleGenerateSlab(args) {
     const data = result.data;
     let output = `## 📐 Surface Slab Generated\n\n`;
     output += `**Miller Indices:** (${data.miller_indices.join(' ')})\n`;
-    output += `**Slab Thickness:** ${data.slab_thickness.toFixed(3)} Å\n`;
-    output += `**Vacuum Thickness:** ${data.vacuum_thickness.toFixed(3)} Å\n`;
-    output += `**Surface Area:** ${data.surface_area.toFixed(3)} ų\n`;
+    output += `**Slab Thickness:** ${data.slab_thickness.toFixed(3)} Angstroms\n`;
+    output += `**Vacuum Thickness:** ${data.vacuum_thickness.toFixed(3)} Angstroms\n`;
+    output += `**Surface Area:** ${data.surface_area.toFixed(3)} Angstrom^2\n`;
     if (data.fixed_atoms && data.fixed_atoms.length > 0) {
         output += `**Fixed Atoms:** ${data.fixed_atoms.length} atoms (bottom layers)\n`;
     }

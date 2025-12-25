@@ -44,7 +44,7 @@ export async function exploreSymmetryRelations(input) {
     if (!result.success) {
         return createFailure(result.error);
     }
-    const pythonResult = result.data.data;
+    const pythonResult = result.data;
     if (!pythonResult.success) {
         return createFailure(createError(CrystalErrorCode.PYTHON_EXECUTION_FAILED, pythonResult.error.message, pythonResult.error.details));
     }

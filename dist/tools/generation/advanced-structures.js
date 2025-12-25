@@ -87,7 +87,7 @@ export async function generatePrototype(input) {
     const result = await executePythonWithJSON("advanced_structures.py", params, { timeout: 60000 });
     if (!result.success)
         return createFailure(result.error);
-    const pythonResult = result.data.data;
+    const pythonResult = result.data;
     if (!pythonResult.success) {
         return createFailure(createError(CrystalErrorCode.GENERATION_FAILED, pythonResult.error?.message || "Prototype generation failed"));
     }
@@ -119,7 +119,7 @@ export async function generateTwistedBilayer(input) {
     const result = await executePythonWithJSON("advanced_structures.py", params, { timeout: 120000 });
     if (!result.success)
         return createFailure(result.error);
-    const pythonResult = result.data.data;
+    const pythonResult = result.data;
     if (!pythonResult.success) {
         return createFailure(createError(CrystalErrorCode.GENERATION_FAILED, pythonResult.error?.message || "Twisted bilayer generation failed"));
     }
@@ -152,7 +152,7 @@ export async function generateHighEntropyAlloy(input) {
     const result = await executePythonWithJSON("advanced_structures.py", params, { timeout: 60000 });
     if (!result.success)
         return createFailure(result.error);
-    const pythonResult = result.data.data;
+    const pythonResult = result.data;
     if (!pythonResult.success) {
         return createFailure(createError(CrystalErrorCode.GENERATION_FAILED, pythonResult.error?.message || "HEA generation failed"));
     }
@@ -185,7 +185,7 @@ export async function generate2DMaterial(input) {
     const result = await executePythonWithJSON("advanced_structures.py", params, { timeout: 60000 });
     if (!result.success)
         return createFailure(result.error);
-    const pythonResult = result.data.data;
+    const pythonResult = result.data;
     if (!pythonResult.success) {
         return createFailure(createError(CrystalErrorCode.GENERATION_FAILED, pythonResult.error?.message || "2D material generation failed"));
     }
@@ -217,7 +217,7 @@ export async function generateMOF(input) {
     const result = await executePythonWithJSON("advanced_structures.py", params, { timeout: 60000 });
     if (!result.success)
         return createFailure(result.error);
-    const pythonResult = result.data.data;
+    const pythonResult = result.data;
     if (!pythonResult.success) {
         return createFailure(createError(CrystalErrorCode.GENERATION_FAILED, pythonResult.error?.message || "MOF generation failed"));
     }
@@ -250,7 +250,7 @@ export async function generateCage(input) {
     const result = await executePythonWithJSON("advanced_structures.py", params, { timeout: 60000 });
     if (!result.success)
         return createFailure(result.error);
-    const pythonResult = result.data.data;
+    const pythonResult = result.data;
     if (!pythonResult.success) {
         return createFailure(createError(CrystalErrorCode.GENERATION_FAILED, pythonResult.error?.message || "Cage generation failed"));
     }

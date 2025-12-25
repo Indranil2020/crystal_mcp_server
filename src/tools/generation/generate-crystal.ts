@@ -6,7 +6,7 @@
  */
 
 import { GenerateCrystalSchema } from "../../types/tools.js";
-import { CrystalStructure, StructureGenerationResult } from "../../types/crystal.js";
+import { StructureGenerationResult } from "../../types/crystal.js";
 import { Result, createSuccess, createFailure, createError, CrystalErrorCode } from "../../types/errors.js";
 import { executePythonWithJSON } from "../../utils/python-bridge.js";
 import { formatStructureOutput } from "../../utils/formatting.js";

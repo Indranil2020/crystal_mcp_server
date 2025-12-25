@@ -30,17 +30,17 @@ export function generateCIF(structure: CrystalStructure | any): string {
     matrix.every((row: number[]) => Array.isArray(row) && row.length >= 3);
 
   if (hasMatrix) {
-    const v1 = [matrix[0][0], matrix[0][1], matrix[0][2]];
-    const v2 = [matrix[1][0], matrix[1][1], matrix[1][2]];
-    const v3 = [matrix[2][0], matrix[2][1], matrix[2][2]];
-    const norm = (v: number[]) => Math.sqrt(v[0] ** 2 + v[1] ** 2 + v[2] ** 2);
-    const dot = (vA: number[], vB: number[]) => vA[0] * vB[0] + vA[1] * vB[1] + vA[2] * vB[2];
+    const v1: [number, number, number] = [matrix[0][0], matrix[0][1], matrix[0][2]];
+    const v2: [number, number, number] = [matrix[1][0], matrix[1][1], matrix[1][2]];
+    const v3: [number, number, number] = [matrix[2][0], matrix[2][1], matrix[2][2]];
+    const norm = (v: [number, number, number]) => Math.sqrt(v[0] ** 2 + v[1] ** 2 + v[2] ** 2);
+    const dot = (vA: [number, number, number], vB: [number, number, number]) => vA[0] * vB[0] + vA[1] * vB[1] + vA[2] * vB[2];
 
     const aCalc = norm(v1);
     const bCalc = norm(v2);
     const cCalc = norm(v3);
 
-    const angle = (vA: number[], vB: number[]) => {
+    const angle = (vA: [number, number, number], vB: [number, number, number]) => {
       const denom = norm(vA) * norm(vB);
       if (denom === 0) {
         return undefined;

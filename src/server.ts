@@ -12,7 +12,9 @@ import {
   Tool
 } from "@modelcontextprotocol/sdk/types.js";
 import { zodToJsonSchema } from "zod-to-json-schema";
-import pkg from "../package.json" assert { type: "json" };
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const pkg = require("../package.json") as { version: string };
 
 // Import tool handlers
 import { handleComprehensiveGenerate } from "./tools/generation/comprehensive-generator.js";
@@ -80,7 +82,8 @@ export function createServer(): Server {
 
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     const tools = TOOL_DEFINITIONS.map(tool => {
-      const inputSchema = zodToJsonSchema(tool.inputSchema);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const inputSchema = zodToJsonSchema(tool.inputSchema as any) as unknown;
       if (!isToolInputSchema(inputSchema)) {
         throw new Error(`Invalid input schema for tool: ${tool.name}`);
       }

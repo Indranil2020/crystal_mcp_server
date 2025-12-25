@@ -7,6 +7,9 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { zodToJsonSchema } from "zod-to-json-schema";
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const pkg = require("../package.json");
 // Import tool handlers
 import { handleComprehensiveGenerate } from "./tools/generation/comprehensive-generator.js";
 import { handleGenerateCrystal } from "./tools/generation/generate-crystal.js";
@@ -36,21 +39,40 @@ import { TOOL_DEFINITIONS } from "./types/tools.js";
  * Create and configure the MCP server.
  */
 export function createServer() {
+    const serverVersion = pkg.version;
     const server = new Server({
         name: "crystal-structure-generator",
-        version: "2.0.0"
+        version: serverVersion
     }, {
         capabilities: {
             tools: {}
         }
     });
     // Register ListTools handler
+    const isToolInputSchema = (value) => {
+        if (!value || typeof value !== "object") {
+            return false;
+        }
+        if ("type" in value) {
+            const typeValue = value.type;
+            return typeValue === "object";
+        }
+        return "anyOf" in value || "oneOf" in value;
+    };
     server.setRequestHandler(ListToolsRequestSchema, async () => {
-        const tools = TOOL_DEFINITIONS.map(tool => ({
-            name: tool.name,
-            description: tool.description,
-            inputSchema: zodToJsonSchema(tool.inputSchema)
-        }));
+        const tools = TOOL_DEFINITIONS.map(tool => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const inputSchema = zodToJsonSchema(tool.inputSchema);
+            if (!isToolInputSchema(inputSchema)) {
+                throw new Error(`Invalid input schema for tool: ${tool.name}`);
+            }
+            return {
+                name: tool.name,
+                description: tool.description,
+                inputSchema,
+                annotations: tool.annotations
+            };
+        });
         return {
             tools: tools
         };
@@ -134,7 +156,7 @@ export async function startServer() {
     const transport = new StdioServerTransport();
     await server.connect(transport);
     console.error("Crystal Structure Generator MCP Server running on stdio");
-    console.error("Version: 2.0.0");
+    console.error(`Version: ${pkg.version}`);
     console.error("Available tools:", TOOL_DEFINITIONS.length);
 }
 //# sourceMappingURL=server.js.map

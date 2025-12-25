@@ -22,9 +22,11 @@ class MCPTestClient:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            bufsize=0
+            bufsize=1  # Line buffered for text mode
         )
-        time.sleep(0.5)  # Give server time to start
+        time.sleep(1.5)  # Give server time to start
+        # Drain any startup messages from stderr
+        self._read_stderr()
     
     def stop(self):
         """Stop the MCP server"""
@@ -66,27 +68,48 @@ class MCPTestClient:
         self.process.stdin.write(json_req + "\n")
         self.process.stdin.flush()
 
-    def _read_line_with_timeout(self, timeout: float = 2.0) -> Optional[str]:
+    def _read_stderr(self) -> str:
+        """Read any available stderr output without blocking"""
+        import select
+
+        if not self.process or not self.process.stderr:
+            return ""
+
+        stderr_output = []
+        while True:
+            reads = [self.process.stderr]
+            if select.select(reads, [], [], 0)[0]:
+                try:
+                    stderr_bytes = os.read(self.process.stderr.fileno(), 4096)
+                    if stderr_bytes:
+                        stderr_output.append(stderr_bytes.decode('utf-8', errors='replace'))
+                    else:
+                        break
+                except (OSError, IOError):
+                    break
+            else:
+                break
+
+        result = ''.join(stderr_output)
+        if result:
+            print(f"\n[SERVER STDERR]: {result}")
+        return result
+
+    def _read_line_with_timeout(self, timeout: float = 10.0) -> Optional[str]:
         """Read a line from stdout with timeout using select"""
         import select
-        
+
         if not self.process or self.process.poll() is not None:
             return None
-            
+
         reads = [self.process.stdout.fileno()]
         ret = select.select(reads, [], [], timeout)
-        
+
         if reads[0] in ret[0]:
             return self.process.stdout.readline()
-        
-        # If we timed out, check if there's anything in stderr
-        if self.process.stderr:
-            err_reads = [self.process.stderr.fileno()]
-            if select.select(err_reads, [], [], 0)[0]:
-                err = self.process.stderr.read()
-                if err:
-                    print(f"\n[SERVER STDERR]: {err}")
-                
+
+        # If we timed out, check stderr for debugging
+        self._read_stderr()
         return None
 
 

@@ -53,7 +53,7 @@ export declare const GenerateHighEntropyAlloySchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     elements: string[];
     supercell: [number, number, number];
-    structure_type: "fcc" | "bcc" | "hcp";
+    structure_type: "bcc" | "fcc" | "hcp";
     seed?: number | undefined;
     lattice_constant?: number | undefined;
     concentrations?: number[] | undefined;
@@ -63,7 +63,7 @@ export declare const GenerateHighEntropyAlloySchema: z.ZodObject<{
     supercell?: [number, number, number] | undefined;
     lattice_constant?: number | undefined;
     concentrations?: number[] | undefined;
-    structure_type?: "fcc" | "bcc" | "hcp" | undefined;
+    structure_type?: "bcc" | "fcc" | "hcp" | undefined;
 }>;
 export declare const Generate2DMaterialSchema: z.ZodObject<{
     material: z.ZodEnum<["hBN", "MoS2", "WS2", "MoSe2", "WSe2", "phosphorene", "silicene", "MXene"]>;

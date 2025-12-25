@@ -12,12 +12,14 @@ export async function validateStructure(input) {
     if (!parsed.success) {
         return createFailure(createError(CrystalErrorCode.INVALID_INPUT, "Invalid input parameters", { zodErrors: parsed.error.errors }, ["Check structure and validation parameters"], true));
     }
-    const params = { structure_dict: parsed.data.structure, ...parsed.data };
+    // Extract structure and rename to structure_dict for Python, exclude original structure key
+    const { structure, ...restParams } = parsed.data;
+    const params = { structure_dict: structure, ...restParams };
     const result = await executePythonWithJSON("validators.py", params, { timeout: 30000 });
     if (!result.success) {
         return createFailure(result.error);
     }
-    const pythonResult = result.data.data;
+    const pythonResult = result.data;
     if (!pythonResult.success) {
         return createFailure(createError(pythonResult.error.code, pythonResult.error.message, pythonResult.error.details));
     }

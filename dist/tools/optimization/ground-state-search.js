@@ -18,7 +18,7 @@ export async function groundStateSearch(input) {
     if (!result.success) {
         return createFailure(result.error);
     }
-    const pythonResult = result.data.data;
+    const pythonResult = result.data;
     if (!pythonResult.success) {
         return createFailure(createError(pythonResult.error.code, pythonResult.error.message, pythonResult.error.details));
     }

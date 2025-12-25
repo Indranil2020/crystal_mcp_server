@@ -4,7 +4,7 @@
  * Tool for calculating energy, forces, and stress using Machine Learning Force Fields.
  */
 import { CalculateEnergyMLFFSchema } from "../../types/tools.js";
-import { createSuccess, createFailure, createError, CrystalErrorCode } from "../../types/errors.js";
+import { createSuccess, createFailure, createError, CrystalErrorCode, ERROR_MESSAGES } from "../../types/errors.js";
 import { executePythonWithJSON } from "../../utils/python-bridge.js";
 export async function calculateEnergyMLFF(input) {
     const parsed = CalculateEnergyMLFFSchema.safeParse(input);
@@ -17,8 +17,13 @@ export async function calculateEnergyMLFF(input) {
     if (!result.success) {
         return createFailure(result.error);
     }
-    const pythonResult = result.data.data;
+    const pythonResult = result.data;
     if (!pythonResult.success) {
+        if (pythonResult.error?.code === "MODEL_NOT_AVAILABLE") {
+            const model = pythonResult.error.details?.mlff_model ?? parsed.data.mlff_model;
+            const messageInfo = ERROR_MESSAGES.MODEL_NOT_AVAILABLE(String(model));
+            return createFailure(createError(CrystalErrorCode.MODEL_NOT_AVAILABLE, messageInfo.message, pythonResult.error.details ?? {}, [...messageInfo.suggestions], false));
+        }
         return createFailure(createError(pythonResult.error.code, pythonResult.error.message, pythonResult.error.details, ["Check MLFF model installation", "Verify structure format", "Consider using CPU instead of GPU"], false));
     }
     return createSuccess(pythonResult);
@@ -34,7 +39,7 @@ export async function handleCalculateEnergyMLFF(args) {
             isError: true
         };
     }
-    const data = result.data.data;
+    const data = result.data;
     let outputText = `✅ **MLFF Energy Calculation Complete**\n\n`;
     outputText += `**Model:** ${data.model}\n`;
     outputText += `**Energy:** ${data.energy.toFixed(6)} eV\n`;
@@ -43,7 +48,7 @@ export async function handleCalculateEnergyMLFF(args) {
     }
     if (data.forces && data.forces.length > 0) {
         const maxForce = Math.max(...data.forces.map((f) => Math.sqrt((f[0] ?? 0) ** 2 + (f[1] ?? 0) ** 2 + (f[2] ?? 0) ** 2)));
-        outputText += `**Maximum force:** ${maxForce.toFixed(6)} eV/Å\n`;
+        outputText += `**Maximum force:** ${maxForce.toFixed(6)} eV/Angstrom\n`;
     }
     if (data.stress) {
         outputText += `**Stress tensor available:** Yes\n`;

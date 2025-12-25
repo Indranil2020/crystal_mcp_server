@@ -14,11 +14,16 @@ export function fileExists(filePath) {
     if (!filePath || typeof filePath !== "string") {
         return false;
     }
-    if (!fs.existsSync(filePath)) {
+    try {
+        if (!fs.existsSync(filePath)) {
+            return false;
+        }
+        const stats = fs.statSync(filePath);
+        return stats.isFile();
+    }
+    catch {
         return false;
     }
-    const stats = fs.statSync(filePath);
-    return stats.isFile();
 }
 /**
  * Check if a directory exists
@@ -27,11 +32,16 @@ export function directoryExists(dirPath) {
     if (!dirPath || typeof dirPath !== "string") {
         return false;
     }
-    if (!fs.existsSync(dirPath)) {
+    try {
+        if (!fs.existsSync(dirPath)) {
+            return false;
+        }
+        const stats = fs.statSync(dirPath);
+        return stats.isDirectory();
+    }
+    catch {
         return false;
     }
-    const stats = fs.statSync(dirPath);
-    return stats.isDirectory();
 }
 /**
  * Read file contents as string
@@ -40,21 +50,27 @@ export function readFileSync(filePath) {
     if (!filePath || typeof filePath !== "string") {
         return createFailure(createError(CrystalErrorCode.FILE_READ_ERROR, "Invalid file path", { filePath }, ["Provide a valid file path string"]));
     }
-    if (!fs.existsSync(filePath)) {
-        return createFailure(createError(CrystalErrorCode.FILE_NOT_FOUND, `File not found: ${filePath}`, { filePath }, [
-            "Check that the file exists",
-            "Verify the file path is correct",
-            "Ensure you have read permissions"
-        ]));
+    try {
+        if (!fs.existsSync(filePath)) {
+            return createFailure(createError(CrystalErrorCode.FILE_NOT_FOUND, `File not found: ${filePath}`, { filePath }, [
+                "Check that the file exists",
+                "Verify the file path is correct",
+                "Ensure you have read permissions"
+            ]));
+        }
+        const stats = fs.statSync(filePath);
+        if (!stats.isFile()) {
+            return createFailure(createError(CrystalErrorCode.FILE_READ_ERROR, `Path is not a file: ${filePath}`, { filePath }, ["Provide a path to a file, not a directory"]));
+        }
+        // Check read permissions
+        fs.accessSync(filePath, fs.constants.R_OK);
+        const content = fs.readFileSync(filePath, "utf-8");
+        return createSuccess(content);
     }
-    const stats = fs.statSync(filePath);
-    if (!stats.isFile()) {
-        return createFailure(createError(CrystalErrorCode.FILE_READ_ERROR, `Path is not a file: ${filePath}`, { filePath }, ["Provide a path to a file, not a directory"]));
+    catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return createFailure(createError(CrystalErrorCode.FILE_READ_ERROR, `Failed to read file: ${errorMessage}`, { filePath }, ["Check file permissions", "Ensure file is not locked by another process"]));
     }
-    // Check read permissions
-    fs.accessSync(filePath, fs.constants.R_OK);
-    const content = fs.readFileSync(filePath, "utf-8");
-    return createSuccess(content);
 }
 /**
  * Write string contents to file

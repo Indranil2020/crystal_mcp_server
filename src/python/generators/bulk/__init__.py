@@ -76,16 +76,26 @@ else:
     CAGE_TYPES = {}
 
 if _module_available(f"{_BASE_MODULE}.strain"):
-    from .strain import apply_strain, generate_strained_structure
+    from .strain import apply_strain, apply_strain_tensor, generate_bain_path, generate_epitaxial_strain
 else:
     apply_strain = None
+    apply_strain_tensor = None
+    generate_bain_path = None
+    generate_epitaxial_strain = None
+
+# Import generate_strained_structure from external_fields if available
+try:
+    from ..external_fields.strain_fields import generate_strained_structure
+except ImportError:
     generate_strained_structure = None
 
 if _module_available(f"{_BASE_MODULE}.polytypes"):
-    from .polytypes import generate_polytype, POLYTYPE_DATABASE
+    from .polytypes import generate_polytype, POLYTYPE_SEQUENCES
+    POLYTYPE_DATABASE = POLYTYPE_SEQUENCES  # Alias for backwards compatibility
 else:
     generate_polytype = None
     POLYTYPE_DATABASE = {}
+    POLYTYPE_SEQUENCES = {}
 
 if _module_available(f"{_BASE_MODULE}.cuprates"):
     from .cuprates import generate_cuprate, CUPRATE_DATABASE
@@ -94,14 +104,14 @@ else:
     CUPRATE_DATABASE = {}
 
 if _module_available(f"{_BASE_MODULE}.magnetic"):
-    from .magnetic import generate_magnetic_bulk
+    from .magnetic import generate_magnetic_ordering
+    generate_magnetic_bulk = generate_magnetic_ordering  # Alias
 else:
+    generate_magnetic_ordering = None
     generate_magnetic_bulk = None
 
-if _module_available(f"{_BASE_MODULE}.base"):
-    from .base import LATTICE_DATABASE
-else:
-    LATTICE_DATABASE = {}
+# base module provides utilities, not databases
+LATTICE_DATABASE = {}  # Placeholder for future use
 
 
 __all__ = [
@@ -118,10 +128,11 @@ __all__ = [
     # Clathrates
     "generate_clathrate", "generate_empty_clathrate",
     "CLATHRATE_DATABASE", "CAGE_TYPES",
-    # Other
-    "apply_strain", "generate_strained_structure",
+    # Strain engineering
+    "apply_strain", "apply_strain_tensor", "generate_bain_path",
+    "generate_epitaxial_strain", "generate_strained_structure",
     "generate_polytype", "POLYTYPE_DATABASE",
     "generate_cuprate", "CUPRATE_DATABASE",
-    "generate_magnetic_bulk",
+    "generate_magnetic_ordering", "generate_magnetic_bulk",
     "LATTICE_DATABASE",
 ]

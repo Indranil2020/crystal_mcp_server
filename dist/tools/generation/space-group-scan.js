@@ -22,7 +22,7 @@ export async function spaceGroupScan(input) {
     if (!result.success) {
         return createFailure(result.error);
     }
-    const scanResults = result.data.data;
+    const scanResults = result.data;
     return createSuccess(scanResults);
 }
 export async function handleSpaceGroupScan(args) {

@@ -12,12 +12,14 @@ export async function createHeterostructure(input) {
     if (!parsed.success) {
         return createFailure(createError(CrystalErrorCode.INVALID_INPUT, "Invalid input parameters", { zodErrors: parsed.error.errors }, ["Ensure both substrate and overlayer are valid structures"], true));
     }
-    const params = { ...parsed.data, operation: "heterostructure" };
+    // Rename substrate/overlayer to _dict variants for Python compatibility
+    const { substrate, overlayer, ...rest } = parsed.data;
+    const params = { substrate_dict: substrate, overlayer_dict: overlayer, ...rest, operation: "heterostructure" };
     const result = await executePythonWithJSON("structure_tools.py", params, { timeout: 60000 });
     if (!result.success) {
         return createFailure(result.error);
     }
-    const pythonResult = result.data.data;
+    const pythonResult = result.data;
     if (!pythonResult.success) {
         return createFailure(createError(pythonResult.error?.code || CrystalErrorCode.EXECUTION_ERROR, pythonResult.error?.message || "Heterostructure generation failed", pythonResult.error?.details));
     }

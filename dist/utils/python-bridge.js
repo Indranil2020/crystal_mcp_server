@@ -8,6 +8,7 @@
 import { PythonShell } from "python-shell";
 import * as fs from "fs";
 import * as path from "path";
+import * as os from "os";
 import { fileURLToPath } from "url";
 import { spawnSync } from "child_process";
 import { createSuccess, createFailure, createError, CrystalErrorCode } from "../types/errors.js";
@@ -21,7 +22,9 @@ const __dirname = path.dirname(__filename);
  */
 export class PythonConfig {
     static instance = null;
-    pythonPath = "python3";
+    pythonPath = process.env.PYTHON_PATH ??
+        process.env.PYTHON ??
+        (process.platform === "win32" ? "python" : "python3");
     scriptsDirectory;
     constructor() {
         // Default to src/python directory
@@ -98,24 +101,30 @@ function parseJSONOutput(output) {
             "Verify script completed successfully"
         ]));
     }
-    // Manual JSON parsing without try/catch
+    // Parse JSON with proper error handling
     let parsed;
-    const parseResult = (() => {
-        // This is the only place we use JSON.parse
-        // We handle errors through returned Result type
-        const result = JSON.parse(output);
-        return { success: true, data: result };
-    })();
-    if (parseResult.success) {
-        parsed = parseResult.data;
+    try {
+        parsed = JSON.parse(output);
     }
-    else {
-        return createFailure(createError(CrystalErrorCode.INVALID_JSON_RESPONSE, "Failed to parse JSON from Python output", { output: output.substring(0, 200) }, [
+    catch (parseError) {
+        const errorMessage = parseError instanceof Error ? parseError.message : 'Unknown parse error';
+        return createFailure(createError(CrystalErrorCode.INVALID_JSON_RESPONSE, `Failed to parse JSON from Python output: ${errorMessage}`, { output: output.substring(0, 200) }, [
             "Check JSON syntax in Python output",
-            "Ensure proper JSON formatting"
+            "Ensure proper JSON formatting",
+            "Look for stray print statements or warnings in Python script"
         ]));
     }
     return createSuccess(parsed);
+}
+function isPythonResult(value) {
+    if (!value || typeof value !== "object") {
+        return false;
+    }
+    if (!("success" in value)) {
+        return false;
+    }
+    const successValue = value.success;
+    return typeof successValue === "boolean";
 }
 /**
  * Execute a Python script
@@ -143,15 +152,18 @@ export async function executePython(options) {
     let timedOut = false;
     let timeoutId = null;
     // Set up timeout if specified
-    if (options.timeout) {
-        timeoutId = setTimeout(() => {
-            timedOut = true;
-        }, options.timeout);
-    }
     return new Promise((resolve) => {
         const shell = new PythonShell(path.basename(scriptPath), pythonOptions);
         const stdoutLines = [];
         const stderrLines = [];
+        // Set up timeout with proper process termination
+        if (options.timeout) {
+            timeoutId = setTimeout(() => {
+                timedOut = true;
+                // Kill the Python process when timeout occurs
+                shell.terminate();
+            }, options.timeout);
+        }
         // Collect stdout
         shell.on("message", (message) => {
             if (!timedOut) {
@@ -244,8 +256,8 @@ export async function executePythonWithJSON(scriptName, input, options) {
         return createFailure(createError(CrystalErrorCode.INVALID_OPERATION, "Failed to serialize input to JSON", { input }, ["Ensure input is JSON-serializable"]));
     }
     jsonInput = stringifyResult.data;
-    // Write input to temporary file
-    const tempDir = "/tmp";
+    // Write input to temporary file (cross-platform)
+    const tempDir = os.tmpdir();
     const tempFileName = `crystal_mcp_${Date.now()}_${Math.random().toString(36).substring(7)}.json`;
     const tempFilePath = path.join(tempDir, tempFileName);
     // Write file synchronously with error checking
@@ -271,12 +283,15 @@ export async function executePythonWithJSON(scriptName, input, options) {
     if (execResult.data.data === undefined) {
         return createFailure(createError(CrystalErrorCode.INVALID_JSON_RESPONSE, "Python script did not return any data", { scriptName }, ["Ensure script prints JSON output"]));
     }
+    if (!isPythonResult(execResult.data.data)) {
+        return createFailure(createError(CrystalErrorCode.INVALID_JSON_RESPONSE, "Python response missing required 'success' flag", { scriptName, response: execResult.data.data }, ["Ensure Python scripts return {'success': true|false, ...}"]));
+    }
     return createSuccess(execResult.data.data);
 }
 /**
  * Check if Python is available
  */
-export function checkPythonAvailable(pythonPath = "python3") {
+export function checkPythonAvailable(pythonPath = PythonConfig.getInstance().getPythonPath()) {
     // Check if python executable exists
     const result = spawnSync(pythonPath, ["--version"], {
         encoding: "utf-8",
@@ -296,6 +311,27 @@ export function checkPythonAvailable(pythonPath = "python3") {
         ]));
     }
     const version = checkResult.stdout || checkResult.stderr || "";
+    const requiredModules = ["numpy", "pymatgen", "ase", "pyxtal", "spglib", "matplotlib"];
+    const moduleCheck = spawnSync(pythonPath, [
+        "-c",
+        `import importlib.util, json; mods=${JSON.stringify(requiredModules)}; missing=[m for m in mods if importlib.util.find_spec(m) is None]; print(json.dumps(missing))`
+    ], { encoding: "utf-8", timeout: 5000 });
+    if (moduleCheck.status !== 0) {
+        return createFailure(createError(CrystalErrorCode.PYTHON_EXECUTION_FAILED, "Failed to verify Python dependencies", { pythonPath, stderr: moduleCheck.stderr }, ["Ensure required Python packages are installed"]));
+    }
+    const missingRaw = moduleCheck.stdout.trim();
+    let missing = [];
+    if (missingRaw.length > 0) {
+        try {
+            missing = JSON.parse(missingRaw);
+        }
+        catch {
+            return createFailure(createError(CrystalErrorCode.PYTHON_EXECUTION_FAILED, "Failed to parse Python dependency check output", { output: missingRaw }, ["Re-run dependency check or verify Python output"]));
+        }
+    }
+    if (missing.length > 0) {
+        return createFailure(createError(CrystalErrorCode.PYTHON_EXECUTION_FAILED, `Missing Python dependencies: ${missing.join(", ")}`, { missing }, ["Install missing packages with pip", "Verify active Python environment"]));
+    }
     return createSuccess(version.trim());
 }
 /**

@@ -12,12 +12,14 @@ export async function createAlloy(input) {
     if (!parsed.success) {
         return createFailure(createError(CrystalErrorCode.INVALID_INPUT, "Invalid input parameters", { zodErrors: parsed.error.errors }, ["Check substitutions format"], true));
     }
-    const params = { ...parsed.data, operation: "alloy" };
+    // Rename structure -> structure_dict for Python compatibility
+    const { structure, ...rest } = parsed.data;
+    const params = { structure_dict: structure, ...rest, operation: "alloy" };
     const result = await executePythonWithJSON("structure_tools.py", params, { timeout: 60000 });
     if (!result.success) {
         return createFailure(result.error);
     }
-    const pythonResult = result.data.data;
+    const pythonResult = result.data;
     if (!pythonResult.success) {
         return createFailure(createError(pythonResult.error?.code || CrystalErrorCode.EXECUTION_ERROR, pythonResult.error?.message || "Alloy generation failed", pythonResult.error?.details));
     }
