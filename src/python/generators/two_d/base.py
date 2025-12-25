@@ -146,61 +146,112 @@ def atoms_to_dict(atoms: Atoms, vacuum: float = 15.0) -> Dict[str, Any]:
     }
 
 
+def recompute_cartesian_coords(structure_dict: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Recompute Cartesian coordinates from fractional coordinates.
+
+    This function ensures Cartesian coordinates are always consistent with
+    fractional coordinates and the current lattice. Should be called whenever
+    fractional coordinates or lattice parameters are modified.
+
+    Args:
+        structure_dict: Structure with 'atoms' and 'lattice' fields
+
+    Returns:
+        Structure with updated Cartesian coordinates
+    """
+    lattice = structure_dict.get("lattice", {})
+    lattice_matrix = np.array(lattice.get("matrix", [[1,0,0],[0,1,0],[0,0,1]]))
+    atoms = structure_dict.get("atoms", [])
+
+    updated_atoms = []
+    for atom in atoms:
+        atom_copy = dict(atom)
+        frac_coords = np.array(atom["coords"])
+        # Cartesian = fractional @ lattice_matrix
+        cart_coords = frac_coords @ lattice_matrix
+        atom_copy["cartesian"] = cart_coords.tolist()
+        updated_atoms.append(atom_copy)
+
+    result = dict(structure_dict)
+    result["atoms"] = updated_atoms
+    return result
+
+
 def add_vacuum(structure_dict: Dict[str, Any], vacuum: float) -> Dict[str, Any]:
     """
     Add or modify vacuum in a 2D structure.
-    
+
+    IMPORTANT SEMANTICS:
+    - `thickness` = vertical extent of atomic layer (max_z - min_z in Cartesian coords)
+    - `vacuum` = desired vacuum spacing
+    - `c` (lattice parameter) = thickness + vacuum (total cell height)
+
+    This function:
+    1. Calculates new c = thickness + vacuum
+    2. Scales the lattice matrix to match new c
+    3. Recomputes Cartesian coordinates to reflect the new lattice
+
     Args:
         structure_dict: 2D structure
-        vacuum: New vacuum thickness
-    
+        vacuum: New vacuum thickness in Angstroms
+
     Returns:
-        Structure with updated vacuum
+        Structure with updated vacuum and consistent Cartesian coordinates
     """
     lattice = structure_dict.get("lattice", {})
     current_c = lattice.get("c", 20.0)
     thickness = structure_dict.get("thickness", 0.0)
-    
-    # New c = thickness + vacuum
+
+    # SEMANTICS: c = thickness + vacuum (total cell height)
     new_c = thickness + vacuum
-    scale = new_c / current_c if current_c > 0 else 1.0
-    
+    scale = new_c / current_c if current_c > 1e-6 else 1.0
+
     # Update lattice
     new_lattice = dict(lattice)
     new_lattice["c"] = new_c
-    
+
     if "matrix" in lattice:
         matrix = np.array(lattice["matrix"])
+        # Scale only the c-axis (third lattice vector)
         matrix[2] = matrix[2] * scale
         new_lattice["matrix"] = matrix.tolist()
-    
+        new_lattice["volume"] = float(abs(np.linalg.det(matrix)))
+
     result = dict(structure_dict)
     result["lattice"] = new_lattice
     result["vacuum"] = vacuum
-    
+
+    # CRITICAL: Recompute Cartesian coordinates with new lattice
+    result = recompute_cartesian_coords(result)
+
     return result
 
 
 def center_in_vacuum(structure_dict: Dict[str, Any]) -> Dict[str, Any]:
     """
     Center 2D layer in the middle of the vacuum.
-    
+
+    Shifts fractional coordinates so the layer is centered at z=0.5 in fractional
+    coordinates, then recomputes Cartesian coordinates to maintain consistency.
+
     Args:
         structure_dict: 2D structure
-    
+
     Returns:
-        Structure with layer centered at z=0.5
+        Structure with layer centered at z=0.5 and updated Cartesian coordinates
     """
     atoms = structure_dict.get("atoms", [])
-    
+
     if not atoms:
         return structure_dict
-    
-    # Find z-center
+
+    # Find z-center in fractional coordinates
     z_coords = [a["coords"][2] for a in atoms]
     z_center = (max(z_coords) + min(z_coords)) / 2
     shift = 0.5 - z_center
-    
+
+    # Shift fractional coordinates
     new_atoms = []
     for atom in atoms:
         atom_copy = dict(atom)
@@ -208,8 +259,11 @@ def center_in_vacuum(structure_dict: Dict[str, Any]) -> Dict[str, Any]:
         coords[2] = coords[2] + shift
         atom_copy["coords"] = coords
         new_atoms.append(atom_copy)
-    
+
     result = dict(structure_dict)
     result["atoms"] = new_atoms
-    
+
+    # CRITICAL: Recompute Cartesian coordinates after modifying fractional coords
+    result = recompute_cartesian_coords(result)
+
     return result

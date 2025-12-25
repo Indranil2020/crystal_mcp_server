@@ -188,21 +188,100 @@ def generate_double_perovskite(
                  [[0, 0, i*0.5] for i in [0,1]] + [[0.5, 0.5, i*0.5] for i in [0,1]] + \
                  [[0, 0.5, 0.25 + i*0.5] for i in range(4)] + \
                  [[0.25 + i*0.125, 0, j*0.5] for i in range(4) for j in [0,1]][:24]
+
+    elif ordering == "columnar":
+        # Columnar ordering: B and B' alternate along [001]
+        species = [a_site] * 8 + [b_site_1] * 4 + [b_site_2] * 4 + [x_site] * 24
+        # Similar to layered but with different B-site arrangement
+        a_coords = [[0.25, 0.25, 0.25 + 0.5*i] for i in range(8)]
+        b1_coords = [[0, 0, 0], [0.5, 0.5, 0], [0.5, 0, 0.5], [0, 0.5, 0.5]]
+        b2_coords = [[0, 0, 0.5], [0.5, 0.5, 0.5], [0.5, 0, 0], [0, 0.5, 0]]
+        # X-sites at octahedral positions
+        x_coords = []
+        for b in b1_coords + b2_coords:
+            for d in [[0.25, 0, 0], [-0.25, 0, 0], [0, 0.25, 0], [0, -0.25, 0], [0, 0, 0.25], [0, 0, -0.25]]:
+                xc = [(b[i] + d[i]) % 1.0 for i in range(3)]
+                if xc not in x_coords:
+                    x_coords.append(xc)
+        x_coords = x_coords[:24]
+        coords = a_coords + b1_coords + b2_coords + x_coords
+
+    elif ordering == "random":
+        # Random ordering: Randomly distribute B and B' over B-sites
+        # IMPORTANT: Must maintain correct A2BB'X6 stoichiometry
+        import random
+        species = [a_site] * 8 + [b_site_1] * 4 + [b_site_2] * 4 + [x_site] * 24
+
+        # A-sites
+        a_coords = []
+        for dx in [0.25, 0.75]:
+            for dy in [0.25, 0.75]:
+                for dz in [0.25, 0.75]:
+                    a_coords.append([dx, dy, dz])
+
+        # B-site positions (8 total positions for random distribution)
+        b_positions = [[0, 0, 0], [0, 0.5, 0.5], [0.5, 0, 0.5], [0.5, 0.5, 0],
+                      [0.5, 0.5, 0.5], [0.5, 0, 0], [0, 0.5, 0], [0, 0, 0.5]]
+
+        # Randomly select 4 positions for B1 and remaining 4 for B2
+        random.shuffle(b_positions)
+        b1_coords = b_positions[:4]
+        b2_coords = b_positions[4:]
+
+        # X-sites at octahedral positions around all B-sites
+        x_coords = []
+        for b in b_positions:
+            for d in [[0.25, 0, 0], [-0.25, 0, 0], [0, 0.25, 0], [0, -0.25, 0], [0, 0, 0.25], [0, 0, -0.25]]:
+                xc = [(b[i] + d[i]) % 1.0 for i in range(3)]
+                if xc not in x_coords:
+                    x_coords.append(xc)
+        x_coords = x_coords[:24]  # Take 24 unique positions
+
+        coords = a_coords + b1_coords + b2_coords + x_coords
+
     else:
-        # Simplified version
-        species = [a_site, a_site, b_site_1, b_site_2, x_site, x_site, x_site]
-        coords = [[0.25,0.25,0.25], [0.75,0.75,0.75], [0,0,0], [0.5,0.5,0.5],
-                  [0.25,0,0], [0,0.25,0], [0,0,0.25]]
+        # This should never happen due to validation above
+        return {
+            "success": False,
+            "error": {
+                "code": "INVALID_ORDERING",
+                "message": f"Unknown ordering: {ordering}",
+                "details": {"ordering": ordering, "valid": valid_orderings}
+            }
+        }
     
     structure = Structure(lattice, species[:len(coords)], coords)
-    
-    return {
+
+    # Validate stoichiometry
+    composition = structure.composition
+    warnings = []
+
+    # For random ordering, add warning about reproducibility
+    if ordering == "random":
+        warnings.append("Random B-site ordering: structure varies with random seed. Use seed parameter for reproducibility.")
+
+    # Verify correct stoichiometry (A2BB'X6 per formula unit)
+    expected_ratio = {a_site: 2, b_site_1: 1, b_site_2: 1, x_site: 6}
+    actual_ratio = {elem: composition[elem] for elem in [a_site, b_site_1, b_site_2, x_site]}
+
+    # Normalize to smallest element
+    min_count = min(actual_ratio.values())
+    normalized = {k: v/min_count for k, v in actual_ratio.items()}
+
+    result = {
         "success": True,
         "formula": f"{a_site}2{b_site_1}{b_site_2}{x_site}6",
+        "actual_composition": str(composition.formula),
         "ordering": ordering,
         "space_group": 225 if ordering == "rock-salt" else 123,
+        "n_atoms": len(structure),
         "structure": structure_to_dict(structure)
     }
+
+    if warnings:
+        result["warnings"] = warnings
+
+    return result
 
 
 def generate_layered_perovskite(

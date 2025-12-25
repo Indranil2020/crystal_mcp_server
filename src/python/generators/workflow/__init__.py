@@ -33,7 +33,7 @@ Example usage:
 """
 
 # Parametric Scans
-from generators.workflow.parametric_scans import (
+from .parametric_scans import (
     # Basic scans
     generate_z_scan,
     generate_distance_scan,
@@ -61,7 +61,7 @@ from generators.workflow.parametric_scans import (
 )
 
 # Iterative Editing
-from generators.workflow.iterative_editing import (
+from .iterative_editing import (
     StructureEditor,
     edit_structure,
     compare_structures,

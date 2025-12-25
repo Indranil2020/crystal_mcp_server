@@ -132,47 +132,109 @@ def generate_zeolite(
     species = []
     coords = []
     
-    # Generate simplified framework (T-atoms at nodes)
+    # IMPORTANT: This is a SIMPLIFIED zeolite generator
+    # Real zeolite frameworks require precise T-O-T connectivity from IZA-SC database
+    # This implementation provides approximate atom positions with collision checking
+
+    warnings = []
+    warnings.append(
+        "SIMPLIFIED ZEOLITE: This generator creates approximate zeolite structures. "
+        "For scientifically accurate frameworks with proper T-O-T connectivity, "
+        "use the IZA-SC database or structure prediction codes like GULP/GULP-ZEO."
+    )
+
     np.random.seed(42)
-    
+
+    # Calculate number of atoms based on density
     n_T_atoms = int(a * b * c / 50)  # Approximate T-atom density
     n_Al = max(1, int(n_T_atoms / (Si_Al_ratio + 1)))
     n_Si = n_T_atoms - n_Al
-    
-    # Place T-atoms
+
+    def check_collision(new_pos, existing_coords, lattice, min_dist=1.5):
+        """
+        Check if new position collides with existing atoms.
+
+        Args:
+            new_pos: New fractional position [x, y, z]
+            existing_coords: List of existing fractional coords
+            lattice: PyMatGen Lattice object
+            min_dist: Minimum allowed distance in Angstroms
+
+        Returns:
+            True if no collision, False if collision
+        """
+        if not existing_coords:
+            return True
+
+        new_cart = lattice.get_cartesian_coords(new_pos)
+
+        for coord in existing_coords:
+            cart = lattice.get_cartesian_coords(coord)
+            # Account for periodic boundaries
+            dist = lattice.get_distance_and_image(new_pos, coord)[0]
+
+            if dist < min_dist:
+                return False
+
+        return True
+
+    # Place T-atoms (Si/Al) with collision checking
+    max_attempts_per_atom = 100
+
     for i in range(n_Si):
-        pos = np.random.random(3)
-        species.append("Si")
-        coords.append(list(pos))
-    
+        for attempt in range(max_attempts_per_atom):
+            pos = np.random.random(3)
+            if check_collision(pos, coords, lattice, min_dist=2.5):  # T-T minimum ~3Å
+                species.append("Si")
+                coords.append(list(pos))
+                break
+        else:
+            warnings.append(f"Failed to place Si atom {i+1}/{n_Si} without collision")
+
     for i in range(n_Al):
-        pos = np.random.random(3)
-        species.append("Al")
-        coords.append(list(pos))
-    
-    # Add bridging oxygens (2 per T-atom average)
+        for attempt in range(max_attempts_per_atom):
+            pos = np.random.random(3)
+            if check_collision(pos, coords, lattice, min_dist=2.5):
+                species.append("Al")
+                coords.append(list(pos))
+                break
+        else:
+            warnings.append(f"Failed to place Al atom {i+1}/{n_Al} without collision")
+
+    # Add bridging oxygens (2 per T-atom average) between T-sites
     n_O = int(n_T_atoms * 2)
     for i in range(n_O):
-        pos = np.random.random(3)
-        species.append("O")
-        coords.append(list(pos))
-    
+        for attempt in range(max_attempts_per_atom):
+            pos = np.random.random(3)
+            # Oxygens bridge T-atoms, so closer spacing allowed
+            if check_collision(pos, coords, lattice, min_dist=1.2):  # O-O minimum ~2Å
+                species.append("O")
+                coords.append(list(pos))
+                break
+        else:
+            warnings.append(f"Failed to place O atom {i+1}/{n_O} without collision")
+
     # Add cations to balance Al charge
     if cation != "H" and n_Al > 0:
         cation_charge = CATION_DATABASE.get(cation, {}).get("charge", 1)
         n_cations = max(1, int(n_Al / cation_charge))
-        
+
         for i in range(n_cations):
-            pos = np.random.random(3)
-            species.append(cation)
-            coords.append(list(pos))
+            for attempt in range(max_attempts_per_atom):
+                pos = np.random.random(3)
+                if check_collision(pos, coords, lattice, min_dist=1.8):
+                    species.append(cation)
+                    coords.append(list(pos))
+                    break
+            else:
+                warnings.append(f"Failed to place {cation} cation {i+1}/{n_cations} without collision")
     
     structure = Structure(lattice, species, coords)
-    
+
     if supercell != [1, 1, 1]:
         structure.make_supercell(supercell)
-    
-    return {
+
+    result = {
         "success": True,
         "framework": framework,
         "name": info.get("name", framework),
@@ -184,6 +246,12 @@ def generate_zeolite(
         "is_catalytic": info.get("catalytic", False),
         "structure": structure_to_dict(structure)
     }
+
+    # Add warnings if any
+    if warnings:
+        result["warnings"] = warnings
+
+    return result
 
 
 def generate_zeolite_with_guest(

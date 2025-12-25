@@ -451,26 +451,44 @@ def generate_slab(
             "success": False,
             "error": {
                 "code": "INVALID_PARAMETER",
-                "message": f"Thickness must be >= 1, got {thickness}",
+                "message": f"Thickness must be >= 1 layer, got {thickness}",
                 "details": {"thickness": thickness}
             }
         }
-    
+
     if vacuum < 0:
         return {
             "success": False,
             "error": {
                 "code": "INVALID_PARAMETER",
-                "message": f"Vacuum must be >= 0, got {vacuum}",
+                "message": f"Vacuum must be >= 0 Angstroms, got {vacuum}",
                 "details": {"vacuum": vacuum}
             }
         }
-    
+
+    # CRITICAL: thickness is in LAYERS, must convert to Angstroms
+    # Calculate d-spacing for the given Miller indices
+    lattice = structure.lattice
+    h, k, l = miller_indices
+
+    # For cubic/orthorhombic: simple formula
+    # For general case: use reciprocal lattice
+    recip_lattice = lattice.reciprocal_lattice
+    # d-spacing = 1 / |G| where G is reciprocal lattice vector (h,k,l)
+    G_vector = h * recip_lattice.matrix[0] + k * recip_lattice.matrix[1] + l * recip_lattice.matrix[2]
+    d_spacing = 1.0 / np.linalg.norm(G_vector) if np.linalg.norm(G_vector) > 1e-10 else 3.0
+
+    # Convert layers to Angstroms
+    thickness_angstrom = thickness * d_spacing
+
+    # Use the larger of calculated thickness or provided min_slab_size
+    actual_min_slab_size = max(min_slab_size, thickness_angstrom) if min_slab_size is not None else thickness_angstrom
+
     # Generate slab using Pymatgen
     slabgen = SlabGenerator(
         structure,
         miller_indices,
-        min_slab_size=max(min_slab_size, thickness),
+        min_slab_size=actual_min_slab_size,
         min_vacuum_size=vacuum,
         center_slab=center_slab,
         primitive=False,
@@ -867,46 +885,53 @@ def create_heterostructure(
             warnings.append(f"Applied in-plane scaling to overlayer: scale_a={scale_a:.4f}, scale_b={scale_b:.4f}")
             a2, b2, _ = over.lattice.abc
         
-    # Stack
-    # We essentially put 'over' on top of 'sub'
-    # 1. Expand c lattice to hold both + gap + vacuum
-    # 2. Shift overlayer
-    
-    # Get z-range of substrate
+    # Stack layers properly for non-orthogonal cells
+    # IMPORTANT: Do NOT assume c-axis is aligned with Cartesian z-axis!
+    # Instead, work with projections onto the c lattice vector direction.
+
+    # Get c-axis direction (normalized)
+    sub_lattice_matrix = sub.lattice.matrix
+    c_vector = sub_lattice_matrix[2]  # Third lattice vector
+    c_unit = c_vector / np.linalg.norm(c_vector)
+
+    # Project substrate coordinates onto c-direction
     sub_coords = sub.cart_coords
-    max_z_sub = np.max(sub_coords[:, 2]) if len(sub) > 0 else 0
-    min_z_sub = np.min(sub_coords[:, 2]) if len(sub) > 0 else 0
-    
-    # Get z-range of overlayer
+    sub_proj = sub_coords @ c_unit  # Projection onto c-direction
+    max_proj_sub = np.max(sub_proj) if len(sub) > 0 else 0
+    min_proj_sub = np.min(sub_proj) if len(sub) > 0 else 0
+    sub_height = max_proj_sub - min_proj_sub
+
+    # Project overlayer coordinates onto c-direction
     over_coords = over.cart_coords
-    max_z_over = np.max(over_coords[:, 2]) if len(over) > 0 else 0
-    min_z_over = np.min(over_coords[:, 2]) if len(over) > 0 else 0
-    over_height = max_z_over - min_z_over
-    
-    # New z position for overlayer bottom
-    # Place overlayer bottom at max_z_sub + interface_distance
-    # Shift overlayer: Subtract its min_z first, then add offset
-    shift_z = (max_z_sub + interface_distance) - min_z_over
-    
-    new_over_coords = over_coords + np.array([0, 0, shift_z])
-    
-    # Combine atoms
-    # We use substrate's lattice a, b. And new c.
-    new_c = (max_z_sub + interface_distance + over_height + vacuum)
-    
-    # Ensure c is orthogonal to a,b?
-    # Pymatgen Structure expects Lattice.
-    # We take sub.lattice but modify c
-    # Assuming sub is oriented with c along Z for simplicity?
-    # If not, this is complex.
-    # We'll assume orthogonal-ish or just set c length?
-    # Safer: Create new Lattice with sub's a,b, gamma and new c aligned with Z
-    
-    # For now, simplistic approach:
-    new_lattice = Lattice.from_parameters(
-        a1, b1, new_c, 
-        sub.lattice.angles[0], sub.lattice.angles[1], sub.lattice.angles[2]
-    )
+    over_proj = over_coords @ c_unit
+    max_proj_over = np.max(over_proj) if len(over) > 0 else 0
+    min_proj_over = np.min(over_proj) if len(over) > 0 else 0
+    over_height = max_proj_over - min_proj_over
+
+    # Calculate shift along c-direction
+    # Place overlayer bottom at: substrate_top + interface_distance
+    shift_distance = (max_proj_sub + interface_distance) - min_proj_over
+    shift_vector = shift_distance * c_unit
+
+    # Shift overlayer coordinates
+    new_over_coords = over_coords + shift_vector
+
+    # Calculate new c lattice parameter
+    # new_c = substrate_height + interface_distance + overlayer_height + vacuum
+    new_c_length = sub_height + interface_distance + over_height + vacuum
+
+    # Create new lattice with same a, b vectors but scaled c vector
+    # This preserves non-orthogonal angles
+    c_scale = new_c_length / np.linalg.norm(c_vector)
+    new_c_vector = c_vector * c_scale
+
+    new_lattice_matrix = np.array([
+        sub_lattice_matrix[0],  # Keep a vector
+        sub_lattice_matrix[1],  # Keep b vector
+        new_c_vector            # Scale c vector
+    ])
+
+    new_lattice = Lattice(new_lattice_matrix)
     
     # Collect all species and coords
     all_species = sub.species + over.species
@@ -926,6 +951,83 @@ def create_heterostructure(
     }
 
 
+def _calculate_surface_normal(structure: Structure, site_index: int, neighbor_cutoff: float = 5.0) -> np.ndarray:
+    """
+    Calculate local surface normal at a given site by fitting a plane to nearby atoms.
+
+    Args:
+        structure: Pymatgen Structure (typically a slab)
+        site_index: Index of the site to calculate normal at
+        neighbor_cutoff: Maximum distance to consider neighbors (Angstroms)
+
+    Returns:
+        Unit normal vector as numpy array [nx, ny, nz]
+    """
+    target_coords = structure[site_index].coords
+    all_coords = structure.cart_coords
+
+    # Find neighbors within cutoff
+    distances = np.linalg.norm(all_coords - target_coords, axis=1)
+    neighbor_mask = (distances < neighbor_cutoff) & (distances > 0.1)  # Exclude self
+    neighbor_coords = all_coords[neighbor_mask]
+
+    if len(neighbor_coords) < 3:
+        # Not enough neighbors for plane fitting, fall back to z-axis
+        # This happens for isolated molecules or very sparse structures
+        return np.array([0.0, 0.0, 1.0])
+
+    # Fit plane using PCA (principal component analysis)
+    # The normal is the direction with least variance (smallest eigenvalue)
+    centered = neighbor_coords - np.mean(neighbor_coords, axis=0)
+    covariance = centered.T @ centered
+    eigenvalues, eigenvectors = np.linalg.eigh(covariance)
+
+    # Normal is eigenvector with smallest eigenvalue (least variance direction)
+    normal = eigenvectors[:, 0]
+
+    # Ensure normal points "outward" (positive z-component for typical slabs)
+    # This is a heuristic - for slab, we want normal pointing away from bulk
+    if normal[2] < 0:
+        normal = -normal
+
+    # Normalize to unit vector
+    normal = normal / np.linalg.norm(normal)
+
+    return normal
+
+
+def _rotate_around_axis(coords: np.ndarray, axis: np.ndarray, angle: float) -> np.ndarray:
+    """
+    Rotate coordinates around an arbitrary axis using Rodrigues' rotation formula.
+
+    Args:
+        coords: Nx3 array of coordinates to rotate
+        axis: 3D unit vector defining rotation axis
+        angle: Rotation angle in radians
+
+    Returns:
+        Rotated coordinates as Nx3 array
+    """
+    # Rodrigues' rotation formula:
+    # v_rot = v*cos(θ) + (k × v)*sin(θ) + k*(k·v)*(1-cos(θ))
+    # where k is the unit axis vector
+
+    axis = axis / np.linalg.norm(axis)  # Ensure normalized
+    cos_angle = np.cos(angle)
+    sin_angle = np.sin(angle)
+
+    # Rotation matrix using Rodrigues formula
+    K = np.array([
+        [0, -axis[2], axis[1]],
+        [axis[2], 0, -axis[0]],
+        [-axis[1], axis[0], 0]
+    ])
+
+    R = np.eye(3) + sin_angle * K + (1 - cos_angle) * (K @ K)
+
+    return coords @ R.T
+
+
 def add_adsorbate(
     structure_dict: Dict[str, Any],
     molecule: Any,  # Molecule dict or name string
@@ -933,13 +1035,20 @@ def add_adsorbate(
     distance: float = 2.0
 ) -> Dict[str, Any]:
     """
-    Add an adsorbate molecule to a specific site.
+    Add an adsorbate molecule to a specific site using surface normal orientation.
+
+    This function calculates the local surface normal at the adsorption site by
+    fitting a plane to nearby atoms, then places the molecule along this normal
+    direction. This ensures correct placement even for non-(001) surfaces.
 
     Args:
         structure_dict: Surface structure
         molecule: Molecule structure dict OR name string (e.g., "H2O", "CO", "O2")
         site_index: Index of atom to adsorb on (top site mode)
-        distance: Height above site
+        distance: Height above site along surface normal (Angstroms)
+
+    Returns:
+        Dictionary with success status, structure, and optional warnings
     """
     surface = dict_to_structure(structure_dict)
 
@@ -1008,9 +1117,17 @@ def add_adsorbate(
     target_site = surface[site_index]
     target_coords = target_site.coords
 
+    # Calculate local surface normal at the adsorption site
+    # Find nearby atoms and fit a plane to determine normal direction
+    surface_normal = _calculate_surface_normal(surface, site_index)
+
+    # Normalize molecule coordinates so lowest point is at origin
     mol_coords = np.array(mol_struct.cart_coords, dtype=float)
-    min_z_mol = np.min(mol_coords[:, 2])
-    mol_coords = mol_coords - np.array([0, 0, min_z_mol])
+    # Project molecule onto surface normal direction to find extent
+    mol_proj = mol_coords @ surface_normal
+    min_proj = np.min(mol_proj)
+    # Shift molecule so its lowest point (along normal) is at zero
+    mol_coords = mol_coords - min_proj * surface_normal
 
     surface_coords = surface.cart_coords
     angles = [0, 90, 180, 270] if len(mol_coords) > 1 else [0]
@@ -1019,19 +1136,19 @@ def add_adsorbate(
     best_angle = 0
 
     for angle in angles:
+        # Rotate around the surface normal (not just z-axis)
         theta = np.deg2rad(angle)
-        rot = np.array([
-            [np.cos(theta), -np.sin(theta), 0],
-            [np.sin(theta), np.cos(theta), 0],
-            [0, 0, 1]
-        ])
-        rotated = mol_coords.dot(rot.T)
+        rotated = _rotate_around_axis(mol_coords, surface_normal, theta)
+
+        # Center molecule COM on target site in the plane perpendicular to normal
         mol_com = np.mean(rotated, axis=0)
-        shift = np.array([
-            target_coords[0] - mol_com[0],
-            target_coords[1] - mol_com[1],
-            target_coords[2] + distance
-        ])
+
+        # Decompose: component along normal and perpendicular component
+        target_perp = target_coords - (target_coords @ surface_normal) * surface_normal
+        mol_com_perp = mol_com - (mol_com @ surface_normal) * surface_normal
+
+        # Place molecule: align perpendicular components, then offset along normal
+        shift = target_perp - mol_com_perp + (target_coords @ surface_normal + distance) * surface_normal
         placed = rotated + shift
 
         if len(surface_coords) > 0:

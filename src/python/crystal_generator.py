@@ -512,18 +512,29 @@ def generate_crystal(
     counts = Counter(composition)
     species = list(counts.keys())
     
-    # Determine numIons
+    # Determine numIons and track stoichiometry changes
+    stoich_warnings = []
+    requested_stoich = {s: counts[s] for s in species}
+
     if num_atoms:
         total_ratio = sum(counts.values())
         # Scale counts to match target num_atoms
         # This assumes the input composition reflects the stoichiometry
         num_ions = [int(counts[s] * num_atoms / total_ratio) for s in species]
-        
-        # Adjust if rounding errors cause mismatch (simple adjustment)
+
+        # Adjust if rounding errors cause mismatch
         diff = num_atoms - sum(num_ions)
         if diff != 0:
-            # Add/subtract remainder to first species (simplistic, but effective for keeping sum)
+            # WARNING: This perturbs stoichiometry!
+            # Add/subtract remainder to first species
+            old_value = num_ions[0]
             num_ions[0] += diff
+
+            stoich_warnings.append(
+                f"STOICHIOMETRY PERTURBED: Requested num_atoms={num_atoms} with composition {dict(counts)} "
+                f"does not yield integer atom counts. Adjusted {species[0]} from {old_value} to {num_ions[0]} "
+                f"to match total atoms. Actual stoichiometry: {dict(zip(species, num_ions))}"
+            )
     else:
         # Use exact counts from composition list
         num_ions = list(counts.values())
@@ -678,7 +689,7 @@ def generate_crystal(
             }
         }
 
-    return {
+    result = {
         "success": True,
         "structure": structure_data,
         "validation": validation.to_dict(),
@@ -688,6 +699,12 @@ def generate_crystal(
             "dimensionality": dimensionality
         }
     }
+
+    # Add stoichiometry warnings if any
+    if stoich_warnings:
+        result["warnings"] = stoich_warnings
+
+    return result
 
 
 def validate_molecules(molecules: List[str]) -> Tuple[bool, Optional[str]]:

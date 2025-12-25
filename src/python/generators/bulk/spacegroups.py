@@ -331,16 +331,47 @@ def generate_from_spacegroup(
     
     # Convert to pymatgen Structure
     pmg_structure = crystal.to_pymatgen()
-    
+
     # Apply requested lattice parameters if provided
-    # This ensures scientific correctness for specific materials (e.g. Si a=5.43)
+    # IMPORTANT: Validate against crystal system constraints
+    lattice_warnings = []
     if a is not None:
         target_a = a
         target_b = b if b is not None else a
         target_c = c if c is not None else a
-        
-        # Keep original angles unless specified (TODO: add angle support)
-        # For now, we assume the generated angles are correct for the SG
+
+        # Validate lattice parameters against crystal system constraints
+        if crystal_system == "cubic":
+            # Cubic: a = b = c
+            if not (abs(target_a - target_b) < 1e-6 and abs(target_a - target_c) < 1e-6):
+                lattice_warnings.append(
+                    f"CRYSTAL SYSTEM VIOLATION: Cubic system requires a=b=c. "
+                    f"Requested: a={target_a}, b={target_b}, c={target_c}. "
+                    f"Using a={target_a} for all axes."
+                )
+                target_b = target_a
+                target_c = target_a
+
+        elif crystal_system == "tetragonal":
+            # Tetragonal: a = b ≠ c
+            if abs(target_a - target_b) > 1e-6:
+                lattice_warnings.append(
+                    f"CRYSTAL SYSTEM VIOLATION: Tetragonal system requires a=b. "
+                    f"Requested: a={target_a}, b={target_b}. Using a={target_a} for both."
+                )
+                target_b = target_a
+
+        elif crystal_system == "hexagonal" or crystal_system == "trigonal":
+            # Hexagonal/Trigonal: a = b ≠ c
+            if abs(target_a - target_b) > 1e-6:
+                lattice_warnings.append(
+                    f"CRYSTAL SYSTEM VIOLATION: {crystal_system.capitalize()} system requires a=b. "
+                    f"Requested: a={target_a}, b={target_b}. Using a={target_a} for both."
+                )
+                target_b = target_a
+
+        # Keep original angles unless specified
+        # Angles are constrained by crystal system and enforced by PyXtal
         new_lattice = Lattice.from_parameters(
             a=target_a,
             b=target_b,
@@ -349,8 +380,8 @@ def generate_from_spacegroup(
             beta=pmg_structure.lattice.beta,
             gamma=pmg_structure.lattice.gamma
         )
-        
-        # Create new structure with target lattice but same fractional coords
+
+        # Create new structure with validated lattice
         pmg_structure = Structure(
             new_lattice,
             pmg_structure.species,
@@ -385,16 +416,32 @@ def generate_from_spacegroup(
     }
 
     # Add explicit warnings if composition was adjusted
+    all_warnings = []
     if composition_warnings:
         result["composition_adjusted"] = True
         result["composition_warnings"] = composition_warnings
-        result["warning"] = (
+        all_warnings.append(
             "COMPOSITION MODIFIED: The requested composition was adjusted to satisfy "
             "Wyckoff position constraints. Review 'requested_composition' vs 'actual_composition' "
             "to ensure this is acceptable for your scientific application."
         )
     else:
         result["composition_adjusted"] = False
+
+    # Add lattice parameter validation warnings
+    if lattice_warnings:
+        result["lattice_adjusted"] = True
+        result["lattice_warnings"] = lattice_warnings
+        all_warnings.append(
+            "LATTICE PARAMETERS ADJUSTED: The requested lattice parameters violated "
+            "crystal system constraints and were corrected. Review 'lattice_warnings' for details."
+        )
+    else:
+        result["lattice_adjusted"] = False
+
+    # Combine all warnings into a single warning field
+    if all_warnings:
+        result["warning"] = " | ".join(all_warnings)
 
     return result
 

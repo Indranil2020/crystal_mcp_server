@@ -31,6 +31,116 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 
+# ==================== Schema Adapters ====================
+# These functions bridge between two structure schemas:
+# 1. Standard schema: atoms (with element/coords as fractional), lattice (with a/b/c/matrix)
+# 2. Editor schema: species (list), positions (Cartesian), cell (3x3 matrix)
+
+
+def from_standard_schema(structure: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Convert from standard schema to editor schema.
+
+    Standard schema (used by generators):
+        - atoms: [{"element": str, "coords": [x, y, z]}]  # fractional coords
+        - lattice: {"a": float, "b": float, "c": float, "matrix": [[...], [...], [...]]}
+        - metadata: {"formula": str, "n_atoms": int}
+
+    Editor schema (used by StructureEditor):
+        - species: [str, str, ...]  # element symbols
+        - positions: [[x, y, z], [x, y, z], ...]  # Cartesian coords
+        - cell: [[a1x, a1y, a1z], [a2x, a2y, a2z], [a3x, a3y, a3z]]  # lattice vectors
+        - n_atoms: int
+
+    Args:
+        structure: Structure in standard schema
+
+    Returns:
+        Structure in editor schema
+    """
+    if "atoms" not in structure or "lattice" not in structure:
+        raise ValueError(
+            "Invalid structure schema. Expected 'atoms' and 'lattice' keys. "
+            "Received keys: " + str(list(structure.keys()))
+        )
+
+    atoms = structure["atoms"]
+    lattice = structure["lattice"]
+    cell_matrix = np.array(lattice["matrix"])
+
+    # Extract species and fractional coords
+    species = [atom["element"] for atom in atoms]
+    frac_coords = np.array([atom["coords"] for atom in atoms])
+
+    # Convert fractional to Cartesian: cart = frac @ cell_matrix
+    cart_positions = (frac_coords @ cell_matrix).tolist()
+
+    return {
+        "species": species,
+        "positions": cart_positions,
+        "cell": cell_matrix.tolist(),
+        "n_atoms": len(species),
+        "metadata": structure.get("metadata", {})
+    }
+
+
+def to_standard_schema(structure: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Convert from editor schema to standard schema.
+
+    Args:
+        structure: Structure in editor schema (species/positions/cell)
+
+    Returns:
+        Structure in standard schema (atoms/lattice)
+    """
+    if "species" not in structure or "positions" not in structure:
+        raise ValueError(
+            "Invalid editor structure schema. Expected 'species' and 'positions' keys. "
+            "Received keys: " + str(list(structure.keys()))
+        )
+
+    species = structure["species"]
+    cart_positions = np.array(structure["positions"])
+    cell_matrix = np.array(structure.get("cell", [[10, 0, 0], [0, 10, 0], [0, 0, 10]]))
+
+    # Convert Cartesian to fractional: frac = cart @ inv(cell_matrix)
+    inv_cell = np.linalg.inv(cell_matrix)
+    frac_coords = (cart_positions @ inv_cell).tolist()
+
+    # Build atoms list
+    atoms = [
+        {"element": elem, "coords": coords}
+        for elem, coords in zip(species, frac_coords)
+    ]
+
+    # Calculate lattice parameters
+    a = float(np.linalg.norm(cell_matrix[0]))
+    b = float(np.linalg.norm(cell_matrix[1]))
+    c = float(np.linalg.norm(cell_matrix[2]))
+
+    # Build formula from species
+    from collections import Counter
+    composition = Counter(species)
+    formula = "".join(f"{elem}{count}" if count > 1 else elem
+                     for elem, count in sorted(composition.items()))
+
+    return {
+        "atoms": atoms,
+        "lattice": {
+            "a": a,
+            "b": b,
+            "c": c,
+            "matrix": cell_matrix.tolist()
+        },
+        "metadata": {
+            "formula": formula,
+            "n_atoms": len(species),
+            **structure.get("metadata", {})
+        }
+    }
+
+
 @dataclass
 class EditOperation:
     """Record of a single edit operation."""
@@ -49,6 +159,9 @@ class StructureEditor:
 
     Allows iterative modifications to structures with undo/redo capability
     and operation chaining.
+
+    Automatically handles both standard schema (atoms/lattice) and editor schema
+    (species/positions/cell) through schema adapters.
     """
 
     def __init__(self, structure: Optional[Dict[str, Any]] = None, track_history: bool = True):
@@ -58,30 +171,82 @@ class StructureEditor:
         Parameters
         ----------
         structure : dict, optional
-            Initial structure to edit
+            Initial structure to edit (accepts both standard and editor schemas)
         track_history : bool
             Whether to track edit history (default: True)
         """
-        self._structure = deepcopy(structure) if structure else None
+        self._structure = self._normalize_structure(structure) if structure else None
         self._track_history = track_history
         self._history: List[Dict[str, Any]] = []
         self._undo_stack: List[Dict[str, Any]] = []
         self._redo_stack: List[Dict[str, Any]] = []
 
+    def _normalize_structure(self, structure: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Normalize structure to editor schema if needed.
+
+        Detects whether structure is in standard schema (atoms/lattice) or
+        editor schema (species/positions/cell) and converts if necessary.
+        """
+        if structure is None:
+            return None
+
+        # Check if structure is in standard schema (atoms/lattice)
+        if "atoms" in structure and "lattice" in structure:
+            # Convert from standard schema to editor schema
+            return from_standard_schema(structure)
+
+        # Check if structure is already in editor schema
+        elif "species" in structure and "positions" in structure:
+            # Already in editor schema, just deep copy
+            return deepcopy(structure)
+
+        else:
+            raise ValueError(
+                "Unrecognized structure schema. Expected either:\n"
+                "  - Standard schema: {atoms: [...], lattice: {...}}\n"
+                "  - Editor schema: {species: [...], positions: [...], cell: [...]}\n"
+                f"Received keys: {list(structure.keys())}"
+            )
+
     def set_structure(self, structure: Dict[str, Any]) -> 'StructureEditor':
-        """Set the current structure."""
-        self._structure = deepcopy(structure)
+        """
+        Set the current structure.
+
+        Accepts structures in both standard schema (atoms/lattice) and
+        editor schema (species/positions/cell). Automatically converts to
+        editor schema if needed.
+        """
+        self._structure = self._normalize_structure(structure)
         if self._track_history:
             self._history.append({
                 "operation": "set_structure",
                 "timestamp": datetime.now().isoformat(),
-                "n_atoms": structure.get("n_atoms", len(structure.get("species", [])))
+                "n_atoms": self._structure.get("n_atoms", len(self._structure.get("species", [])))
             })
         return self
 
-    def get_structure(self) -> Dict[str, Any]:
-        """Get the current structure."""
-        return deepcopy(self._structure)
+    def get_structure(self, schema: str = "editor") -> Dict[str, Any]:
+        """
+        Get the current structure.
+
+        Parameters
+        ----------
+        schema : str
+            Output schema format: "editor" (species/positions/cell) or
+            "standard" (atoms/lattice). Default: "editor"
+
+        Returns
+        -------
+        dict
+            Structure in requested schema format
+        """
+        if schema == "editor":
+            return deepcopy(self._structure)
+        elif schema == "standard":
+            return to_standard_schema(self._structure)
+        else:
+            raise ValueError(f"Invalid schema: {schema}. Must be 'editor' or 'standard'")
 
     def get_history(self) -> List[Dict[str, Any]]:
         """Get the edit history."""

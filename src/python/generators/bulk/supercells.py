@@ -10,6 +10,7 @@ Comprehensive supercell generation utilities:
 from typing import Dict, Any, List, Optional, Union
 import numpy as np
 from pymatgen.core import Structure, Lattice
+from pymatgen.core.surface import SlabGenerator
 
 
 # Common supercell sizes for DFT
@@ -250,57 +251,113 @@ def generate_slab_supercell(
 ) -> Dict[str, Any]:
     """
     Generate slab supercell for surface calculations.
-    
+
+    IMPORTANT: This function properly cuts a slab from the bulk structure,
+    preserving the original composition and geometry. The slab is created
+    using PyMatGen's SlabGenerator.
+
     Args:
-        base_structure: Bulk structure
-        miller_index: Surface orientation
-        slab_thickness: Number of layers
-        vacuum: Vacuum thickness in Angstrom
-    
+        base_structure: Bulk structure (composition and geometry will be preserved)
+        miller_index: Surface orientation (Miller indices [h, k, l])
+        slab_thickness: Number of layers (will be converted to Angstroms via d-spacing)
+        vacuum: Vacuum thickness in Angstroms
+
     Returns:
-        Slab supercell
+        Dictionary with success status and slab structure
     """
-    a = base_structure.lattice.a
-    
-    # Simplified slab generation
+    # Validate input
+    if len(miller_index) != 3:
+        return {
+            "success": False,
+            "error": {
+                "code": "INVALID_MILLER_INDEX",
+                "message": f"Miller index must have 3 components, got {len(miller_index)}",
+                "details": {"miller_index": miller_index}
+            }
+        }
+
+    if all(x == 0 for x in miller_index):
+        return {
+            "success": False,
+            "error": {
+                "code": "INVALID_MILLER_INDEX",
+                "message": "Miller index cannot be [0, 0, 0]",
+                "details": {}
+            }
+        }
+
+    if slab_thickness < 1:
+        return {
+            "success": False,
+            "error": {
+                "code": "INVALID_PARAMETER",
+                "message": f"Slab thickness must be >= 1 layer, got {slab_thickness}",
+                "details": {"slab_thickness": slab_thickness}
+            }
+        }
+
+    # Calculate d-spacing for the Miller plane using reciprocal lattice
+    # This ensures "5 layers" means 5 actual atomic layers, not 5 Angstroms
+    lattice = base_structure.lattice
     h, k, l = miller_index
-    
-    # Surface lattice vectors
-    if miller_index == [1, 1, 1]:
-        a_surf = a / np.sqrt(2)
-        interlayer = a / np.sqrt(3)
-    elif miller_index == [1, 1, 0]:
-        a_surf = a
-        interlayer = a / np.sqrt(8)
-    else:
-        a_surf = a
-        interlayer = a / np.sqrt(h**2 + k**2 + l**2)
-    
-    c_total = slab_thickness * interlayer + vacuum
-    
-    lattice = Lattice.orthorhombic(a_surf * 2, a_surf * 2 * np.sqrt(3), c_total)
-    
-    species = []
-    coords = []
-    
-    base_elem = str(base_structure[0].specie)
-    
-    for layer in range(slab_thickness):
-        z = (layer + 0.5) * interlayer / c_total
-        for i in range(4):
-            for j in range(4):
-                x = (i + 0.5 * (layer % 2)) / 4
-                y = (j + (layer % 3) * 0.33) / 4
-                species.append(base_elem)
-                coords.append([x, y, z])
-    
-    structure = Structure(lattice, species, coords)
-    
+
+    recip_lattice = lattice.reciprocal_lattice
+    G_vector = h * recip_lattice.matrix[0] + k * recip_lattice.matrix[1] + l * recip_lattice.matrix[2]
+    d_spacing = 1.0 / np.linalg.norm(G_vector) if np.linalg.norm(G_vector) > 1e-10 else 3.0
+
+    # Convert layers to Angstroms
+    min_slab_size = slab_thickness * d_spacing
+
+    # Generate slab using PyMatGen's SlabGenerator
+    # This preserves the original structure's composition and geometry
+    slabgen = SlabGenerator(
+        base_structure,
+        miller_index,
+        min_slab_size=min_slab_size,
+        min_vacuum_size=vacuum,
+        center_slab=True,
+        primitive=False,
+        max_normal_search=1
+    )
+
+    slabs = slabgen.get_slabs(symmetrize=True)
+
+    if not slabs or len(slabs) == 0:
+        return {
+            "success": False,
+            "error": {
+                "code": "SLAB_GENERATION_FAILED",
+                "message": "Failed to generate slab from bulk structure",
+                "details": {
+                    "miller_index": miller_index,
+                    "slab_thickness": slab_thickness,
+                    "min_slab_size_angstrom": min_slab_size
+                }
+            }
+        }
+
+    # Use the first slab (typically the most symmetric)
+    slab = slabs[0]
+
+    # Calculate actual number of layers for reporting
+    # (may differ slightly from requested due to periodicity)
+    slab_coords_z = sorted([site.coords[2] for site in slab])
+    unique_z = []
+    tol = 0.1  # Angstrom tolerance for grouping layers
+    for z in slab_coords_z:
+        if not unique_z or abs(z - unique_z[-1]) > tol:
+            unique_z.append(z)
+    actual_layers = len(unique_z)
+
     return {
         "success": True,
         "miller_index": miller_index,
-        "slab_thickness_layers": slab_thickness,
-        "vacuum_A": vacuum,
-        "n_atoms": len(structure),
-        "structure": structure_to_dict(structure)
+        "requested_thickness_layers": slab_thickness,
+        "actual_thickness_layers": actual_layers,
+        "d_spacing_angstrom": float(d_spacing),
+        "slab_thickness_angstrom": float(max(slab_coords_z) - min(slab_coords_z)),
+        "vacuum_angstrom": vacuum,
+        "n_atoms": len(slab),
+        "composition": slab.composition.formula,
+        "structure": structure_to_dict(slab)
     }
