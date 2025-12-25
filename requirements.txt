@@ -3,6 +3,7 @@ pyxtal>=1.0.0
 pymatgen>=2024.1.1
 spglib>=2.5.0
 ase>=3.22.0
+scipy>=1.10.0  # Required for rotations in workflow editing
 
 # MLFF models
 chgnet>=0.3.0
