@@ -299,18 +299,27 @@ class TestToolDiscovery:
         """Test all tool schemas are valid JSON Schema"""
         res = initialized_client.send_request("tools/list", {})
         tools = res["result"]["tools"]
-        
+
         for tool in tools:
             schema = tool["inputSchema"]
-            
-            # Must have type
-            assert "type" in schema, f"Schema for {tool['name']} missing 'type'"
-            
+
+            # Must have either type or be a union type (anyOf/oneOf)
+            has_type = "type" in schema
+            is_union = "anyOf" in schema or "oneOf" in schema
+            assert has_type or is_union, f"Schema for {tool['name']} missing 'type' or union definition"
+
             # If type is object, should have properties
-            if schema["type"] == "object":
+            if schema.get("type") == "object":
                 # Properties is optional but recommended
                 if "properties" in schema:
                     assert isinstance(schema["properties"], dict)
+
+            # For union types, validate each variant
+            if is_union:
+                variants = schema.get("anyOf") or schema.get("oneOf") or []
+                for variant in variants:
+                    # Each variant should have type
+                    assert "type" in variant, f"Union variant in {tool['name']} missing 'type'"
     
     def test_comprehensive_generator_tool_exists(self, initialized_client):
         """Test the main comprehensive_generate tool exists"""
@@ -525,12 +534,22 @@ class TestSpaceGroups:
                 "a": 5.0
             }
         })
-        
-        # Should fail
-        if "error" not in res:
-            data = json.loads(res["result"]["content"][-1]["text"])
-            assert data.get("success") is False
-    
+
+        # Should fail - can be JSON-RPC error, tool error, or success:false response
+        if "error" in res:
+            pass  # JSON-RPC level error - test passes
+        else:
+            result = res["result"]
+            # Check for isError flag (tool-level error with text message)
+            if result.get("isError"):
+                # This is valid - tool correctly rejected invalid input
+                assert len(result["content"]) > 0
+            else:
+                # Try parsing as JSON to check success flag
+                content_text = result["content"][-1]["text"]
+                data = json.loads(content_text)
+                assert data.get("success") is False
+
     def test_invalid_space_group_999(self, initialized_client):
         """Test invalid space group 999"""
         res = initialized_client.send_request("tools/call", {
@@ -543,11 +562,21 @@ class TestSpaceGroups:
                 "a": 5.0
             }
         })
-        
-        # Should fail gracefully
-        if "error" not in res:
-            data = json.loads(res["result"]["content"][-1]["text"])
-            assert data.get("success") is False
+
+        # Should fail gracefully - can be JSON-RPC error, tool error, or success:false response
+        if "error" in res:
+            pass  # JSON-RPC level error - test passes
+        else:
+            result = res["result"]
+            # Check for isError flag (tool-level error with text message)
+            if result.get("isError"):
+                # This is valid - tool correctly rejected invalid input
+                assert len(result["content"]) > 0
+            else:
+                # Try parsing as JSON to check success flag
+                content_text = result["content"][-1]["text"]
+                data = json.loads(content_text)
+                assert data.get("success") is False
 
 
 # ============================================================================

@@ -13,6 +13,7 @@ class MCPTestClient:
         self.server_path = server_path
         self.process = None
         self.request_id = 0
+        self._stdout_buffer = ""
     
     def start(self):
         """Start the MCP server"""
@@ -96,21 +97,47 @@ class MCPTestClient:
         return result
 
     def _read_line_with_timeout(self, timeout: float = 10.0) -> Optional[str]:
-        """Read a line from stdout with timeout using select"""
+        """Read a line from stdout with timeout using select.
+
+        Avoid blocking on partial lines by buffering raw reads.
+        """
         import select
 
         if not self.process or self.process.poll() is not None:
             return None
 
-        reads = [self.process.stdout.fileno()]
-        ret = select.select(reads, [], [], timeout)
+        end_time = time.monotonic() + timeout
+        fd = self.process.stdout.fileno()
 
-        if reads[0] in ret[0]:
-            return self.process.stdout.readline()
+        while True:
+            newline_index = self._stdout_buffer.find("\n")
+            if newline_index != -1:
+                line = self._stdout_buffer[: newline_index + 1]
+                self._stdout_buffer = self._stdout_buffer[newline_index + 1 :]
+                return line
 
-        # If we timed out, check stderr for debugging
-        self._read_stderr()
-        return None
+            remaining = end_time - time.monotonic()
+            if remaining <= 0:
+                self._read_stderr()
+                return None
+
+            reads = [fd]
+            ret = select.select(reads, [], [], remaining)
+            if fd in ret[0]:
+                try:
+                    chunk = os.read(fd, 4096)
+                except (OSError, IOError):
+                    return None
+
+                if not chunk:
+                    return None
+
+                self._stdout_buffer += chunk.decode("utf-8", errors="replace")
+                continue
+
+            # If we timed out, check stderr for debugging
+            self._read_stderr()
+            return None
 
 
 # ============================================================================
@@ -309,12 +336,19 @@ class TestToolExecution:
                 "a": 5.43
             }
         })
-        
-        # Should return error or success: false
-        if "error" not in res:
-            content_text = res["result"]["content"][0]["text"]
-            data = json.loads(content_text)
-            assert data.get("success") is False
+
+        # Should return error - can be JSON-RPC error, tool error, or success:false
+        if "error" in res:
+            pass  # JSON-RPC level error - test passes
+        else:
+            result = res["result"]
+            # Check for isError flag (tool-level error with text message)
+            if result.get("isError"):
+                assert len(result["content"]) > 0  # Error message exists
+            else:
+                content_text = result["content"][0]["text"]
+                data = json.loads(content_text)
+                assert data.get("success") is False
     
     def test_generate_missing_required_params(self, client):
         """Test generation with missing required parameters"""
@@ -344,14 +378,18 @@ class TestToolExecution:
             }
         })
 
-        # Should return validation error - check for MCP error format or success: false
+        # Should return validation error - can be JSON-RPC error, tool error, or success:false
         if "error" in res:
-            pass  # Protocol-level error
+            pass  # Protocol-level error - test passes
         else:
-            # Application-level error: check content
-            content_text = res["result"]["content"][0]["text"]
-            data = json.loads(content_text)
-            assert data.get("success") is False
+            result = res["result"]
+            # Check for isError flag (tool-level error with text message)
+            if result.get("isError"):
+                assert len(result["content"]) > 0  # Error message exists
+            else:
+                content_text = result["content"][0]["text"]
+                data = json.loads(content_text)
+                assert data.get("success") is False
     
     def test_export_vasp_valid(self, client):
         """Test VASP export with valid structure"""
