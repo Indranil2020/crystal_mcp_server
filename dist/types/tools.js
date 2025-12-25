@@ -124,7 +124,7 @@ export const ComprehensiveGenerateSchema = z.object({
     // Additional parameters are passed through dynamically
     list_available: z.boolean().optional()
         .describe("Include list of available options in response")
-});
+}).passthrough(); // Allow additional operation-specific parameters to pass through
 /**
  * Schema for space_group_scan tool
  */
