@@ -6,12 +6,14 @@ A comprehensive Model Context Protocol (MCP) server for generating accurate crys
 
 - ✨ **Complete Coverage**: All 230 space groups supported
 - 🔬 **PyXtal Integration**: High-quality structure generation
-- ⚡ **MLFF Optimization**: CHGNet, M3GNet, and MACE support
-- 🎯 **Ground State Search**: Find lowest energy structures
 - 📐 **Structure Transformations**: Supercells, slabs, surfaces
 - 🔷 **Symmetry Analysis**: Spglib-powered symmetry detection
 - 📁 **Multiple Formats**: CIF, POSCAR, XYZ, JSON export
 - ✅ **Comprehensive Validation**: Distance checks, lattice validation
+- ⚡ **MLFF Optimization**: Not implemented yet
+- 🎯 **Ground State Search**: Not implemented yet
+
+For the most accurate and complete capabilities list, see the [API reference](docs/api_reference.md).
 
 ## Installation
 
@@ -25,8 +27,8 @@ A comprehensive Model Context Protocol (MCP) server for generating accurate crys
 
 ```bash
 # Clone repository
-git clone <repository-url>
-cd crystal-mcp-server
+git clone https://github.com/Indranil2020/crystal_mcp_server.git
+cd crystal_mcp_server
 
 # Install Node.js dependencies
 npm install
@@ -70,6 +72,8 @@ Required Python packages:
 - `pymatgen>=2024.1.1` - Materials analysis
 - `spglib>=2.5.0` - Symmetry operations
 - `ase>=3.22.0` - Atomic simulation environment
+
+Optional MLFF packages (planned; MLFF not implemented yet):
 - `chgnet>=0.3.0` - CHGNet MLFF model
 - `matgl>=1.0.0` - M3GNet MLFF model
 - `mace-torch>=0.3.0` - MACE MLFF model
@@ -100,6 +104,10 @@ node dist/index.js
 ```
 
 The server runs on stdio transport for MCP protocol communication.
+
+### Connect to an LLM
+
+To use this server from an MCP-capable LLM client, configure the client to start the server with `node dist/index.js` and set the working directory to this repo. See [Connect to LLM agents](docs/connect_to_llm_agents.md) for step-by-step setup examples.
 
 ### Available Tools
 
@@ -175,9 +183,9 @@ Validate crystal structure quality.
 }
 ```
 
-#### 7. optimize_structure_mlff
+#### 7. optimize_structure_mlff (not implemented yet)
 
-Optimize structure using machine learning force fields (optional - requires MLFF packages).
+Planned MLFF optimization interface (CHGNet, M3GNet, MACE).
 
 ```typescript
 {
@@ -189,9 +197,9 @@ Optimize structure using machine learning force fields (optional - requires MLFF
 }
 ```
 
-#### 8. ground_state_search
+#### 8. ground_state_search (not implemented yet)
 
-Find ground state across space groups.
+Planned ground state search across space groups.
 
 ```typescript
 {
@@ -245,7 +253,7 @@ const slab = await mcpClient.callTool("generate_slab", {
 });
 ```
 
-### Example 3: Ground State Search
+### Example 3: Ground State Search (not implemented yet)
 
 ```typescript
 const search = await mcpClient.callTool("ground_state_search", {
@@ -286,7 +294,6 @@ crystal-mcp-server/
 
 This project follows strict defensive programming practices:
 
-- ✅ **No try/catch blocks** - Use Result<T> pattern
 - ✅ **100% type hints** - All functions fully typed
 - ✅ **Defensive validation** - Check inputs before processing
 - ✅ **Comprehensive tests** - Unit and integration tests
@@ -302,8 +309,8 @@ This project follows strict defensive programming practices:
 |-----------|------|-------|
 | Generate crystal | <1s | Single structure |
 | Space group scan (230) | ~10 min | Parallel mode |
-| MLFF optimization | ~30s | Per structure |
-| Ground state search | ~4 hours | 230 groups, 5 attempts each |
+| MLFF optimization (not implemented yet) | N/A | Planned feature |
+| Ground state search (not implemented yet) | N/A | Planned feature |
 
 ### Memory Requirements
 
@@ -322,7 +329,7 @@ python -c "import chgnet; print('CHGNet OK')"
 python -c "import spglib; print('Spglib OK')"
 ```
 
-### MLFF Model Loading Fails
+### MLFF Model Loading Fails (planned)
 
 ```bash
 # Download CHGNet model
@@ -353,19 +360,6 @@ Contributions welcome! Please ensure:
 
 MIT License - see LICENSE file for details
 
-## Citation
-
-If you use this server in your research, please cite:
-
-```bibtex
-@software{crystal_mcp_server,
-  title = {Crystal Structure Generator MCP Server},
-  author = {Your Name},
-  year = {2024},
-  url = {https://github.com/yourname/crystal-mcp-server}
-}
-```
-
 ## Acknowledgments
 
 Built with:
@@ -377,14 +371,14 @@ Built with:
 
 ## Support
 
-- 📧 Email: support@example.com
+- 📧 Email:  
 - 🐛 Issues: [GitHub Issues](https://github.com/yourname/crystal-mcp-server/issues)
 - 📖 Docs: [Full Documentation](./docs/)
 
 ---
 
-**Status:** Production Ready ✅
+**Status:**  
 
-**Version:** 1.0.0
+**Version:**  
 
-**Last Updated:** December 2024
+**Last Updated:** December 2025

@@ -6,9 +6,9 @@ ase>=3.22.0
 scipy>=1.10.0  # Required for rotations in workflow editing
 
 # MLFF models
-chgnet>=0.3.0
-matgl>=1.0.0
-mace-torch>=0.3.0
+#chgnet>=0.3.0
+#matgl>=1.0.0
+#mace-torch>=0.3.0
 
 
 # File I/O and molecule handling
