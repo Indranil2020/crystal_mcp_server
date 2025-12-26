@@ -9,5 +9,18 @@
         "PYTHON_PATH": "python"
       }
     }
+  },
+  "$comment": "Alternative: Direct Git Connection (no manual installation required)",
+  "$example_git_connection": {
+    "crystal-structure-generator": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "git+https://github.com/Indranil2020/crystal_mcp_server.git"
+      ],
+      "env": {
+        "PYTHON_PATH": "python"
+      }
+    }
   }
 }

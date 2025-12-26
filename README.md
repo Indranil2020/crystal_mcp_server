@@ -23,7 +23,36 @@ For the most accurate and complete capabilities list, see the [API reference](do
 - Python 3.8+ and pip
 - Git
 
-### Quick Install
+### Method 1: Direct Git Connection (Easiest)
+
+You can connect this MCP server directly from the git repository without manual installation. Just add it to your MCP client configuration:
+
+```json
+{
+  "mcpServers": {
+    "crystal-structure-generator": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "git+https://github.com/Indranil2020/crystal_mcp_server.git"
+      ],
+      "env": {
+        "PYTHON_PATH": "python"
+      }
+    }
+  }
+}
+```
+
+The server will automatically:
+- Install Node.js dependencies
+- Install Python dependencies (via pip/pip3)
+- Build TypeScript code
+- Start the MCP server
+
+**Note:** First run may take 1-2 minutes to install dependencies. Subsequent runs are instant.
+
+### Method 2: Manual Installation
 
 ```bash
 # Clone repository
