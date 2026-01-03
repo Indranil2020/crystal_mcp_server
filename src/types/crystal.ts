@@ -161,6 +161,7 @@ export interface StructureGenerationResult {
     readonly generation_time_ms: number;
   };
   readonly files?: Record<string, string>;  // Format -> content mapping
+  readonly file_paths?: Record<string, string>;  // Format -> saved file path mapping
 }
 
 /**

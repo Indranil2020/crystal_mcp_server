@@ -9,6 +9,8 @@ import { createSuccess, createFailure, createError, CrystalErrorCode } from "../
 import { executePythonWithJSON } from "../../utils/python-bridge.js";
 import { formatStructureOutput } from "../../utils/formatting.js";
 import { generateCIF, generatePOSCAR, generateXYZ, generateJSON } from "../../utils/structure-formats.js";
+import { writeFileSync, ensureDirectory } from "../../utils/file-io.js";
+import * as path from "path";
 /**
  * Generate a crystal structure with specified composition and space group.
  *
@@ -42,6 +44,35 @@ export async function generateCrystal(input) {
     const structure = pythonResult.structure;
     const validation = pythonResult.validation;
     const metadata = pythonResult.metadata;
+    // Generate file contents
+    const files = {
+        cif: generateCIF(structure),
+        poscar: generatePOSCAR(structure),
+        xyz: generateXYZ(structure),
+        json: generateJSON(structure)
+    };
+    // Auto-save files if output_directory is provided
+    const filePaths = {};
+    if (params.output_directory) {
+        const dirResult = ensureDirectory(params.output_directory);
+        if (dirResult.success) {
+            const formula = structure.metadata?.formula || 'structure';
+            const spg = structure.space_group?.number || 'unknown';
+            const baseName = `${formula}_sg${spg}`;
+            const cifPath = path.join(params.output_directory, `${baseName}.cif`);
+            const poscarPath = path.join(params.output_directory, `${baseName}_POSCAR`);
+            const xyzPath = path.join(params.output_directory, `${baseName}.xyz`);
+            const jsonPath = path.join(params.output_directory, `${baseName}.json`);
+            writeFileSync(cifPath, files.cif);
+            writeFileSync(poscarPath, files.poscar);
+            writeFileSync(xyzPath, files.xyz);
+            writeFileSync(jsonPath, files.json);
+            filePaths.cif = cifPath;
+            filePaths.poscar = poscarPath;
+            filePaths.xyz = xyzPath;
+            filePaths.json = jsonPath;
+        }
+    }
     // Create result
     const generationResult = {
         structure,
@@ -55,12 +86,8 @@ export async function generateCrystal(input) {
             seed: params.seed,
             generation_time_ms: metadata?.generation_time_ms || 0
         },
-        files: {
-            cif: generateCIF(structure),
-            poscar: generatePOSCAR(structure),
-            xyz: generateXYZ(structure),
-            json: generateJSON(structure)
-        }
+        files,
+        file_paths: filePaths
     };
     return createSuccess(generationResult);
 }
@@ -90,13 +117,22 @@ export async function handleGenerateCrystal(args) {
         success: true,
         structure: data.structure,
         validation: data.validation,
-        files: data.files
+        files: data.files,
+        file_paths: data.file_paths
     });
+    // Add file paths info to output if files were saved
+    let filePathsInfo = '';
+    if (data.file_paths && Object.keys(data.file_paths).length > 0) {
+        filePathsInfo = '\n\n### 📁 Files Saved\n\n';
+        for (const [format, filePath] of Object.entries(data.file_paths)) {
+            filePathsInfo += `- **${format.toUpperCase()}:** \`${filePath}\`\n`;
+        }
+    }
     return {
         content: [
             {
                 type: "text",
-                text: outputText
+                text: outputText + filePathsInfo
             },
             {
                 type: "text",

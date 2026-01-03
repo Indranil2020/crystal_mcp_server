@@ -408,10 +408,12 @@ def validate_generated_structure(
         if param > 50.0:
             warnings.append(f"Lattice parameter {name} = {param:.2f} Angstroms is very large (> 50 Angstroms)")
     
-    angles = [lattice.alpha, lattice.beta, lattice.gamma]
-    for angle, name in zip(angles, ['alpha', 'beta', 'gamma']):
-        if angle < 30 or angle > 150:
-            warnings.append(f"Angle {name} = {angle:.1f} deg is unusual (< 30 deg or > 150 deg)")
+    # PyXtal lattice returns angles in radians, convert to degrees for validation
+    angles_rad = [lattice.alpha, lattice.beta, lattice.gamma]
+    for angle_rad, name in zip(angles_rad, ['alpha', 'beta', 'gamma']):
+        angle_deg = np.degrees(angle_rad)
+        if angle_deg < 30 or angle_deg > 150:
+            warnings.append(f"Angle {name} = {angle_deg:.1f} deg is unusual (< 30 deg or > 150 deg)")
     
     # Check minimum distances if specified
     if min_distance:
@@ -452,7 +454,8 @@ def generate_crystal(
     wyckoff_positions: Optional[List[Dict[str, Any]]] = None,
     seed: Optional[int] = None,
     dimensionality: int = 3,
-    max_attempts: int = 100
+    max_attempts: int = 100,
+    output_directory: Optional[str] = None  # Handled in TypeScript, ignored here
 ) -> Dict[str, Any]:
     """
     Generate crystal structure using PyXtal.

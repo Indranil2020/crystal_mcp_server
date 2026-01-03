@@ -141,6 +141,7 @@ export interface StructureGenerationResult {
         readonly generation_time_ms: number;
     };
     readonly files?: Record<string, string>;
+    readonly file_paths?: Record<string, string>;
 }
 /**
  * Supercell transformation parameters

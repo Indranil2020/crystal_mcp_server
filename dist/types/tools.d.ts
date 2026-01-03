@@ -62,6 +62,7 @@ export declare const GenerateCrystalSchema: z.ZodObject<{
     seed: z.ZodOptional<z.ZodNumber>;
     dimensionality: z.ZodDefault<z.ZodUnion<[z.ZodLiteral<0>, z.ZodLiteral<1>, z.ZodLiteral<2>, z.ZodLiteral<3>]>>;
     max_attempts: z.ZodDefault<z.ZodNumber>;
+    output_directory: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
     composition: string[];
     space_group: string | number;
@@ -84,6 +85,7 @@ export declare const GenerateCrystalSchema: z.ZodObject<{
         coords?: [number, number, number] | undefined;
     }[] | undefined;
     seed?: number | undefined;
+    output_directory?: string | undefined;
 }, {
     composition: string[];
     space_group: string | number;
@@ -106,6 +108,7 @@ export declare const GenerateCrystalSchema: z.ZodObject<{
     seed?: number | undefined;
     dimensionality?: 0 | 3 | 2 | 1 | undefined;
     max_attempts?: number | undefined;
+    output_directory?: string | undefined;
 }>;
 export type GenerateCrystalInput = z.infer<typeof GenerateCrystalSchema>;
 /**
@@ -193,20 +196,20 @@ export declare const SpaceGroupScanSchema: z.ZodObject<{
     volume_factor: number;
     parallel: boolean;
     num_atoms?: number | undefined;
+    output_directory?: string | undefined;
     space_groups?: number[] | undefined;
     space_group_range?: [number, number] | undefined;
     crystal_systems?: CrystalSystem[] | undefined;
-    output_directory?: string | undefined;
     naming_scheme?: string | undefined;
 }, {
     composition: string[];
     num_atoms?: number | undefined;
     volume_factor?: number | undefined;
+    output_directory?: string | undefined;
     space_groups?: number[] | undefined;
     space_group_range?: [number, number] | undefined;
     crystal_systems?: CrystalSystem[] | undefined;
     parallel?: boolean | undefined;
-    output_directory?: string | undefined;
     naming_scheme?: string | undefined;
 }>;
 export type SpaceGroupScanInput = z.infer<typeof SpaceGroupScanSchema>;
@@ -412,8 +415,8 @@ export declare const GroundStateSearchSchema: z.ZodObject<{
         constrain_symmetry: boolean;
     };
     save_trajectories: boolean;
-    space_groups?: number[] | undefined;
     output_directory?: string | undefined;
+    space_groups?: number[] | undefined;
     n_workers?: number | undefined;
 }, {
     composition: string[];
@@ -424,9 +427,9 @@ export declare const GroundStateSearchSchema: z.ZodObject<{
         steps?: number | undefined;
         constrain_symmetry?: boolean | undefined;
     };
+    output_directory?: string | undefined;
     space_groups?: number[] | undefined;
     parallel?: boolean | undefined;
-    output_directory?: string | undefined;
     num_structures_per_group?: number | undefined;
     n_workers?: number | undefined;
     save_trajectories?: boolean | undefined;

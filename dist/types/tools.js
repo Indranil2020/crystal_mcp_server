@@ -72,7 +72,9 @@ export const GenerateCrystalSchema = z.object({
     ]).default(3)
         .describe("Crystal dimensionality: 0=cluster, 1=rod, 2=slab/layer, 3=bulk"),
     max_attempts: z.number().int().positive().default(100)
-        .describe("Maximum attempts to generate valid structure")
+        .describe("Maximum attempts to generate valid structure"),
+    output_directory: z.string().optional()
+        .describe("Directory to save structure files (CIF, POSCAR, XYZ, JSON). If not provided, files are returned in response but not saved to disk.")
 });
 /**
  * Schema for comprehensive_generate tool
