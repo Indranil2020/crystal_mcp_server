@@ -106,7 +106,7 @@ def generate_image(atoms: Atoms, output_file: str, rotation: str = '10x,10y,10z'
 
 def main():
     if len(sys.argv) < 2:
-        print(json.dumps({"success": False, "error": "Usage: python visualization.py <input.json>"}), file=sys.stderr)
+        print(json.dumps({"success": False, "error": "Usage: python visualization.py <input.json>"}))
         sys.exit(1)
         
     input_file = sys.argv[1]
@@ -120,7 +120,7 @@ def main():
     
     atoms = dict_to_atoms(structure)
     if atoms is None:
-        print(json.dumps({"success": False, "error": "Invalid structure data"}), file=sys.stderr)
+        print(json.dumps({"success": False, "error": "Invalid structure data"}))
         sys.exit(1)
         
     if fmt == "html":
@@ -128,7 +128,7 @@ def main():
     elif fmt == "png":
         result = generate_image(atoms, output_file)
     else:
-        print(json.dumps({"success": False, "error": f"Unknown format: {fmt}"}), file=sys.stderr)
+        print(json.dumps({"success": False, "error": f"Unknown format: {fmt}"}))
         sys.exit(1)
         
     print(json.dumps({"success": True, "result": result}))

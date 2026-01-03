@@ -20,7 +20,6 @@ async function main(): Promise<void> {
 }
 
 // Run main function
-main().catch((error) => {
-  console.error("Fatal error:", error);
+main().catch(() => {
   process.exit(1);
 });

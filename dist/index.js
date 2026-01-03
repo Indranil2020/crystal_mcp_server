@@ -15,8 +15,7 @@ async function main() {
     // The transport will handle stdin/stdout and keep event loop active
 }
 // Run main function
-main().catch((error) => {
-    console.error("Fatal error:", error);
+main().catch(() => {
     process.exit(1);
 });
 //# sourceMappingURL=index.js.map

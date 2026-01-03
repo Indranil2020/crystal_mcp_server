@@ -155,13 +155,6 @@ export async function startServer() {
     const server = createServer();
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    // Log to stderr after a brief delay to avoid interfering with MCP handshake
-    setTimeout(() => {
-        console.error("🔬 Crystal Structure Generator MCP Server");
-        console.error("========================================");
-        console.error(`Version: ${pkg.version}`);
-        console.error("Available tools:", TOOL_DEFINITIONS.length);
-        console.error("Status: Connected and ready");
-    }, 100);
+    // Server is now running - no stderr output to avoid interfering with MCP protocol
 }
 //# sourceMappingURL=server.js.map
