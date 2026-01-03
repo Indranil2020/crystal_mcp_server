@@ -1,0 +1,432 @@
+{
+  "success": true,
+  "structure": {
+    "lattice": {
+      "a": 6.1092440240886905,
+      "b": 6.1092440240886905,
+      "c": 6.1092440240886905,
+      "alpha": 90,
+      "beta": 90,
+      "gamma": 90,
+      "matrix": [
+        [
+          6.1092440240886905,
+          3.7408330696551553e-16,
+          3.7408330696551553e-16
+        ],
+        [
+          0,
+          6.1092440240886905,
+          3.7408330696551553e-16
+        ],
+        [
+          0,
+          0,
+          6.1092440240886905
+        ]
+      ],
+      "reciprocal_matrix": [
+        [
+          1.0284718178558667,
+          0,
+          0
+        ],
+        [
+          -6.297573598752234e-17,
+          1.0284718178558667,
+          0
+        ],
+        [
+          -6.297573598752234e-17,
+          -6.297573598752234e-17,
+          1.0284718178558667
+        ]
+      ],
+      "volume": 228.01447497019942
+    },
+    "atoms": [
+      {
+        "element": "Si",
+        "coords": [
+          0.125,
+          0.125,
+          0.125
+        ],
+        "cartesian": [
+          0.7636555030110863,
+          0.7636555030110863,
+          0.7636555030110864
+        ],
+        "wyckoff": "a",
+        "multiplicity": 8,
+        "site_symmetry": "-43m",
+        "species": [
+          {
+            "element": "Si",
+            "occupation": 1
+          }
+        ]
+      },
+      {
+        "element": "Si",
+        "coords": [
+          0.875,
+          0.375,
+          0.375
+        ],
+        "cartesian": [
+          5.345588521077604,
+          2.290966509033259,
+          2.2909665090332596
+        ],
+        "wyckoff": "a",
+        "multiplicity": 8,
+        "site_symmetry": "-43m",
+        "species": [
+          {
+            "element": "Si",
+            "occupation": 1
+          }
+        ]
+      },
+      {
+        "element": "Si",
+        "coords": [
+          0.125,
+          0.625,
+          0.625
+        ],
+        "cartesian": [
+          0.7636555030110863,
+          3.818277515055432,
+          3.818277515055432
+        ],
+        "wyckoff": "a",
+        "multiplicity": 8,
+        "site_symmetry": "-43m",
+        "species": [
+          {
+            "element": "Si",
+            "occupation": 1
+          }
+        ]
+      },
+      {
+        "element": "Si",
+        "coords": [
+          0.875,
+          0.875,
+          0.875
+        ],
+        "cartesian": [
+          5.345588521077604,
+          5.345588521077604,
+          5.345588521077604
+        ],
+        "wyckoff": "a",
+        "multiplicity": 8,
+        "site_symmetry": "-43m",
+        "species": [
+          {
+            "element": "Si",
+            "occupation": 1
+          }
+        ]
+      },
+      {
+        "element": "Si",
+        "coords": [
+          0.625,
+          0.125,
+          0.625
+        ],
+        "cartesian": [
+          3.8182775150554313,
+          0.7636555030110865,
+          3.818277515055432
+        ],
+        "wyckoff": "a",
+        "multiplicity": 8,
+        "site_symmetry": "-43m",
+        "species": [
+          {
+            "element": "Si",
+            "occupation": 1
+          }
+        ]
+      },
+      {
+        "element": "Si",
+        "coords": [
+          1.375,
+          0.375,
+          0.875
+        ],
+        "cartesian": [
+          8.40021053312195,
+          2.2909665090332596,
+          5.345588521077604
+        ],
+        "wyckoff": "a",
+        "multiplicity": 8,
+        "site_symmetry": "-43m",
+        "species": [
+          {
+            "element": "Si",
+            "occupation": 1
+          }
+        ]
+      },
+      {
+        "element": "Si",
+        "coords": [
+          0.625,
+          0.625,
+          0.125
+        ],
+        "cartesian": [
+          3.8182775150554313,
+          3.818277515055432,
+          0.7636555030110868
+        ],
+        "wyckoff": "a",
+        "multiplicity": 8,
+        "site_symmetry": "-43m",
+        "species": [
+          {
+            "element": "Si",
+            "occupation": 1
+          }
+        ]
+      },
+      {
+        "element": "Si",
+        "coords": [
+          1.375,
+          0.875,
+          0.375
+        ],
+        "cartesian": [
+          8.40021053312195,
+          5.345588521077604,
+          2.2909665090332596
+        ],
+        "wyckoff": "a",
+        "multiplicity": 8,
+        "site_symmetry": "-43m",
+        "species": [
+          {
+            "element": "Si",
+            "occupation": 1
+          }
+        ]
+      }
+    ],
+    "sites": [
+      {
+        "element": "Si",
+        "coords": [
+          0.125,
+          0.125,
+          0.125
+        ],
+        "cartesian": [
+          0.7636555030110863,
+          0.7636555030110863,
+          0.7636555030110864
+        ],
+        "wyckoff": "a",
+        "multiplicity": 8,
+        "site_symmetry": "-43m",
+        "species": [
+          {
+            "element": "Si",
+            "occupation": 1
+          }
+        ]
+      },
+      {
+        "element": "Si",
+        "coords": [
+          0.875,
+          0.375,
+          0.375
+        ],
+        "cartesian": [
+          5.345588521077604,
+          2.290966509033259,
+          2.2909665090332596
+        ],
+        "wyckoff": "a",
+        "multiplicity": 8,
+        "site_symmetry": "-43m",
+        "species": [
+          {
+            "element": "Si",
+            "occupation": 1
+          }
+        ]
+      },
+      {
+        "element": "Si",
+        "coords": [
+          0.125,
+          0.625,
+          0.625
+        ],
+        "cartesian": [
+          0.7636555030110863,
+          3.818277515055432,
+          3.818277515055432
+        ],
+        "wyckoff": "a",
+        "multiplicity": 8,
+        "site_symmetry": "-43m",
+        "species": [
+          {
+            "element": "Si",
+            "occupation": 1
+          }
+        ]
+      },
+      {
+        "element": "Si",
+        "coords": [
+          0.875,
+          0.875,
+          0.875
+        ],
+        "cartesian": [
+          5.345588521077604,
+          5.345588521077604,
+          5.345588521077604
+        ],
+        "wyckoff": "a",
+        "multiplicity": 8,
+        "site_symmetry": "-43m",
+        "species": [
+          {
+            "element": "Si",
+            "occupation": 1
+          }
+        ]
+      },
+      {
+        "element": "Si",
+        "coords": [
+          0.625,
+          0.125,
+          0.625
+        ],
+        "cartesian": [
+          3.8182775150554313,
+          0.7636555030110865,
+          3.818277515055432
+        ],
+        "wyckoff": "a",
+        "multiplicity": 8,
+        "site_symmetry": "-43m",
+        "species": [
+          {
+            "element": "Si",
+            "occupation": 1
+          }
+        ]
+      },
+      {
+        "element": "Si",
+        "coords": [
+          1.375,
+          0.375,
+          0.875
+        ],
+        "cartesian": [
+          8.40021053312195,
+          2.2909665090332596,
+          5.345588521077604
+        ],
+        "wyckoff": "a",
+        "multiplicity": 8,
+        "site_symmetry": "-43m",
+        "species": [
+          {
+            "element": "Si",
+            "occupation": 1
+          }
+        ]
+      },
+      {
+        "element": "Si",
+        "coords": [
+          0.625,
+          0.625,
+          0.125
+        ],
+        "cartesian": [
+          3.8182775150554313,
+          3.818277515055432,
+          0.7636555030110868
+        ],
+        "wyckoff": "a",
+        "multiplicity": 8,
+        "site_symmetry": "-43m",
+        "species": [
+          {
+            "element": "Si",
+            "occupation": 1
+          }
+        ]
+      },
+      {
+        "element": "Si",
+        "coords": [
+          1.375,
+          0.875,
+          0.375
+        ],
+        "cartesian": [
+          8.40021053312195,
+          5.345588521077604,
+          2.2909665090332596
+        ],
+        "wyckoff": "a",
+        "multiplicity": 8,
+        "site_symmetry": "-43m",
+        "species": [
+          {
+            "element": "Si",
+            "occupation": 1
+          }
+        ]
+      }
+    ],
+    "space_group": {
+      "number": 227,
+      "symbol": "Fd-3m",
+      "hall_symbol": "",
+      "point_group": "m-3m",
+      "crystal_system": "cubic"
+    },
+    "metadata": {
+      "formula": "Si8",
+      "natoms": 8,
+      "volume": 228.01447497019942,
+      "density": 1.636284539435417
+    }
+  },
+  "validation": {
+    "valid": true,
+    "issues": [],
+    "warnings": [
+      "Angle alpha = 1.6 deg is unusual (< 30 deg or > 150 deg)",
+      "Angle beta = 1.6 deg is unusual (< 30 deg or > 150 deg)",
+      "Angle gamma = 1.6 deg is unusual (< 30 deg or > 150 deg)"
+    ]
+  },
+  "files": {
+    "cif": "data_crystal\n_symmetry_space_group_name_H-M 'P1'\n_space_group_IT_number 1\n_cell_length_a 6.109244\n_cell_length_b 6.109244\n_cell_length_c 6.109244\n_cell_angle_alpha 90.0000\n_cell_angle_beta 90.0000\n_cell_angle_gamma 90.0000\n_cell_volume 228.0145\n\nloop_\n_atom_site_label\n_atom_site_type_symbol\n_atom_site_fract_x\n_atom_site_fract_y\n_atom_site_fract_z\nSi1 Si 0.125000 0.125000 0.125000\nSi2 Si 0.875000 0.375000 0.375000\nSi3 Si 0.125000 0.625000 0.625000\nSi4 Si 0.875000 0.875000 0.875000\nSi5 Si 0.625000 0.125000 0.625000\nSi6 Si 1.375000 0.375000 0.875000\nSi7 Si 0.625000 0.625000 0.125000\nSi8 Si 1.375000 0.875000 0.375000\n",
+    "poscar": "Si8\n1.0\n  6.109244024089  0.000000000000  0.000000000000\n  0.000000000000  6.109244024089  0.000000000000\n  0.000000000000  0.000000000000  6.109244024089\nSi\n8\nDirect\n  0.125000000000  0.125000000000  0.125000000000\n  0.875000000000  0.375000000000  0.375000000000\n  0.125000000000  0.625000000000  0.625000000000\n  0.875000000000  0.875000000000  0.875000000000\n  0.625000000000  0.125000000000  0.625000000000\n  1.375000000000  0.375000000000  0.875000000000\n  0.625000000000  0.625000000000  0.125000000000\n  1.375000000000  0.875000000000  0.375000000000\n",
+    "xyz": "8\nSi8\nSi  0.76365550  0.76365550  0.76365550\nSi  5.34558852  2.29096651  2.29096651\nSi  0.76365550  3.81827752  3.81827752\nSi  5.34558852  5.34558852  5.34558852\nSi  3.81827752  0.76365550  3.81827752\nSi  8.40021053  2.29096651  5.34558852\nSi  3.81827752  3.81827752  0.76365550\nSi  8.40021053  5.34558852  2.29096651\n",
+    "json": "{\n  \"lattice\": {\n    \"a\": 6.1092440240886905,\n    \"b\": 6.1092440240886905,\n    \"c\": 6.1092440240886905,\n    \"alpha\": 90,\n    \"beta\": 90,\n    \"gamma\": 90,\n    \"matrix\": [\n      [\n        6.1092440240886905,\n        3.7408330696551553e-16,\n        3.7408330696551553e-16\n      ],\n      [\n        0,\n        6.1092440240886905,\n        3.7408330696551553e-16\n      ],\n      [\n        0,\n        0,\n        6.1092440240886905\n      ]\n    ],\n    \"reciprocal_matrix\": [\n      [\n        1.0284718178558667,\n        0,\n        0\n      ],\n      [\n        -6.297573598752234e-17,\n        1.0284718178558667,\n        0\n      ],\n      [\n        -6.297573598752234e-17,\n        -6.297573598752234e-17,\n        1.0284718178558667\n      ]\n    ],\n    \"volume\": 228.01447497019942\n  },\n  \"atoms\": [\n    {\n      \"element\": \"Si\",\n      \"coords\": [\n        0.125,\n        0.125,\n        0.125\n      ],\n      \"cartesian\": [\n        0.7636555030110863,\n        0.7636555030110863,\n        0.7636555030110864\n      ],\n      \"wyckoff\": \"a\",\n      \"multiplicity\": 8,\n      \"site_symmetry\": \"-43m\",\n      \"species\": [\n        {\n          \"element\": \"Si\",\n          \"occupation\": 1\n        }\n      ]\n    },\n    {\n      \"element\": \"Si\",\n      \"coords\": [\n        0.875,\n        0.375,\n        0.375\n      ],\n      \"cartesian\": [\n        5.345588521077604,\n        2.290966509033259,\n        2.2909665090332596\n      ],\n      \"wyckoff\": \"a\",\n      \"multiplicity\": 8,\n      \"site_symmetry\": \"-43m\",\n      \"species\": [\n        {\n          \"element\": \"Si\",\n          \"occupation\": 1\n        }\n      ]\n    },\n    {\n      \"element\": \"Si\",\n      \"coords\": [\n        0.125,\n        0.625,\n        0.625\n      ],\n      \"cartesian\": [\n        0.7636555030110863,\n        3.818277515055432,\n        3.818277515055432\n      ],\n      \"wyckoff\": \"a\",\n      \"multiplicity\": 8,\n      \"site_symmetry\": \"-43m\",\n      \"species\": [\n        {\n          \"element\": \"Si\",\n          \"occupation\": 1\n        }\n      ]\n    },\n    {\n      \"element\": \"Si\",\n      \"coords\": [\n        0.875,\n        0.875,\n        0.875\n      ],\n      \"cartesian\": [\n        5.345588521077604,\n        5.345588521077604,\n        5.345588521077604\n      ],\n      \"wyckoff\": \"a\",\n      \"multiplicity\": 8,\n      \"site_symmetry\": \"-43m\",\n      \"species\": [\n        {\n          \"element\": \"Si\",\n          \"occupation\": 1\n        }\n      ]\n    },\n    {\n      \"element\": \"Si\",\n      \"coords\": [\n        0.625,\n        0.125,\n        0.625\n      ],\n      \"cartesian\": [\n        3.8182775150554313,\n        0.7636555030110865,\n        3.818277515055432\n      ],\n      \"wyckoff\": \"a\",\n      \"multiplicity\": 8,\n      \"site_symmetry\": \"-43m\",\n      \"species\": [\n        {\n          \"element\": \"Si\",\n          \"occupation\": 1\n        }\n      ]\n    },\n    {\n      \"element\": \"Si\",\n      \"coords\": [\n        1.375,\n        0.375,\n        0.875\n      ],\n      \"cartesian\": [\n        8.40021053312195,\n        2.2909665090332596,\n        5.345588521077604\n      ],\n      \"wyckoff\": \"a\",\n      \"multiplicity\": 8,\n      \"site_symmetry\": \"-43m\",\n      \"species\": [\n        {\n          \"element\": \"Si\",\n          \"occupation\": 1\n        }\n      ]\n    },\n    {\n      \"element\": \"Si\",\n      \"coords\": [\n        0.625,\n        0.625,\n        0.125\n      ],\n      \"cartesian\": [\n        3.8182775150554313,\n        3.818277515055432,\n        0.7636555030110868\n      ],\n      \"wyckoff\": \"a\",\n      \"multiplicity\": 8,\n      \"site_symmetry\": \"-43m\",\n      \"species\": [\n        {\n          \"element\": \"Si\",\n          \"occupation\": 1\n        }\n      ]\n    },\n    {\n      \"element\": \"Si\",\n      \"coords\": [\n        1.375,\n        0.875,\n        0.375\n      ],\n      \"cartesian\": [\n        8.40021053312195,\n        5.345588521077604,\n        2.2909665090332596\n      ],\n      \"wyckoff\": \"a\",\n      \"multiplicity\": 8,\n      \"site_symmetry\": \"-43m\",\n      \"species\": [\n        {\n          \"element\": \"Si\",\n          \"occupation\": 1\n        }\n      ]\n    }\n  ],\n  \"sites\": [\n    {\n      \"element\": \"Si\",\n      \"coords\": [\n        0.125,\n        0.125,\n        0.125\n      ],\n      \"cartesian\": [\n        0.7636555030110863,\n        0.7636555030110863,\n        0.7636555030110864\n      ],\n      \"wyckoff\": \"a\",\n      \"multiplicity\": 8,\n      \"site_symmetry\": \"-43m\",\n      \"species\": [\n        {\n          \"element\": \"Si\",\n          \"occupation\": 1\n        }\n      ]\n    },\n    {\n      \"element\": \"Si\",\n      \"coords\": [\n        0.875,\n        0.375,\n        0.375\n      ],\n      \"cartesian\": [\n        5.345588521077604,\n        2.290966509033259,\n        2.2909665090332596\n      ],\n      \"wyckoff\": \"a\",\n      \"multiplicity\": 8,\n      \"site_symmetry\": \"-43m\",\n      \"species\": [\n        {\n          \"element\": \"Si\",\n          \"occupation\": 1\n        }\n      ]\n    },\n    {\n      \"element\": \"Si\",\n      \"coords\": [\n        0.125,\n        0.625,\n        0.625\n      ],\n      \"cartesian\": [\n        0.7636555030110863,\n        3.818277515055432,\n        3.818277515055432\n      ],\n      \"wyckoff\": \"a\",\n      \"multiplicity\": 8,\n      \"site_symmetry\": \"-43m\",\n      \"species\": [\n        {\n          \"element\": \"Si\",\n          \"occupation\": 1\n        }\n      ]\n    },\n    {\n      \"element\": \"Si\",\n      \"coords\": [\n        0.875,\n        0.875,\n        0.875\n      ],\n      \"cartesian\": [\n        5.345588521077604,\n        5.345588521077604,\n        5.345588521077604\n      ],\n      \"wyckoff\": \"a\",\n      \"multiplicity\": 8,\n      \"site_symmetry\": \"-43m\",\n      \"species\": [\n        {\n          \"element\": \"Si\",\n          \"occupation\": 1\n        }\n      ]\n    },\n    {\n      \"element\": \"Si\",\n      \"coords\": [\n        0.625,\n        0.125,\n        0.625\n      ],\n      \"cartesian\": [\n        3.8182775150554313,\n        0.7636555030110865,\n        3.818277515055432\n      ],\n      \"wyckoff\": \"a\",\n      \"multiplicity\": 8,\n      \"site_symmetry\": \"-43m\",\n      \"species\": [\n        {\n          \"element\": \"Si\",\n          \"occupation\": 1\n        }\n      ]\n    },\n    {\n      \"element\": \"Si\",\n      \"coords\": [\n        1.375,\n        0.375,\n        0.875\n      ],\n      \"cartesian\": [\n        8.40021053312195,\n        2.2909665090332596,\n        5.345588521077604\n      ],\n      \"wyckoff\": \"a\",\n      \"multiplicity\": 8,\n      \"site_symmetry\": \"-43m\",\n      \"species\": [\n        {\n          \"element\": \"Si\",\n          \"occupation\": 1\n        }\n      ]\n    },\n    {\n      \"element\": \"Si\",\n      \"coords\": [\n        0.625,\n        0.625,\n        0.125\n      ],\n      \"cartesian\": [\n        3.8182775150554313,\n        3.818277515055432,\n        0.7636555030110868\n      ],\n      \"wyckoff\": \"a\",\n      \"multiplicity\": 8,\n      \"site_symmetry\": \"-43m\",\n      \"species\": [\n        {\n          \"element\": \"Si\",\n          \"occupation\": 1\n        }\n      ]\n    },\n    {\n      \"element\": \"Si\",\n      \"coords\": [\n        1.375,\n        0.875,\n        0.375\n      ],\n      \"cartesian\": [\n        8.40021053312195,\n        5.345588521077604,\n        2.2909665090332596\n      ],\n      \"wyckoff\": \"a\",\n      \"multiplicity\": 8,\n      \"site_symmetry\": \"-43m\",\n      \"species\": [\n        {\n          \"element\": \"Si\",\n          \"occupation\": 1\n        }\n      ]\n    }\n  ],\n  \"space_group\": {\n    \"number\": 227,\n    \"symbol\": \"Fd-3m\",\n    \"hall_symbol\": \"\",\n    \"point_group\": \"m-3m\",\n    \"crystal_system\": \"cubic\"\n  },\n  \"metadata\": {\n    \"formula\": \"Si8\",\n    \"natoms\": 8,\n    \"volume\": 228.01447497019942,\n    \"density\": 1.636284539435417\n  }\n}"
+  }
+}

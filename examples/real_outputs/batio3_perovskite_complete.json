@@ -1,0 +1,359 @@
+{
+  "query": "Generate BaTiO3 perovskite for ferroelectric applications",
+  "mcp_request": {
+    "tool": "generate_crystal",
+    "params": {
+      "composition": [
+        "Ba",
+        "Ti",
+        "O",
+        "O",
+        "O"
+      ],
+      "space_group": 221,
+      "seed": 42
+    },
+    "intent": "Generate BaTiO3 cubic perovskite (Pm-3m)"
+  },
+  "structure": {
+    "lattice": {
+      "a": 4.542963128340439,
+      "b": 4.542963128340439,
+      "c": 4.542963128340439,
+      "alpha": 90.0,
+      "beta": 90.0,
+      "gamma": 90.0,
+      "matrix": [
+        [
+          4.542963128340439,
+          2.7817626268832826e-16,
+          2.7817626268832826e-16
+        ],
+        [
+          0.0,
+          4.542963128340439,
+          2.7817626268832826e-16
+        ],
+        [
+          0.0,
+          0.0,
+          4.542963128340439
+        ]
+      ],
+      "reciprocal_matrix": [
+        [
+          1.3830588384006666,
+          0.0,
+          0.0
+        ],
+        [
+          -8.468792897399164e-17,
+          1.3830588384006666,
+          0.0
+        ],
+        [
+          -8.468792897399164e-17,
+          -8.468792897399164e-17,
+          1.3830588384006666
+        ]
+      ],
+      "volume": 93.76000805968665
+    },
+    "atoms": [
+      {
+        "element": "Ba",
+        "coords": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "cartesian": [
+          2.2714815641702195,
+          2.2714815641702195,
+          2.27148156417022
+        ],
+        "wyckoff": "b",
+        "multiplicity": 1,
+        "site_symmetry": "m-3m",
+        "species": [
+          {
+            "element": "Ba",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "Ti",
+        "coords": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "cartesian": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "wyckoff": "a",
+        "multiplicity": 1,
+        "site_symmetry": "m-3m",
+        "species": [
+          {
+            "element": "Ti",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "O",
+        "coords": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "cartesian": [
+          2.2714815641702195,
+          1.3908813134416413e-16,
+          1.3908813134416413e-16
+        ],
+        "wyckoff": "d",
+        "multiplicity": 3,
+        "site_symmetry": "4/mm.m",
+        "species": [
+          {
+            "element": "O",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "O",
+        "coords": [
+          0.0,
+          0.5,
+          0.0
+        ],
+        "cartesian": [
+          0.0,
+          2.2714815641702195,
+          1.3908813134416413e-16
+        ],
+        "wyckoff": "d",
+        "multiplicity": 3,
+        "site_symmetry": "4/mm.m",
+        "species": [
+          {
+            "element": "O",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "O",
+        "coords": [
+          0.0,
+          0.0,
+          0.5
+        ],
+        "cartesian": [
+          0.0,
+          0.0,
+          2.2714815641702195
+        ],
+        "wyckoff": "d",
+        "multiplicity": 3,
+        "site_symmetry": "4/mm.m",
+        "species": [
+          {
+            "element": "O",
+            "occupation": 1.0
+          }
+        ]
+      }
+    ],
+    "sites": [
+      {
+        "element": "Ba",
+        "coords": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "cartesian": [
+          2.2714815641702195,
+          2.2714815641702195,
+          2.27148156417022
+        ],
+        "wyckoff": "b",
+        "multiplicity": 1,
+        "site_symmetry": "m-3m",
+        "species": [
+          {
+            "element": "Ba",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "Ti",
+        "coords": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "cartesian": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "wyckoff": "a",
+        "multiplicity": 1,
+        "site_symmetry": "m-3m",
+        "species": [
+          {
+            "element": "Ti",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "O",
+        "coords": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "cartesian": [
+          2.2714815641702195,
+          1.3908813134416413e-16,
+          1.3908813134416413e-16
+        ],
+        "wyckoff": "d",
+        "multiplicity": 3,
+        "site_symmetry": "4/mm.m",
+        "species": [
+          {
+            "element": "O",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "O",
+        "coords": [
+          0.0,
+          0.5,
+          0.0
+        ],
+        "cartesian": [
+          0.0,
+          2.2714815641702195,
+          1.3908813134416413e-16
+        ],
+        "wyckoff": "d",
+        "multiplicity": 3,
+        "site_symmetry": "4/mm.m",
+        "species": [
+          {
+            "element": "O",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "O",
+        "coords": [
+          0.0,
+          0.0,
+          0.5
+        ],
+        "cartesian": [
+          0.0,
+          0.0,
+          2.2714815641702195
+        ],
+        "wyckoff": "d",
+        "multiplicity": 3,
+        "site_symmetry": "4/mm.m",
+        "species": [
+          {
+            "element": "O",
+            "occupation": 1.0
+          }
+        ]
+      }
+    ],
+    "space_group": {
+      "number": 221,
+      "symbol": "Pm-3m",
+      "hall_symbol": "",
+      "point_group": "m-3m",
+      "crystal_system": "cubic"
+    },
+    "metadata": {
+      "formula": "Ba1Ti1O3",
+      "natoms": 5,
+      "volume": 93.76000805968665,
+      "density": 4.129956542035523
+    }
+  },
+  "symmetry": {
+    "space_group": {
+      "number": 221,
+      "symbol": "Pm-3m",
+      "hall_symbol": "-P 4 2 3",
+      "point_group": "m-3m",
+      "crystal_system": "cubic"
+    },
+    "wyckoff_positions": [
+      {
+        "element": "Ba",
+        "wyckoff": "b",
+        "multiplicity": 1,
+        "site_symmetry": "Unknown",
+        "coords": [
+          0.5,
+          0.5,
+          0.5
+        ]
+      },
+      {
+        "element": "Ti",
+        "wyckoff": "a",
+        "multiplicity": 1,
+        "site_symmetry": "Unknown",
+        "coords": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "element": "O",
+        "wyckoff": "d",
+        "multiplicity": 3,
+        "site_symmetry": "Unknown",
+        "coords": [
+          0.5,
+          0.0,
+          0.0
+        ]
+      }
+    ],
+    "n_operations": 48
+  },
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "warnings": [],
+    "metrics": {
+      "min_distance": 2.2714815641702195,
+      "avg_distance": 3.002292637848936,
+      "space_group_number": 221,
+      "space_group_symbol": "Pm-3m",
+      "density": 4.130084952204081,
+      "packing_fraction": 0.5955432959282958
+    }
+  },
+  "timestamp": "2025-12-30T13:27:29.181226"
+}

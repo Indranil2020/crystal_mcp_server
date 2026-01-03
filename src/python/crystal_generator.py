@@ -655,7 +655,7 @@ def generate_crystal(
 
     # HARD FAILURE: If min_distance constraints are violated, fail the generation
     # This is scientifically critical - unphysical short contacts invalidate results
-    if not validation.is_valid:
+    if not validation.valid:
         # Check if any errors are min_distance related
         min_distance_errors = [e for e in validation.errors if "Distance between" in e]
         if min_distance_errors:

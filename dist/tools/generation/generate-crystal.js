@@ -66,6 +66,10 @@ export async function generateCrystal(input) {
 }
 /**
  * MCP tool handler for generate_crystal.
+ *
+ * Returns two content items:
+ * 1. Human-readable markdown for LLM consumption
+ * 2. JSON data block for programmatic access (web GUI, CLI, etc.)
  */
 export async function handleGenerateCrystal(args) {
     const result = await generateCrystal(args);
@@ -80,11 +84,25 @@ export async function handleGenerateCrystal(args) {
     }
     const data = result.data;
     const outputText = formatStructureOutput(data.structure, data.validation);
+    // Include both human-readable markdown AND raw JSON data
+    // The JSON block allows programmatic access for web interfaces and CLIs
+    const jsonData = JSON.stringify({
+        success: true,
+        structure: data.structure,
+        validation: data.validation,
+        files: data.files
+    });
     return {
-        content: [{
+        content: [
+            {
                 type: "text",
                 text: outputText
-            }]
+            },
+            {
+                type: "text",
+                text: `\n\n<json-data>\n${jsonData}\n</json-data>`
+            }
+        ]
     };
 }
 //# sourceMappingURL=generate-crystal.js.map

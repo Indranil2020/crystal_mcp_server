@@ -94,10 +94,14 @@ export async function generateCrystal(input: unknown): Promise<Result<StructureG
 
 /**
  * MCP tool handler for generate_crystal.
+ *
+ * Returns two content items:
+ * 1. Human-readable markdown for LLM consumption
+ * 2. JSON data block for programmatic access (web GUI, CLI, etc.)
  */
 export async function handleGenerateCrystal(args: unknown): Promise<any> {
   const result = await generateCrystal(args);
-  
+
   if (!result.success) {
     return {
       content: [{
@@ -107,14 +111,29 @@ export async function handleGenerateCrystal(args: unknown): Promise<any> {
       isError: true
     };
   }
-  
+
   const data = result.data;
   const outputText = formatStructureOutput(data.structure, data.validation);
-  
+
+  // Include both human-readable markdown AND raw JSON data
+  // The JSON block allows programmatic access for web interfaces and CLIs
+  const jsonData = JSON.stringify({
+    success: true,
+    structure: data.structure,
+    validation: data.validation,
+    files: data.files
+  });
+
   return {
-    content: [{
-      type: "text",
-      text: outputText
-    }]
+    content: [
+      {
+        type: "text",
+        text: outputText
+      },
+      {
+        type: "text",
+        text: `\n\n<json-data>\n${jsonData}\n</json-data>`
+      }
+    ]
   };
 }

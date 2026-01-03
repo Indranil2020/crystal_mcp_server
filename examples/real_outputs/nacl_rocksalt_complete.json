@@ -1,0 +1,483 @@
+{
+  "query": "Create a NaCl rocksalt structure for ionic solid study",
+  "mcp_request": {
+    "tool": "generate_crystal",
+    "params": {
+      "composition": [
+        "Na",
+        "Na",
+        "Na",
+        "Na",
+        "Cl",
+        "Cl",
+        "Cl",
+        "Cl"
+      ],
+      "space_group": 225,
+      "seed": 42
+    },
+    "intent": "Generate NaCl in rocksalt structure (Fm-3m, 4+4 atoms)"
+  },
+  "structure": {
+    "lattice": {
+      "a": 5.270564321077722,
+      "b": 5.270564321077722,
+      "c": 5.270564321077722,
+      "alpha": 90.0,
+      "beta": 90.0,
+      "gamma": 90.0,
+      "matrix": [
+        [
+          5.270564321077722,
+          3.2272898627540374e-16,
+          3.2272898627540374e-16
+        ],
+        [
+          0.0,
+          5.270564321077722,
+          3.2272898627540374e-16
+        ],
+        [
+          0.0,
+          0.0,
+          5.270564321077722
+        ]
+      ],
+      "reciprocal_matrix": [
+        [
+          1.1921276213350156,
+          0.0,
+          0.0
+        ],
+        [
+          -7.299676378215374e-17,
+          1.1921276213350156,
+          0.0
+        ],
+        [
+          -7.299676378215374e-17,
+          -7.299676378215374e-17,
+          1.1921276213350156
+        ]
+      ],
+      "volume": 146.4102065335835
+    },
+    "atoms": [
+      {
+        "element": "Na",
+        "coords": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "cartesian": [
+          2.635282160538861,
+          2.635282160538861,
+          2.6352821605388614
+        ],
+        "wyckoff": "b",
+        "multiplicity": 4,
+        "site_symmetry": "m-3m",
+        "species": [
+          {
+            "element": "Na",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "Na",
+        "coords": [
+          0.5,
+          1.0,
+          1.0
+        ],
+        "cartesian": [
+          2.635282160538861,
+          5.270564321077722,
+          5.270564321077723
+        ],
+        "wyckoff": "b",
+        "multiplicity": 4,
+        "site_symmetry": "m-3m",
+        "species": [
+          {
+            "element": "Na",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "Na",
+        "coords": [
+          1.0,
+          0.5,
+          1.0
+        ],
+        "cartesian": [
+          5.270564321077722,
+          2.6352821605388614,
+          5.270564321077723
+        ],
+        "wyckoff": "b",
+        "multiplicity": 4,
+        "site_symmetry": "m-3m",
+        "species": [
+          {
+            "element": "Na",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "Na",
+        "coords": [
+          1.0,
+          1.0,
+          0.5
+        ],
+        "cartesian": [
+          5.270564321077722,
+          5.270564321077722,
+          2.6352821605388614
+        ],
+        "wyckoff": "b",
+        "multiplicity": 4,
+        "site_symmetry": "m-3m",
+        "species": [
+          {
+            "element": "Na",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "Cl",
+        "coords": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "cartesian": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "wyckoff": "a",
+        "multiplicity": 4,
+        "site_symmetry": "m-3m",
+        "species": [
+          {
+            "element": "Cl",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "Cl",
+        "coords": [
+          0.0,
+          0.5,
+          0.5
+        ],
+        "cartesian": [
+          0.0,
+          2.635282160538861,
+          2.635282160538861
+        ],
+        "wyckoff": "a",
+        "multiplicity": 4,
+        "site_symmetry": "m-3m",
+        "species": [
+          {
+            "element": "Cl",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "Cl",
+        "coords": [
+          0.5,
+          0.0,
+          0.5
+        ],
+        "cartesian": [
+          2.635282160538861,
+          1.6136449313770187e-16,
+          2.635282160538861
+        ],
+        "wyckoff": "a",
+        "multiplicity": 4,
+        "site_symmetry": "m-3m",
+        "species": [
+          {
+            "element": "Cl",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "Cl",
+        "coords": [
+          0.5,
+          0.5,
+          0.0
+        ],
+        "cartesian": [
+          2.635282160538861,
+          2.635282160538861,
+          3.2272898627540374e-16
+        ],
+        "wyckoff": "a",
+        "multiplicity": 4,
+        "site_symmetry": "m-3m",
+        "species": [
+          {
+            "element": "Cl",
+            "occupation": 1.0
+          }
+        ]
+      }
+    ],
+    "sites": [
+      {
+        "element": "Na",
+        "coords": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "cartesian": [
+          2.635282160538861,
+          2.635282160538861,
+          2.6352821605388614
+        ],
+        "wyckoff": "b",
+        "multiplicity": 4,
+        "site_symmetry": "m-3m",
+        "species": [
+          {
+            "element": "Na",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "Na",
+        "coords": [
+          0.5,
+          1.0,
+          1.0
+        ],
+        "cartesian": [
+          2.635282160538861,
+          5.270564321077722,
+          5.270564321077723
+        ],
+        "wyckoff": "b",
+        "multiplicity": 4,
+        "site_symmetry": "m-3m",
+        "species": [
+          {
+            "element": "Na",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "Na",
+        "coords": [
+          1.0,
+          0.5,
+          1.0
+        ],
+        "cartesian": [
+          5.270564321077722,
+          2.6352821605388614,
+          5.270564321077723
+        ],
+        "wyckoff": "b",
+        "multiplicity": 4,
+        "site_symmetry": "m-3m",
+        "species": [
+          {
+            "element": "Na",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "Na",
+        "coords": [
+          1.0,
+          1.0,
+          0.5
+        ],
+        "cartesian": [
+          5.270564321077722,
+          5.270564321077722,
+          2.6352821605388614
+        ],
+        "wyckoff": "b",
+        "multiplicity": 4,
+        "site_symmetry": "m-3m",
+        "species": [
+          {
+            "element": "Na",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "Cl",
+        "coords": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "cartesian": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "wyckoff": "a",
+        "multiplicity": 4,
+        "site_symmetry": "m-3m",
+        "species": [
+          {
+            "element": "Cl",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "Cl",
+        "coords": [
+          0.0,
+          0.5,
+          0.5
+        ],
+        "cartesian": [
+          0.0,
+          2.635282160538861,
+          2.635282160538861
+        ],
+        "wyckoff": "a",
+        "multiplicity": 4,
+        "site_symmetry": "m-3m",
+        "species": [
+          {
+            "element": "Cl",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "Cl",
+        "coords": [
+          0.5,
+          0.0,
+          0.5
+        ],
+        "cartesian": [
+          2.635282160538861,
+          1.6136449313770187e-16,
+          2.635282160538861
+        ],
+        "wyckoff": "a",
+        "multiplicity": 4,
+        "site_symmetry": "m-3m",
+        "species": [
+          {
+            "element": "Cl",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "Cl",
+        "coords": [
+          0.5,
+          0.5,
+          0.0
+        ],
+        "cartesian": [
+          2.635282160538861,
+          2.635282160538861,
+          3.2272898627540374e-16
+        ],
+        "wyckoff": "a",
+        "multiplicity": 4,
+        "site_symmetry": "m-3m",
+        "species": [
+          {
+            "element": "Cl",
+            "occupation": 1.0
+          }
+        ]
+      }
+    ],
+    "space_group": {
+      "number": 225,
+      "symbol": "Fm-3m",
+      "hall_symbol": "",
+      "point_group": "m-3m",
+      "crystal_system": "cubic"
+    },
+    "metadata": {
+      "formula": "Na4Cl4",
+      "natoms": 8,
+      "volume": 146.4102065335835,
+      "density": 2.6513589177420385
+    }
+  },
+  "symmetry": {
+    "space_group": {
+      "number": 225,
+      "symbol": "Fm-3m",
+      "hall_symbol": "-F 4 2 3",
+      "point_group": "m-3m",
+      "crystal_system": "cubic"
+    },
+    "wyckoff_positions": [
+      {
+        "element": "Na",
+        "wyckoff": "b",
+        "multiplicity": 4,
+        "site_symmetry": "Unknown",
+        "coords": [
+          0.5,
+          0.5,
+          0.5
+        ]
+      },
+      {
+        "element": "Cl",
+        "wyckoff": "a",
+        "multiplicity": 4,
+        "site_symmetry": "Unknown",
+        "coords": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    ],
+    "n_operations": 192
+  },
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "warnings": [],
+    "metrics": {
+      "min_distance": 2.635282160538861,
+      "avg_distance": 3.378692056041652,
+      "space_group_number": 225,
+      "space_group_symbol": "Fm-3m",
+      "density": 2.6514313558602773,
+      "packing_fraction": 0.7818529966361677
+    }
+  },
+  "timestamp": "2025-12-30T13:27:29.137661"
+}

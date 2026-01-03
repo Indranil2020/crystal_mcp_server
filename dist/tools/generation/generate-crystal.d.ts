@@ -15,6 +15,10 @@ import { Result } from "../../types/errors.js";
 export declare function generateCrystal(input: unknown): Promise<Result<StructureGenerationResult>>;
 /**
  * MCP tool handler for generate_crystal.
+ *
+ * Returns two content items:
+ * 1. Human-readable markdown for LLM consumption
+ * 2. JSON data block for programmatic access (web GUI, CLI, etc.)
  */
 export declare function handleGenerateCrystal(args: unknown): Promise<any>;
 //# sourceMappingURL=generate-crystal.d.ts.map

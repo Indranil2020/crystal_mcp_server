@@ -1,0 +1,393 @@
+{
+  "query": "Create TiO2 rutile structure for photocatalysis",
+  "mcp_request": {
+    "tool": "generate_crystal",
+    "params": {
+      "composition": [
+        "Ti",
+        "Ti",
+        "O",
+        "O",
+        "O",
+        "O"
+      ],
+      "space_group": 136,
+      "seed": 42
+    },
+    "intent": "Generate TiO2 rutile (P4_2/mnm)"
+  },
+  "structure": {
+    "lattice": {
+      "a": 4.577591435081477,
+      "b": 4.577591435081477,
+      "c": 2.5813808267032883,
+      "alpha": 90.0,
+      "beta": 90.0,
+      "gamma": 90.0,
+      "matrix": [
+        [
+          4.577591435081477,
+          2.8029663493884346e-16,
+          2.8029663493884346e-16
+        ],
+        [
+          0.0,
+          4.577591435081477,
+          2.8029663493884346e-16
+        ],
+        [
+          0.0,
+          0.0,
+          2.5813808267032883
+        ]
+      ],
+      "reciprocal_matrix": [
+        [
+          1.3725963525330984,
+          0.0,
+          0.0
+        ],
+        [
+          -8.404728648254955e-17,
+          1.3725963525330984,
+          0.0
+        ],
+        [
+          -1.490419913111799e-16,
+          -1.4904199131117992e-16,
+          2.434040433779744
+        ]
+      ],
+      "volume": 54.091140150893494
+    },
+    "atoms": [
+      {
+        "element": "Ti",
+        "coords": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "cartesian": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "wyckoff": "a",
+        "multiplicity": 2,
+        "site_symmetry": "m.mm",
+        "species": [
+          {
+            "element": "Ti",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "Ti",
+        "coords": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "cartesian": [
+          2.2887957175407383,
+          2.2887957175407383,
+          1.2906904133516444
+        ],
+        "wyckoff": "a",
+        "multiplicity": 2,
+        "site_symmetry": "m.mm",
+        "species": [
+          {
+            "element": "Ti",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "O",
+        "coords": [
+          0.0,
+          0.5,
+          0.25
+        ],
+        "cartesian": [
+          0.0,
+          2.2887957175407383,
+          0.6453452066758222
+        ],
+        "wyckoff": "d",
+        "multiplicity": 4,
+        "site_symmetry": "-4..",
+        "species": [
+          {
+            "element": "O",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "O",
+        "coords": [
+          0.0,
+          0.5,
+          0.75
+        ],
+        "cartesian": [
+          0.0,
+          2.2887957175407383,
+          1.9360356200274664
+        ],
+        "wyckoff": "d",
+        "multiplicity": 4,
+        "site_symmetry": "-4..",
+        "species": [
+          {
+            "element": "O",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "O",
+        "coords": [
+          0.5,
+          0.0,
+          0.25
+        ],
+        "cartesian": [
+          2.2887957175407383,
+          1.4014831746942173e-16,
+          0.6453452066758222
+        ],
+        "wyckoff": "d",
+        "multiplicity": 4,
+        "site_symmetry": "-4..",
+        "species": [
+          {
+            "element": "O",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "O",
+        "coords": [
+          0.5,
+          0.0,
+          0.75
+        ],
+        "cartesian": [
+          2.2887957175407383,
+          1.4014831746942173e-16,
+          1.9360356200274664
+        ],
+        "wyckoff": "d",
+        "multiplicity": 4,
+        "site_symmetry": "-4..",
+        "species": [
+          {
+            "element": "O",
+            "occupation": 1.0
+          }
+        ]
+      }
+    ],
+    "sites": [
+      {
+        "element": "Ti",
+        "coords": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "cartesian": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "wyckoff": "a",
+        "multiplicity": 2,
+        "site_symmetry": "m.mm",
+        "species": [
+          {
+            "element": "Ti",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "Ti",
+        "coords": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "cartesian": [
+          2.2887957175407383,
+          2.2887957175407383,
+          1.2906904133516444
+        ],
+        "wyckoff": "a",
+        "multiplicity": 2,
+        "site_symmetry": "m.mm",
+        "species": [
+          {
+            "element": "Ti",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "O",
+        "coords": [
+          0.0,
+          0.5,
+          0.25
+        ],
+        "cartesian": [
+          0.0,
+          2.2887957175407383,
+          0.6453452066758222
+        ],
+        "wyckoff": "d",
+        "multiplicity": 4,
+        "site_symmetry": "-4..",
+        "species": [
+          {
+            "element": "O",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "O",
+        "coords": [
+          0.0,
+          0.5,
+          0.75
+        ],
+        "cartesian": [
+          0.0,
+          2.2887957175407383,
+          1.9360356200274664
+        ],
+        "wyckoff": "d",
+        "multiplicity": 4,
+        "site_symmetry": "-4..",
+        "species": [
+          {
+            "element": "O",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "O",
+        "coords": [
+          0.5,
+          0.0,
+          0.25
+        ],
+        "cartesian": [
+          2.2887957175407383,
+          1.4014831746942173e-16,
+          0.6453452066758222
+        ],
+        "wyckoff": "d",
+        "multiplicity": 4,
+        "site_symmetry": "-4..",
+        "species": [
+          {
+            "element": "O",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "O",
+        "coords": [
+          0.5,
+          0.0,
+          0.75
+        ],
+        "cartesian": [
+          2.2887957175407383,
+          1.4014831746942173e-16,
+          1.9360356200274664
+        ],
+        "wyckoff": "d",
+        "multiplicity": 4,
+        "site_symmetry": "-4..",
+        "species": [
+          {
+            "element": "O",
+            "occupation": 1.0
+          }
+        ]
+      }
+    ],
+    "space_group": {
+      "number": 136,
+      "symbol": "P42/mnm",
+      "hall_symbol": "",
+      "point_group": "4/mmm",
+      "crystal_system": "tetragonal"
+    },
+    "metadata": {
+      "formula": "Ti2O4",
+      "natoms": 6,
+      "volume": 54.091140150893494,
+      "density": 4.903586088242595
+    }
+  },
+  "symmetry": {
+    "space_group": {
+      "number": 139,
+      "symbol": "I4/mmm",
+      "hall_symbol": "-I 4 2",
+      "point_group": "4/mmm",
+      "crystal_system": "tetragonal"
+    },
+    "wyckoff_positions": [
+      {
+        "element": "Ti",
+        "wyckoff": "a",
+        "multiplicity": 2,
+        "site_symmetry": "Unknown",
+        "coords": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "element": "O",
+        "wyckoff": "d",
+        "multiplicity": 4,
+        "site_symmetry": "Unknown",
+        "coords": [
+          0.0,
+          0.5,
+          0.25
+        ]
+      }
+    ],
+    "n_operations": 32
+  },
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "warnings": [],
+    "metrics": {
+      "min_distance": 1.2906904133516441,
+      "avg_distance": 2.5688951843799788,
+      "space_group_number": 139,
+      "space_group_symbol": "I4/mmm",
+      "density": 4.903651581545388,
+      "packing_fraction": 0.4918956284999595
+    }
+  },
+  "timestamp": "2025-12-30T13:27:29.290968"
+}

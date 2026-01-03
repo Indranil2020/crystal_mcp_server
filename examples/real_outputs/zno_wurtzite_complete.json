@@ -1,0 +1,315 @@
+{
+  "query": "Generate wurtzite ZnO for semiconductor applications",
+  "mcp_request": {
+    "tool": "generate_crystal",
+    "params": {
+      "composition": [
+        "Zn",
+        "Zn",
+        "O",
+        "O"
+      ],
+      "space_group": 186,
+      "seed": 42
+    },
+    "intent": "Generate wurtzite ZnO (P6_3mc)"
+  },
+  "structure": {
+    "lattice": {
+      "a": 3.629217484177708,
+      "b": 3.6292174841777074,
+      "c": 1.9363231143190844,
+      "alpha": 90.0,
+      "beta": 90.0,
+      "gamma": 119.99999999999999,
+      "matrix": [
+        [
+          3.1429945371565444,
+          -1.8146087420888528,
+          2.2222547877039195e-16
+        ],
+        [
+          0.0,
+          3.6292174841777074,
+          2.2222547877039195e-16
+        ],
+        [
+          0.0,
+          0.0,
+          1.9363231143190844
+        ]
+      ],
+      "reciprocal_matrix": [
+        [
+          1.9991079312737083,
+          0.0,
+          0.0
+        ],
+        [
+          0.9995539656368536,
+          1.7312782533899875,
+          0.0
+        ],
+        [
+          -3.4414663068555897e-16,
+          -1.9869314986701028e-16,
+          3.244905388318464
+        ]
+      ],
+      "volume": 22.086884006582086
+    },
+    "atoms": [
+      {
+        "element": "Zn",
+        "coords": [
+          0.3333333333333333,
+          0.6666666666666666,
+          0.4626513540547377
+        ],
+        "cartesian": [
+          1.047664845718848,
+          1.814608742088854,
+          0.8958425107272112
+        ],
+        "wyckoff": "b",
+        "multiplicity": 2,
+        "site_symmetry": "3m.",
+        "species": [
+          {
+            "element": "Zn",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "Zn",
+        "coords": [
+          0.6666666666666666,
+          0.3333333333333333,
+          0.9626513540547377
+        ],
+        "cartesian": [
+          2.095329691437696,
+          5.249649329283123e-16,
+          1.8640040678867535
+        ],
+        "wyckoff": "b",
+        "multiplicity": 2,
+        "site_symmetry": "3m.",
+        "species": [
+          {
+            "element": "Zn",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "O",
+        "coords": [
+          0.0,
+          0.0,
+          0.34938243557197035
+        ],
+        "cartesian": [
+          0.0,
+          0.0,
+          0.6765172857351045
+        ],
+        "wyckoff": "a",
+        "multiplicity": 2,
+        "site_symmetry": "3m.",
+        "species": [
+          {
+            "element": "O",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "O",
+        "coords": [
+          0.0,
+          0.0,
+          0.8493824355719704
+        ],
+        "cartesian": [
+          0.0,
+          0.0,
+          1.6446788428946466
+        ],
+        "wyckoff": "a",
+        "multiplicity": 2,
+        "site_symmetry": "3m.",
+        "species": [
+          {
+            "element": "O",
+            "occupation": 1.0
+          }
+        ]
+      }
+    ],
+    "sites": [
+      {
+        "element": "Zn",
+        "coords": [
+          0.3333333333333333,
+          0.6666666666666666,
+          0.4626513540547377
+        ],
+        "cartesian": [
+          1.047664845718848,
+          1.814608742088854,
+          0.8958425107272112
+        ],
+        "wyckoff": "b",
+        "multiplicity": 2,
+        "site_symmetry": "3m.",
+        "species": [
+          {
+            "element": "Zn",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "Zn",
+        "coords": [
+          0.6666666666666666,
+          0.3333333333333333,
+          0.9626513540547377
+        ],
+        "cartesian": [
+          2.095329691437696,
+          5.249649329283123e-16,
+          1.8640040678867535
+        ],
+        "wyckoff": "b",
+        "multiplicity": 2,
+        "site_symmetry": "3m.",
+        "species": [
+          {
+            "element": "Zn",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "O",
+        "coords": [
+          0.0,
+          0.0,
+          0.34938243557197035
+        ],
+        "cartesian": [
+          0.0,
+          0.0,
+          0.6765172857351045
+        ],
+        "wyckoff": "a",
+        "multiplicity": 2,
+        "site_symmetry": "3m.",
+        "species": [
+          {
+            "element": "O",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "O",
+        "coords": [
+          0.0,
+          0.0,
+          0.8493824355719704
+        ],
+        "cartesian": [
+          0.0,
+          0.0,
+          1.6446788428946466
+        ],
+        "wyckoff": "a",
+        "multiplicity": 2,
+        "site_symmetry": "3m.",
+        "species": [
+          {
+            "element": "O",
+            "occupation": 1.0
+          }
+        ]
+      }
+    ],
+    "space_group": {
+      "number": 186,
+      "symbol": "P63mc",
+      "hall_symbol": "",
+      "point_group": "6mm",
+      "crystal_system": "hexagonal"
+    },
+    "metadata": {
+      "formula": "Zn2O2",
+      "natoms": 4,
+      "volume": 22.086884006582086,
+      "density": 12.240914444788276
+    }
+  },
+  "symmetry": {
+    "space_group": {
+      "number": 186,
+      "symbol": "P6_3mc",
+      "hall_symbol": "P 6c -2c",
+      "point_group": "6mm",
+      "crystal_system": "hexagonal"
+    },
+    "wyckoff_positions": [
+      {
+        "element": "Zn",
+        "wyckoff": "b",
+        "multiplicity": 2,
+        "site_symmetry": "Unknown",
+        "coords": [
+          0.3333333333333333,
+          0.6666666666666666,
+          0.4626513540547377
+        ]
+      },
+      {
+        "element": "O",
+        "wyckoff": "a",
+        "multiplicity": 2,
+        "site_symmetry": "Unknown",
+        "coords": [
+          0.0,
+          0.0,
+          0.34938243557197035
+        ]
+      }
+    ],
+    "n_operations": 12
+  },
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "warnings": [
+      {
+        "message": {
+          "message": "Very short interatomic distance: 0.968 Angstroms",
+          "details": {}
+        },
+        "details": {}
+      },
+      {
+        "message": "High packing fraction: 1.015",
+        "details": {}
+      }
+    ],
+    "metrics": {
+      "min_distance": 0.9681615571595422,
+      "avg_distance": 1.9900246503542203,
+      "space_group_number": 186,
+      "space_group_symbol": "P6_3mc",
+      "density": 12.236779741857534,
+      "packing_fraction": 1.0151521039359168
+    }
+  },
+  "timestamp": "2025-12-30T13:27:29.275016"
+}

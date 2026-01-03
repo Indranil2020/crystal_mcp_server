@@ -21,7 +21,17 @@
       "Bash(pip3 install:*)",
       "Bash(./tests/testsuit/run_tests.py:*)",
       "Bash(pgrep:*)",
-      "Bash(timeout 60 pytest:*)"
+      "Bash(timeout 60 pytest:*)",
+      "Bash(timeout 120 pytest:*)",
+      "Bash(timeout 180 pytest:*)",
+      "Bash(timeout 300 pytest:*)",
+      "Bash(mkdir:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs:*)",
+      "Bash(ss:*)",
+      "Bash(curl:*)",
+      "Bash(timeout 90 python3:*)",
+      "Bash(timeout 180 python3:*)"
     ],
     "deny": [],
     "ask": []

@@ -210,7 +210,12 @@ export async function startServer(): Promise<void> {
 
   await server.connect(transport);
 
-  console.error("Crystal Structure Generator MCP Server running on stdio");
-  console.error(`Version: ${pkg.version}`);
-  console.error("Available tools:", TOOL_DEFINITIONS.length);
+  // Log to stderr after a brief delay to avoid interfering with MCP handshake
+  setTimeout(() => {
+    console.error("🔬 Crystal Structure Generator MCP Server");
+    console.error("========================================");
+    console.error(`Version: ${pkg.version}`);
+    console.error("Available tools:", TOOL_DEFINITIONS.length);
+    console.error("Status: Connected and ready");
+  }, 100);
 }

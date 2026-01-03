@@ -1,0 +1,303 @@
+{
+  "query": "Create a layered graphite carbon structure",
+  "mcp_request": {
+    "tool": "generate_crystal",
+    "params": {
+      "composition": [
+        "C",
+        "C",
+        "C",
+        "C"
+      ],
+      "space_group": 194,
+      "seed": 42
+    },
+    "intent": "Generate graphite (P6_3/mmc)"
+  },
+  "structure": {
+    "lattice": {
+      "a": 4.23502585873281,
+      "b": 4.23502585873281,
+      "c": 4.064300975898833,
+      "alpha": 90.0,
+      "beta": 90.0,
+      "gamma": 119.99999999999999,
+      "matrix": [
+        [
+          3.667639979346621,
+          -2.117512929366404,
+          2.593205431101703e-16
+        ],
+        [
+          0.0,
+          4.23502585873281,
+          2.593205431101703e-16
+        ],
+        [
+          0.0,
+          0.0,
+          4.064300975898833
+        ]
+      ],
+      "reciprocal_matrix": [
+        [
+          1.7131412413873066,
+          0.0,
+          0.0
+        ],
+        [
+          0.856570620693653,
+          1.483623835312217,
+          0.0
+        ],
+        [
+          -1.6395908660876415e-16,
+          -9.466182278965519e-17,
+          1.5459448855876232
+        ]
+      ],
+      "volume": 63.12895874525985
+    },
+    "atoms": [
+      {
+        "element": "C",
+        "coords": [
+          0.0,
+          0.0,
+          0.25
+        ],
+        "cartesian": [
+          0.0,
+          0.0,
+          1.0160752439747083
+        ],
+        "wyckoff": "b",
+        "multiplicity": 2,
+        "site_symmetry": "-6m2",
+        "species": [
+          {
+            "element": "C",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "C",
+        "coords": [
+          0.0,
+          0.0,
+          0.75
+        ],
+        "cartesian": [
+          0.0,
+          0.0,
+          3.048225731924125
+        ],
+        "wyckoff": "b",
+        "multiplicity": 2,
+        "site_symmetry": "-6m2",
+        "species": [
+          {
+            "element": "C",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "C",
+        "coords": [
+          0.3333333333333333,
+          0.6666666666666666,
+          0.25
+        ],
+        "cartesian": [
+          1.222546659782207,
+          2.117512929366405,
+          1.0160752439747085
+        ],
+        "wyckoff": "c",
+        "multiplicity": 2,
+        "site_symmetry": "-6m2",
+        "species": [
+          {
+            "element": "C",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "C",
+        "coords": [
+          0.6666666666666666,
+          0.3333333333333333,
+          0.75
+        ],
+        "cartesian": [
+          2.445093319564414,
+          5.877700944709591e-16,
+          3.0482257319241253
+        ],
+        "wyckoff": "c",
+        "multiplicity": 2,
+        "site_symmetry": "-6m2",
+        "species": [
+          {
+            "element": "C",
+            "occupation": 1.0
+          }
+        ]
+      }
+    ],
+    "sites": [
+      {
+        "element": "C",
+        "coords": [
+          0.0,
+          0.0,
+          0.25
+        ],
+        "cartesian": [
+          0.0,
+          0.0,
+          1.0160752439747083
+        ],
+        "wyckoff": "b",
+        "multiplicity": 2,
+        "site_symmetry": "-6m2",
+        "species": [
+          {
+            "element": "C",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "C",
+        "coords": [
+          0.0,
+          0.0,
+          0.75
+        ],
+        "cartesian": [
+          0.0,
+          0.0,
+          3.048225731924125
+        ],
+        "wyckoff": "b",
+        "multiplicity": 2,
+        "site_symmetry": "-6m2",
+        "species": [
+          {
+            "element": "C",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "C",
+        "coords": [
+          0.3333333333333333,
+          0.6666666666666666,
+          0.25
+        ],
+        "cartesian": [
+          1.222546659782207,
+          2.117512929366405,
+          1.0160752439747085
+        ],
+        "wyckoff": "c",
+        "multiplicity": 2,
+        "site_symmetry": "-6m2",
+        "species": [
+          {
+            "element": "C",
+            "occupation": 1.0
+          }
+        ]
+      },
+      {
+        "element": "C",
+        "coords": [
+          0.6666666666666666,
+          0.3333333333333333,
+          0.75
+        ],
+        "cartesian": [
+          2.445093319564414,
+          5.877700944709591e-16,
+          3.0482257319241253
+        ],
+        "wyckoff": "c",
+        "multiplicity": 2,
+        "site_symmetry": "-6m2",
+        "species": [
+          {
+            "element": "C",
+            "occupation": 1.0
+          }
+        ]
+      }
+    ],
+    "space_group": {
+      "number": 194,
+      "symbol": "P63/mmc",
+      "hall_symbol": "",
+      "point_group": "6/mmm",
+      "crystal_system": "hexagonal"
+    },
+    "metadata": {
+      "formula": "C4",
+      "natoms": 4,
+      "volume": 63.12895874525985,
+      "density": 1.263713958949148
+    }
+  },
+  "symmetry": {
+    "space_group": {
+      "number": 194,
+      "symbol": "P6_3/mmc",
+      "hall_symbol": "-P 6c 2c",
+      "point_group": "6/mmm",
+      "crystal_system": "hexagonal"
+    },
+    "wyckoff_positions": [
+      {
+        "element": "C",
+        "wyckoff": "b",
+        "multiplicity": 2,
+        "site_symmetry": "Unknown",
+        "coords": [
+          0.0,
+          0.0,
+          0.25
+        ]
+      },
+      {
+        "element": "C",
+        "wyckoff": "c",
+        "multiplicity": 2,
+        "site_symmetry": "Unknown",
+        "coords": [
+          0.3333333333333333,
+          0.6666666666666666,
+          0.25
+        ]
+      }
+    ],
+    "n_operations": 24
+  },
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "warnings": [],
+    "metrics": {
+      "min_distance": 2.0321504879494166,
+      "avg_distance": 2.743386100852621,
+      "space_group_number": 194,
+      "space_group_symbol": "P6_3/mmc",
+      "density": 1.263775061483727,
+      "packing_fraction": 0.09103619440576392
+    }
+  },
+  "timestamp": "2025-12-30T13:27:29.207719"
+}
