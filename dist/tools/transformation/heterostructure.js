@@ -31,7 +31,7 @@ export async function handleCreateHeterostructure(args) {
         return {
             content: [{
                     type: "text",
-                    text: `❌ **Heterostructure Creation Failed**\n\n${result.error.message}`
+                    text: `**Heterostructure Creation Failed**\n\n${result.error.message}`
                 }],
             isError: true
         };
@@ -40,11 +40,23 @@ export async function handleCreateHeterostructure(args) {
     const warnings = data.warnings || [];
     const warningText = warnings.length > 0 ? `> ⚠️ **Warnings:**\n> ${warnings.join('\n> ')}\n\n` : "";
     const outputText = formatStructureOutput(data.heterostructure, undefined);
+    // Include raw JSON data for the frontend viewer
+    const jsonData = JSON.stringify({
+        success: true,
+        structure: data.heterostructure,
+        warnings: data.warnings
+    });
     return {
-        content: [{
+        content: [
+            {
                 type: "text",
                 text: `## 🥞 Heterostructure Created\n\n${warningText}${outputText}`
-            }]
+            },
+            {
+                type: "text",
+                text: `\n\n<json-data>\n${jsonData}\n</json-data>`
+            }
+        ]
     };
 }
 //# sourceMappingURL=heterostructure.js.map

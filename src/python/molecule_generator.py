@@ -93,6 +93,11 @@ def atoms_to_dict(atoms) -> Dict[str, Any]:
         },
         "atoms": sites,
         "sites": sites,
+        "space_group": {
+            "number": 1,
+            "symbol": "P1",
+            "crystal_system": "triclinic"
+        },
         "metadata": {
             "formula": atoms.get_chemical_formula(),
             "natoms": len(atoms),

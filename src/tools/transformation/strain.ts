@@ -55,7 +55,7 @@ export async function handleApplyStrain(args: unknown): Promise<any> {
         return {
             content: [{
                 type: "text",
-                text: `❌ **Strain Failed**\n\n${result.error.message}`
+                text: `**Strain Failed**\n\n${result.error.message}`
             }],
             isError: true
         };
@@ -64,10 +64,23 @@ export async function handleApplyStrain(args: unknown): Promise<any> {
     const data = result.data;
     const outputText = formatStructureOutput(data.strained_structure, undefined);
 
+    // Include raw JSON data for the frontend viewer
+    const jsonData = JSON.stringify({
+        success: true,
+        structure: data.strained_structure,
+        strain_tensor: data.strain_tensor
+    });
+
     return {
-        content: [{
-            type: "text",
-            text: `## 📏 Strain Applied\n\n**Strain Tensor:** ${JSON.stringify(data.strain_tensor)}\n\n${outputText}`
-        }]
+        content: [
+            {
+                type: "text",
+                text: `## 📏 Strain Applied\n\n**Strain Tensor:** ${JSON.stringify(data.strain_tensor)}\n\n${outputText}`
+            },
+            {
+                type: "text",
+                text: `\n\n<json-data>\n${jsonData}\n</json-data>`
+            }
+        ]
     };
 }

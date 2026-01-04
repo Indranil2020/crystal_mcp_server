@@ -29,18 +29,31 @@ export async function handleMakeSupercell(args) {
         return {
             content: [{
                     type: "text",
-                    text: `❌ **Supercell Generation Failed**\n\n${result.error.message}`
+                    text: `**Supercell Generation Failed**\n\n${result.error.message}`
                 }],
             isError: true
         };
     }
     const data = result.data;
     const outputText = formatStructureOutput(data.supercell, undefined);
+    // Include raw JSON data for the frontend viewer
+    const jsonData = JSON.stringify({
+        success: true,
+        structure: data.supercell,
+        volume_multiplier: data.volume_multiplier,
+        scaling_matrix: data.scaling_matrix
+    });
     return {
-        content: [{
+        content: [
+            {
                 type: "text",
                 text: `## 🔲 Supercell Generated\n\n**Volume Multiplier:** ${data.volume_multiplier}x\n\n${outputText}`
-            }]
+            },
+            {
+                type: "text",
+                text: `\n\n<json-data>\n${jsonData}\n</json-data>`
+            }
+        ]
     };
 }
 //# sourceMappingURL=supercell.js.map

@@ -73,7 +73,7 @@ export async function handleExportStructure(args: unknown): Promise<any> {
     return {
       content: [{
         type: "text",
-        text: `❌ **Export Failed**\n\n${result.error.message}`
+        text: `**Export Failed**\n\n${result.error.message}`
       }],
       isError: true
     };
@@ -90,10 +90,23 @@ export async function handleExportStructure(args: unknown): Promise<any> {
     });
   }
   
+  // Include raw JSON data for the frontend viewer
+  const jsonData = JSON.stringify({
+      success: true,
+      files: data.files,
+      file_paths: data.file_paths
+  });
+
   return {
-    content: [{
-      type: "text",
-      text: output
-    }]
+    content: [
+      {
+        type: "text",
+        text: output
+      },
+      {
+        type: "text",
+        text: `\n\n<json-data>\n${jsonData}\n</json-data>`
+      }
+    ]
   };
 }

@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::crystal_viewer::{CrystalStructure, CrystalViewer};
 use crate::llm_client::{ChatMessage, LlmClient};
-use crate::mcp_client::McpClient;
+use crate::mcp_client::{McpClient, Tool};
 
 pub struct CrystalApp {
     mcp_client: Arc<Mutex<Option<McpClient>>>,
@@ -22,7 +22,7 @@ pub struct CrystalApp {
     mcp_connected: bool,
     llm_connected: bool,
     
-    available_tools: Vec<String>,
+    available_tools: Vec<Tool>,
     selected_tool: Option<String>,
     tool_params: String,
     
@@ -59,7 +59,7 @@ impl CrystalApp {
             
             show_settings: false,
             ollama_url: "http://localhost:11434".to_string(),
-            ollama_model: "llama3.2:1b".to_string(),
+            ollama_model: "qwen2.5:7b".to_string(),
             mcp_server_path,
             current_structure_json: None,
         }
@@ -71,7 +71,7 @@ impl CrystalApp {
         
         match client.start() {
             Ok(()) => {
-                self.available_tools = client.get_tools().iter().map(|t| t.name.clone()).collect();
+                self.available_tools = client.get_tools().to_vec();
                 self.mcp_connected = true;
                 self.status_message = format!("MCP connected. {} tools available.", self.available_tools.len());
                 *self.mcp_client.lock().unwrap() = Some(client);
@@ -109,6 +109,40 @@ impl CrystalApp {
         }
     }
 
+    fn format_tools_for_llm(&self) -> String {
+        let mut output = String::new();
+        for tool in &self.available_tools {
+            output.push_str(&format!("## {}\n", tool.name));
+            if let Some(ref desc) = tool.description {
+                output.push_str(&format!("{}\n", desc));
+            }
+            if let Some(ref schema) = tool.input_schema {
+                if let Some(props) = schema.get("properties") {
+                    output.push_str("Parameters:\n");
+                    if let Some(obj) = props.as_object() {
+                        for (key, val) in obj {
+                            let type_str = val.get("type").and_then(|t| t.as_str()).unwrap_or("any");
+                            let desc_str = val.get("description").and_then(|d| d.as_str()).unwrap_or("");
+                            output.push_str(&format!("  - {}: {} - {}\n", key, type_str, desc_str));
+                        }
+                    }
+                }
+                if let Some(required) = schema.get("required").and_then(|r| r.as_array()) {
+                    let req_strs: Vec<&str> = required.iter().filter_map(|v| v.as_str()).collect();
+                    if !req_strs.is_empty() {
+                        output.push_str(&format!("Required: {}\n", req_strs.join(", ")));
+                    }
+                }
+            }
+            output.push('\n');
+        }
+        output
+    }
+
+    fn get_tool_names(&self) -> Vec<String> {
+        self.available_tools.iter().map(|t| t.name.clone()).collect()
+    }
+
     fn send_chat_message(&mut self) {
         if self.chat_input.trim().is_empty() {
             return;
@@ -143,7 +177,8 @@ impl CrystalApp {
             return;
         }
 
-        let tools_desc = self.available_tools.join("\n");
+        let tools_desc = self.format_tools_for_llm();
+        let tool_names = self.get_tool_names();
         let client = self.llm_client.lock().unwrap();
 
         match client.chat_with_tools(&self.chat_history, &tools_desc) {
@@ -152,13 +187,13 @@ impl CrystalApp {
                 let tool_call = self.parse_tool_call(&response);
                 
                 if let Some((tool_name, params)) = tool_call {
-                    if !self.available_tools.iter().any(|t| t == &tool_name) {
+                    if !tool_names.iter().any(|t| t == &tool_name) {
                         self.chat_history.push(ChatMessage {
                             role: "assistant".to_string(),
                             content: format!(
                                 "Tool `{}` is not available. Available tools:\n{}",
                                 tool_name,
-                                self.available_tools.join("\n")
+                                tool_names.join("\n")
                             ),
                         });
                         return;
@@ -601,7 +636,7 @@ print("OK")
             .show_ui(ui, |ui| {
                 ui.selectable_value(&mut self.selected_tool, None, "-- Select --");
                 for tool in &self.available_tools {
-                    ui.selectable_value(&mut self.selected_tool, Some(tool.clone()), tool);
+                    ui.selectable_value(&mut self.selected_tool, Some(tool.name.clone()), &tool.name);
                 }
             });
         

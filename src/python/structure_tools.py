@@ -15,6 +15,124 @@ import spglib
 from pymatgen.core import Structure, Lattice
 from pymatgen.core.surface import SlabGenerator
 
+# Prototype templates for common crystal structures
+PROTOTYPE_TEMPLATES = {
+    "rocksalt": {
+        "space_group": 225,
+        "coords": {"A": [0, 0, 0], "B": [0.5, 0.5, 0.5]},
+        "lattice_type": "cubic"
+    },
+    "zincblende": {
+        "space_group": 216,
+        "coords": {"A": [0, 0, 0], "B": [0.25, 0.25, 0.25]},
+        "lattice_type": "cubic"
+    },
+    "diamond": {
+        "space_group": 227,
+        "coords": {"A": [[0, 0, 0], [0.25, 0.25, 0.25]]},
+        "lattice_type": "cubic"
+    },
+    "fcc": {
+        "space_group": 225,
+        "coords": {"A": [0, 0, 0]},
+        "lattice_type": "cubic"
+    },
+    "bcc": {
+        "space_group": 229,
+        "coords": {"A": [[0, 0, 0], [0.5, 0.5, 0.5]]},
+        "lattice_type": "cubic"
+    },
+    "hcp": {
+        "space_group": 194,
+        "coords": {"A": [[1/3, 2/3, 0.25], [2/3, 1/3, 0.75]]},
+        "lattice_type": "hexagonal",
+        "c_over_a": 1.633
+    },
+    "perovskite": {
+        "space_group": 221,
+        "coords": {"A": [0, 0, 0], "B": [0.5, 0.5, 0.5], "X": [[0.5, 0.5, 0], [0.5, 0, 0.5], [0, 0.5, 0.5]]},
+        "lattice_type": "cubic"
+    },
+    "fluorite": {
+        "space_group": 225,
+        "coords": {"A": [0, 0, 0], "B": [[0.25, 0.25, 0.25], [0.75, 0.75, 0.75]]},
+        "lattice_type": "cubic"
+    },
+    "rutile": {
+        "space_group": 136,
+        "coords": {"A": [[0, 0, 0], [0.5, 0.5, 0.5]], "B": [[0.3, 0.3, 0], [0.7, 0.7, 0], [0.8, 0.2, 0.5], [0.2, 0.8, 0.5]]},
+        "lattice_type": "tetragonal",
+        "c_over_a": 0.644
+    },
+    "wurtzite": {
+        "space_group": 186,
+        "coords": {"A": [[1/3, 2/3, 0], [2/3, 1/3, 0.5]], "B": [[1/3, 2/3, 0.375], [2/3, 1/3, 0.875]]},
+        "lattice_type": "hexagonal",
+        "c_over_a": 1.633
+    }
+}
+
+
+def prototype_to_structure(prototype_dict: Dict[str, Any]) -> Optional[Structure]:
+    """
+    Convert a prototype definition to a Pymatgen Structure.
+    
+    Args:
+        prototype_dict: Dict with 'prototype', 'elements', and optionally 'lattice_constant'
+    
+    Returns:
+        Pymatgen Structure or None if conversion fails
+    """
+    if not prototype_dict or not isinstance(prototype_dict, dict):
+        return None
+    
+    prototype_name = prototype_dict.get("prototype")
+    if prototype_name is None or prototype_name not in PROTOTYPE_TEMPLATES:
+        return None
+    
+    elements = prototype_dict.get("elements")
+    if not elements or not isinstance(elements, dict):
+        return None
+    
+    template = PROTOTYPE_TEMPLATES[prototype_name]
+    lattice_constant = prototype_dict.get("lattice_constant", 5.0)
+    c_over_a = template.get("c_over_a", 1.0)
+    
+    # Build lattice
+    if template["lattice_type"] == "cubic":
+        lattice = Lattice.cubic(lattice_constant)
+    elif template["lattice_type"] == "hexagonal":
+        c = lattice_constant * c_over_a
+        lattice = Lattice.hexagonal(lattice_constant, c)
+    elif template["lattice_type"] == "tetragonal":
+        c = lattice_constant * c_over_a
+        lattice = Lattice.tetragonal(lattice_constant, c)
+    else:
+        lattice = Lattice.cubic(lattice_constant)
+    
+    # Build species and coords
+    species = []
+    coords = []
+    
+    for site_label, positions in template["coords"].items():
+        element = elements.get(site_label)
+        if element is None:
+            continue
+        
+        # Handle single position or list of positions
+        if isinstance(positions[0], (int, float)):
+            positions = [positions]
+        
+        for pos in positions:
+            species.append(element)
+            coords.append(pos)
+    
+    if not species:
+        return None
+    
+    return Structure(lattice, species, coords, coords_are_cartesian=False)
+
+
 CRYSTAL_SYSTEM_RANGES = [
     (1, 2, "triclinic"),
     (3, 15, "monoclinic"),
@@ -38,21 +156,25 @@ def crystal_system_from_number(number: Optional[int]) -> str:
 
 def get_space_group_info(structure: Structure, symprec: float = 1e-3) -> Dict[str, Any]:
     """Extract space group info using spglib dataset."""
+    default_sg = {"number": 1, "symbol": "P1", "hall_symbol": "P 1", "point_group": "1", "crystal_system": "triclinic"}
+    
     if structure is None or len(structure) == 0:
-        return {"number": None, "symbol": "", "hall_symbol": "", "point_group": "", "crystal_system": ""}
+        return default_sg
 
     cell = (
         structure.lattice.matrix,
         structure.frac_coords,
         structure.atomic_numbers
     )
+    
     dataset = spglib.get_symmetry_dataset(cell, symprec=symprec)
+        
     if dataset is None:
-        return {"number": None, "symbol": "", "hall_symbol": "", "point_group": "", "crystal_system": ""}
+        return default_sg
 
     number = dataset.get("number")
-    number_int = int(number) if number is not None else None
-    symbol = dataset.get("international", "") or ""
+    number_int = int(number) if number is not None else 1
+    symbol = dataset.get("international", "P1") or "P1"
     hall_symbol = dataset.get("hall", "") or ""
     point_group = dataset.get("pointgroup", "") or ""
 
@@ -143,15 +265,20 @@ def calculate_supercell_size(scaling: Any) -> int:
 def dict_to_structure(structure_dict: Dict[str, Any]) -> Optional[Structure]:
     """
     Convert structure dictionary to Pymatgen Structure.
+    Handles both full structure dicts and prototype definitions.
     
     Args:
-        structure_dict: Structure dictionary
+        structure_dict: Structure dictionary or prototype definition
     
     Returns:
         Pymatgen Structure or None
     """
     if not structure_dict or not isinstance(structure_dict, dict):
         return None
+    
+    # Check if this is a prototype definition
+    if "prototype" in structure_dict and "elements" in structure_dict:
+        return prototype_to_structure(structure_dict)
     
     if "lattice" not in structure_dict or ("atoms" not in structure_dict and "sites" not in structure_dict):
         return None

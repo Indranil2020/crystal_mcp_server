@@ -29,18 +29,30 @@ export async function handleGenerateMolecularCrystal(args) {
         return {
             content: [{
                     type: "text",
-                    text: `❌ **Molecular Crystal Generation Failed**\n\n${result.error.message}`
+                    text: `**Molecular Crystal Generation Failed**\n\n${result.error.message}`
                 }],
             isError: true
         };
     }
     const data = result.data;
     const outputText = formatStructureOutput(data.structure, data.validation);
+    // Include raw JSON data for the frontend viewer
+    const jsonData = JSON.stringify({
+        success: true,
+        structure: data.structure,
+        validation: data.validation
+    });
     return {
-        content: [{
+        content: [
+            {
                 type: "text",
-                text: `## 🧪 Molecular Crystal Generated\n\n${outputText}`
-            }]
+                text: `## Molecular Crystal Generated\n\n${outputText}`
+            },
+            {
+                type: "text",
+                text: `\n\n<json-data>\n${jsonData}\n</json-data>`
+            }
+        ]
     };
 }
 //# sourceMappingURL=molecular-crystal.js.map

@@ -112,35 +112,15 @@ impl LlmClient {
         let mut enhanced_messages = messages.to_vec();
         
         let tool_instruction = format!(
-            r#"You are a crystal structure assistant. Output ONLY a single valid JSON object.
+            r#"You are a crystal structure assistant. Select the appropriate tool and output valid JSON.
 
-AVAILABLE TOOLS:
+# Available Tools
+
 {}
 
-TOOL SELECTION:
-- Bulk crystals (Si, Ge, NaCl, GaAs, perovskites) -> generate_prototype
-- Slabs/surfaces -> generate_slab
-- Graphene, nanotubes -> generate_nanostructure
-- MXene, hBN, MoS2 -> generate_2d_material
-
-LATTICE CONSTANTS (Angstroms):
-Si=5.43, Ge=5.66, NaCl=5.64, GaAs=5.65, Fe=2.87, Cu=3.61
-
-EXAMPLES:
-
-Ge slab (100) 4 layers:
-{{"tool": "generate_slab", "params": {{"structure": {{"prototype": "diamond", "elements": {{"A": "Ge"}}, "lattice_constant": 5.66}}, "miller_indices": [1, 0, 0], "thickness": 4, "vacuum": 15.0, "symmetric": false}}}}
-
-Si diamond:
-{{"tool": "generate_prototype", "params": {{"prototype": "diamond", "elements": {{"A": "Si"}}, "lattice_constant": 5.43}}}}
-
-NaCl rocksalt:
-{{"tool": "generate_prototype", "params": {{"prototype": "rocksalt", "elements": {{"A": "Na", "B": "Cl"}}, "lattice_constant": 5.64}}}}
-
-Graphene:
-{{"tool": "generate_nanostructure", "params": {{"type": "graphene", "params": {{"size": [4, 4, 1], "vacuum": 15.0}}}}}}
-
-Output ONLY the JSON. No text before or after."#,
+# Response Format
+Output ONLY a JSON object: {{"tool": "...", "params": {{...}}}}
+No markdown, no explanation, no other text."#,
             tools_description
         );
         

@@ -31,18 +31,31 @@ export async function handleAddAdsorbate(args) {
         return {
             content: [{
                     type: "text",
-                    text: `❌ **Adsorbate Addition Failed**\n\n${result.error.message}`
+                    text: `**Adsorbate Addition Failed**\n\n${result.error.message}`
                 }],
             isError: true
         };
     }
     const data = result.data;
     const outputText = formatStructureOutput(data.structure, undefined);
+    // Include raw JSON data for the frontend viewer
+    const jsonData = JSON.stringify({
+        success: true,
+        structure: data.structure,
+        adsorbate: data.adsorbate,
+        position: data.position
+    });
     return {
-        content: [{
+        content: [
+            {
                 type: "text",
                 text: `## 📎 Adsorbate Added\n\n${outputText}`
-            }]
+            },
+            {
+                type: "text",
+                text: `\n\n<json-data>\n${jsonData}\n</json-data>`
+            }
+        ]
     };
 }
 //# sourceMappingURL=adsorbate.js.map

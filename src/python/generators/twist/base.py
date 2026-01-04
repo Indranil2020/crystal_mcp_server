@@ -7,6 +7,7 @@ Common utilities and databases for twisted/Moiré structures.
 from typing import Dict, Any, List, Optional, Tuple
 import numpy as np
 from pymatgen.core import Structure, Lattice
+from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
 
 class TwistStructure:
@@ -277,9 +278,44 @@ def structure_to_dict(structure: Structure, vacuum: Optional[float] = None) -> D
         site_info = {
             "element": str(s.specie),
             "coords": list(s.frac_coords),
+            "cartesian": list(s.coords),
             "species": [{"element": str(s.specie), "occupation": 1.0}]
         }
         sites_data.append(site_info)
+
+    # Get symmetry info
+    # Use spglib directly to avoid try-except
+    # Convert Pymatgen structure to spglib cell tuple: (lattice, positions, numbers)
+    cell = (
+        structure.lattice.matrix,
+        structure.frac_coords,
+        structure.atomic_numbers
+    )
+    
+    dataset = spglib.get_symmetry_dataset(cell, symprec=0.1)
+    
+    if dataset:
+        sg_symbol = str(dataset["international"])
+        sg_number = int(dataset["number"])
+        hall = str(dataset["hall"])
+        point_group = str(dataset["pointgroup"])
+        
+        # Determine crystal system
+        if 1 <= sg_number <= 2: crystal_system = "triclinic"
+        elif 3 <= sg_number <= 15: crystal_system = "monoclinic"
+        elif 16 <= sg_number <= 74: crystal_system = "orthorhombic"
+        elif 75 <= sg_number <= 142: crystal_system = "tetragonal"
+        elif 143 <= sg_number <= 167: crystal_system = "trigonal"
+        elif 168 <= sg_number <= 194: crystal_system = "hexagonal"
+        elif 195 <= sg_number <= 230: crystal_system = "cubic"
+        else: crystal_system = "unknown"
+    else:
+        # Fallback for complex structures
+        sg_symbol = "P1"
+        sg_number = 1
+        hall = "P 1"
+        point_group = "1"
+        crystal_system = "triclinic"
 
     return {
         "lattice": {"a": lattice.a, "b": lattice.b, "c": lattice.c,
@@ -287,6 +323,13 @@ def structure_to_dict(structure: Structure, vacuum: Optional[float] = None) -> D
                     "matrix": lattice.matrix.tolist()},
         "atoms": sites_data,
         "sites": sites_data,
+        "space_group": {
+            "number": sg_number,
+            "symbol": sg_symbol,
+            "hall_symbol": hall,
+            "point_group": point_group,
+            "crystal_system": crystal_system
+        },
         "metadata": {"formula": structure.formula, "n_atoms": len(structure),
                      "vacuum": vacuum}
     }

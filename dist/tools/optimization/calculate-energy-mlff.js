@@ -34,7 +34,7 @@ export async function handleCalculateEnergyMLFF(args) {
         return {
             content: [{
                     type: "text",
-                    text: `❌ **MLFF Energy Calculation Failed**\n\n${result.error.message}\n\n**Suggestions:**\n${result.error.suggestions.map(s => `- ${s}`).join('\n')}`
+                    text: `**MLFF Energy Calculation Failed**\n\n${result.error.message}\n\n**Suggestions:**\n${result.error.suggestions.map(s => `- ${s}`).join('\n')}`
                 }],
             isError: true
         };
@@ -53,11 +53,26 @@ export async function handleCalculateEnergyMLFF(args) {
     if (data.stress) {
         outputText += `**Stress tensor available:** Yes\n`;
     }
+    // Include raw JSON data for the frontend viewer
+    const jsonData = JSON.stringify({
+        success: true,
+        energy: data.energy,
+        energy_per_atom: data.energy_per_atom,
+        forces: data.forces,
+        stress: data.stress,
+        model: data.model
+    });
     return {
-        content: [{
+        content: [
+            {
                 type: "text",
                 text: outputText
-            }]
+            },
+            {
+                type: "text",
+                text: `\n\n<json-data>\n${jsonData}\n</json-data>`
+            }
+        ]
     };
 }
 //# sourceMappingURL=calculate-energy-mlff.js.map

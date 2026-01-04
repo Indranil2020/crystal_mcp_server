@@ -31,13 +31,13 @@ export async function handleGenerateSlab(args) {
         return {
             content: [{
                     type: "text",
-                    text: `❌ **Slab Generation Failed**\n\n${result.error.message}`
+                    text: `**Slab Generation Failed**\n\n${result.error.message}`
                 }],
             isError: true
         };
     }
     const data = result.data;
-    let output = `## 📐 Surface Slab Generated\n\n`;
+    let output = `## Surface Slab Generated\n\n`;
     output += `**Miller Indices:** (${data.miller_indices.join(' ')})\n`;
     output += `**Slab Thickness:** ${data.slab_thickness.toFixed(3)} Angstroms\n`;
     output += `**Vacuum Thickness:** ${data.vacuum_thickness.toFixed(3)} Angstroms\n`;
@@ -46,11 +46,26 @@ export async function handleGenerateSlab(args) {
         output += `**Fixed Atoms:** ${data.fixed_atoms.length} atoms (bottom layers)\n`;
     }
     output += `\n${formatStructureOutput(data.slab, undefined)}`;
+    // Include raw JSON data for the frontend viewer
+    const jsonData = JSON.stringify({
+        success: true,
+        structure: data.slab,
+        slab_thickness: data.slab_thickness,
+        vacuum_thickness: data.vacuum_thickness,
+        surface_area: data.surface_area,
+        miller_indices: data.miller_indices
+    });
     return {
-        content: [{
+        content: [
+            {
                 type: "text",
                 text: output
-            }]
+            },
+            {
+                type: "text",
+                text: `\n\n<json-data>\n${jsonData}\n</json-data>`
+            }
+        ]
     };
 }
 //# sourceMappingURL=slab.js.map

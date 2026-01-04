@@ -31,17 +31,30 @@ export async function handleSpaceGroupScan(args) {
         return {
             content: [{
                     type: "text",
-                    text: `❌ **Space Group Scan Failed**\n\n${result.error.message}`
+                    text: `**Space Group Scan Failed**\n\n${result.error.message}`
                 }],
             isError: true
         };
     }
     const outputText = formatSpaceGroupScanOutput(result.data.generated_structures);
+    // Include raw JSON data for the frontend viewer
+    const jsonData = JSON.stringify({
+        success: true,
+        scan_results: result.data.generated_structures,
+        // Best structure if available (e.g. first successful one)
+        structure: result.data.generated_structures.find((s) => s.success)?.structure
+    });
     return {
-        content: [{
+        content: [
+            {
                 type: "text",
                 text: outputText
-            }]
+            },
+            {
+                type: "text",
+                text: `\n\n<json-data>\n${jsonData}\n</json-data>`
+            }
+        ]
     };
 }
 //# sourceMappingURL=space-group-scan.js.map

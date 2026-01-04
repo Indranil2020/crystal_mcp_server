@@ -56,16 +56,28 @@ export async function handleGenerateNanostructure(args: unknown): Promise<any> {
         return {
             content: [{
                 type: "text",
-                text: `❌ **Nanostructure Generation Failed**\n\n${result.error.message}`
+                text: `**Nanostructure Generation Failed**\n\n${result.error.message}`
             }],
             isError: true
         };
     }
 
+    // Include raw JSON data for the frontend viewer
+    const jsonData = JSON.stringify({
+        success: true,
+        structure: result.data.structure
+    });
+
     return {
-        content: [{
-            type: "text",
-            text: `## 🧪 Nanostructure Generated\n\n${formatStructureOutput(result.data.structure)}`
-        }]
+        content: [
+            {
+                type: "text",
+                text: `## Nanostructure Generated\n\n${formatStructureOutput(result.data.structure)}`
+            },
+            {
+                type: "text",
+                text: `\n\n<json-data>\n${jsonData}\n</json-data>`
+            }
+        ]
     };
 }

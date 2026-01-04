@@ -30,17 +30,31 @@ export async function handleGroundStateSearch(args) {
         return {
             content: [{
                     type: "text",
-                    text: `❌ **Ground State Search Failed**\n\n${result.error.message}`
+                    text: `**Ground State Search Failed**\n\n${result.error.message}`
                 }],
             isError: true
         };
     }
     const outputText = formatGroundStateSearchOutput(result.data);
+    // Include raw JSON data for the frontend viewer
+    // Python returns: { best_structure: {...}, min_energy_per_atom: float, all_results: [...] }
+    const jsonData = JSON.stringify({
+        success: true,
+        structure: result.data.best_structure,
+        ground_state: result.data.best_structure,
+        energy_ranking: result.data.all_results
+    });
     return {
-        content: [{
+        content: [
+            {
                 type: "text",
                 text: outputText
-            }]
+            },
+            {
+                type: "text",
+                text: `\n\n<json-data>\n${jsonData}\n</json-data>`
+            }
+        ]
     };
 }
 //# sourceMappingURL=ground-state-search.js.map

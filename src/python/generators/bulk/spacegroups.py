@@ -610,7 +610,8 @@ def generate_prototype(
     prototype: str,
     elements: Dict[str, str],
     a: float = 5.0,
-    c: Optional[float] = None
+    c: Optional[float] = None,
+    **kwargs
 ) -> Dict[str, Any]:
     """
     Generate common prototype structure.
@@ -618,12 +619,17 @@ def generate_prototype(
     Args:
         prototype: Prototype name (rocksalt, perovskite, zincblende, etc.)
         elements: Mapping of sites to elements
-        a: Lattice parameter
+        a: Lattice parameter (or 'lattice_constant')
         c: c lattice parameter (for non-cubic)
+        **kwargs: Additional parameters (e.g. space_group, lattice_constant) to prevent crashes
     
     Returns:
         Prototype structure
     """
+    # Handle aliases
+    if "lattice_constant" in kwargs and a == 5.0:
+        a = kwargs["lattice_constant"]
+
     prototypes = PROTOTYPE_STRUCTURES
 
     if prototype.lower() not in prototypes:

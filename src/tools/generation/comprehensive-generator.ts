@@ -107,6 +107,18 @@ export async function handleComprehensiveGenerate(
     }
 
     // Return formatted result
+    
+    // Include raw JSON data for the frontend viewer
+    // Note: 'structure' variable here currently holds the full response object 'data'
+    // We need to extract the actual structure dictionary if it exists
+    const actualStructure = (structure as any).structure || structure;
+
+    const jsonData = JSON.stringify({
+        success: true,
+        structure: actualStructure,
+        operation: operation
+    });
+
     return {
         content: [
             {
@@ -115,7 +127,7 @@ export async function handleComprehensiveGenerate(
             },
             {
                 type: "text",
-                text: JSON.stringify(structure, null, 2)
+                text: `\n\n<json-data>\n${jsonData}\n</json-data>`
             }
         ]
     };

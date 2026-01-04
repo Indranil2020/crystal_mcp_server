@@ -104,7 +104,7 @@ export async function handleGenerateCrystal(args) {
         return {
             content: [{
                     type: "text",
-                    text: `❌ **Crystal Generation Failed**\n\n**Error:** ${result.error.message}\n\n**Code:** ${result.error.code}\n\n**Suggestions:**\n${result.error.suggestions.map(s => `- ${s}`).join('\n')}`
+                    text: `**Crystal Generation Failed**\n\n**Error:** ${result.error.message}\n\n**Code:** ${result.error.code}\n\n**Suggestions:**\n${result.error.suggestions.map(s => `- ${s}`).join('\n')}`
                 }],
             isError: true
         };

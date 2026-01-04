@@ -10,6 +10,7 @@ Comprehensive zeolite framework generation:
 from typing import Dict, Any, List, Optional
 import numpy as np
 from pymatgen.core import Structure, Lattice
+from .base import structure_to_dict
 
 
 # Zeolite framework database
@@ -79,16 +80,6 @@ CATION_DATABASE = {
     "Cu": {"charge": 2, "radius_A": 0.73, "SCR_active": True},
     "Fe": {"charge": 3, "radius_A": 0.65, "redox_active": True},
 }
-
-
-def structure_to_dict(structure: Structure) -> Dict[str, Any]:
-    lattice = structure.lattice
-    return {
-        "lattice": {"a": lattice.a, "b": lattice.b, "c": lattice.c,
-                    "matrix": lattice.matrix.tolist()},
-        "atoms": [{"element": str(s.specie), "coords": list(s.frac_coords)} for s in structure],
-        "metadata": {"formula": structure.formula, "n_atoms": len(structure)}
-    }
 
 
 def generate_zeolite(

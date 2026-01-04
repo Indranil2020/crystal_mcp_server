@@ -31,17 +31,28 @@ export async function handleValidateStructure(args) {
         return {
             content: [{
                     type: "text",
-                    text: `❌ **Validation Failed**\n\n${result.error.message}`
+                    text: `**Validation Failed**\n\n${result.error.message}`
                 }],
             isError: true
         };
     }
     const outputText = formatValidationOutput(result.data);
+    // Include raw JSON data for the frontend viewer
+    const jsonData = JSON.stringify({
+        success: true,
+        validation: result.data
+    });
     return {
-        content: [{
+        content: [
+            {
                 type: "text",
                 text: outputText
-            }]
+            },
+            {
+                type: "text",
+                text: `\n\n<json-data>\n${jsonData}\n</json-data>`
+            }
+        ]
     };
 }
 //# sourceMappingURL=validation.js.map

@@ -86,7 +86,7 @@ export async function handleExploreSymmetryRelations(args: unknown): Promise<any
         return {
             content: [{
                 type: "text",
-                text: `❌ **Symmetry Analysis Failed**\n\n${result.error.message}`
+                text: `**Symmetry Analysis Failed**\n\n${result.error.message}`
             }],
             isError: true
         };
@@ -94,10 +94,22 @@ export async function handleExploreSymmetryRelations(args: unknown): Promise<any
 
     const outputText = formatSymmetryRelationsOutput(result.data);
 
+    // Include raw JSON data for the frontend viewer
+    const jsonData = JSON.stringify({
+        success: true,
+        relations: result.data
+    });
+
     return {
-        content: [{
-            type: "text",
-            text: outputText
-        }]
+        content: [
+            {
+                type: "text",
+                text: outputText
+            },
+            {
+                type: "text",
+                text: `\n\n<json-data>\n${jsonData}\n</json-data>`
+            }
+        ]
     };
 }

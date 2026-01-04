@@ -31,7 +31,7 @@ export async function handleCreateDefect(args) {
         return {
             content: [{
                     type: "text",
-                    text: `❌ **Defect Creation Failed**\n\n${result.error.message}`
+                    text: `**Defect Creation Failed**\n\n${result.error.message}`
                 }],
             isError: true
         };
@@ -44,11 +44,25 @@ export async function handleCreateDefect(args) {
         output += `**Species:** ${data.defect_species}\n`;
     }
     output += `\n${formatStructureOutput(data.defected_structure, undefined)}`;
+    // Include raw JSON data for the frontend viewer
+    const jsonData = JSON.stringify({
+        success: true,
+        structure: data.defected_structure,
+        defect_type: data.defect_type,
+        defect_site: data.defect_site,
+        defect_species: data.defect_species
+    });
     return {
-        content: [{
+        content: [
+            {
                 type: "text",
                 text: output
-            }]
+            },
+            {
+                type: "text",
+                text: `\n\n<json-data>\n${jsonData}\n</json-data>`
+            }
+        ]
     };
 }
 //# sourceMappingURL=defect.js.map

@@ -67,7 +67,7 @@ export async function handleOptimizeStructureMLFF(args: unknown): Promise<any> {
     return {
       content: [{
         type: "text",
-        text: `❌ **MLFF Optimization Failed**\n\n${result.error.message}\n\n**Suggestions:**\n${result.error.suggestions.map(s => `- ${s}`).join('\n')}`
+        text: `**MLFF Optimization Failed**\n\n${result.error.message}\n\n**Suggestions:**\n${result.error.suggestions.map(s => `- ${s}`).join('\n')}`
       }],
       isError: true
     };
@@ -75,10 +75,25 @@ export async function handleOptimizeStructureMLFF(args: unknown): Promise<any> {
 
   const outputText = formatOptimizationOutput(result.data);
   
+  // Include raw JSON data for the frontend viewer
+  const jsonData = JSON.stringify({
+      success: true,
+      structure: result.data.optimized_structure,
+      initial_energy: result.data.initial_energy,
+      final_energy: result.data.final_energy,
+      energy_change: result.data.energy_change
+  });
+
   return {
-    content: [{
-      type: "text",
-      text: outputText
-    }]
+    content: [
+      {
+        type: "text",
+        text: outputText
+      },
+      {
+        type: "text",
+        text: `\n\n<json-data>\n${jsonData}\n</json-data>`
+      }
+    ]
   };
 }

@@ -8,8 +8,10 @@ Comprehensive slab generation per structure_catalogue.md Category 4:
 
 from typing import Dict, Any, List, Optional, Union
 import numpy as np
+import spglib
 from pymatgen.core import Structure, Lattice
 from pymatgen.core.surface import SlabGenerator
+from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
 
 # Surface energy database (J/m^2)
@@ -47,6 +49,38 @@ SLAB_CONFIGURATIONS = {
 
 def structure_to_dict(structure: Structure) -> Dict[str, Any]:
     lattice = structure.lattice
+    
+    # Get symmetry info via spglib directly
+    cell = (
+        structure.lattice.matrix,
+        structure.frac_coords,
+        structure.atomic_numbers
+    )
+    
+    dataset = spglib.get_symmetry_dataset(cell, symprec=0.1)
+    
+    if dataset:
+        sg_symbol = str(dataset["international"])
+        sg_number = int(dataset["number"])
+        hall = str(dataset["hall"])
+        point_group = str(dataset["pointgroup"])
+        
+        if 1 <= sg_number <= 2: crystal_system = "triclinic"
+        elif 3 <= sg_number <= 15: crystal_system = "monoclinic"
+        elif 16 <= sg_number <= 74: crystal_system = "orthorhombic"
+        elif 75 <= sg_number <= 142: crystal_system = "tetragonal"
+        elif 143 <= sg_number <= 167: crystal_system = "trigonal"
+        elif 168 <= sg_number <= 194: crystal_system = "hexagonal"
+        elif 195 <= sg_number <= 230: crystal_system = "cubic"
+        else: crystal_system = "unknown"
+    else:
+        # Fallback
+        sg_symbol = "P1"
+        sg_number = 1
+        hall = "P 1"
+        point_group = "1"
+        crystal_system = "triclinic"
+
     return {
         "lattice": {"a": lattice.a, "b": lattice.b, "c": lattice.c,
                     "matrix": lattice.matrix.tolist()},

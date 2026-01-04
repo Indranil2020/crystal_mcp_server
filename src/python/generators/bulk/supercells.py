@@ -11,6 +11,7 @@ from typing import Dict, Any, List, Optional, Union
 import numpy as np
 from pymatgen.core import Structure, Lattice
 from pymatgen.core.surface import SlabGenerator
+from .base import structure_to_dict
 
 
 # Common supercell sizes for DFT
@@ -43,16 +44,6 @@ SPECIAL_CELLS = {
         "recommended": [[3, 3, 3], [4, 4, 4], [5, 5, 5]]
     },
 }
-
-
-def structure_to_dict(structure: Structure) -> Dict[str, Any]:
-    lattice = structure.lattice
-    return {
-        "lattice": {"a": lattice.a, "b": lattice.b, "c": lattice.c,
-                    "matrix": lattice.matrix.tolist()},
-        "atoms": [{"element": str(s.specie), "coords": list(s.frac_coords)} for s in structure],
-        "metadata": {"formula": structure.formula, "n_atoms": len(structure)}
-    }
 
 
 def make_supercell(

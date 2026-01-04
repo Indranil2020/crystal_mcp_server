@@ -27,23 +27,28 @@ export async function handleBuildMolecule(args) {
         return {
             content: [{
                     type: "text",
-                    text: `❌ **Molecule Building Failed**\n\n${result.error.message}`
+                    text: `**Molecule Building Failed**\n\n${result.error.message}`
                 }],
             isError: true
         };
     }
     const structure = result.data.structure;
     const metadata = structure.metadata;
+    // Include raw JSON data for the frontend viewer
+    const jsonData = JSON.stringify({
+        success: true,
+        structure: structure
+    });
     return {
         content: [{
                 type: "text",
-                text: `### 🧪 Molecule Built: ${metadata.formula}\n\n` +
+                text: `### Molecule Built: ${metadata.formula}\n\n` +
                     `- **Atoms**: ${metadata.natoms}\n` +
                     `- **Box Size**: ${structure.lattice.a.toFixed(2)} x ${structure.lattice.b.toFixed(2)} x ${structure.lattice.c.toFixed(2)} Å\n\n` +
                     `*Structure data is available in the response.*`
             }, {
                 type: "text",
-                text: JSON.stringify(structure, null, 2)
+                text: `\n\n<json-data>\n${jsonData}\n</json-data>`
             }]
     };
 }

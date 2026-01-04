@@ -25,6 +25,7 @@ from typing import Dict, Any, List, Optional, Tuple
 import json
 import sys
 import numpy as np
+import spglib
 from pymatgen.core import Structure, Lattice, Element, Composition
 from pymatgen.transformations.advanced_transformations import SupercellTransformation
 from ase import Atoms
@@ -114,7 +115,8 @@ def generate_prototype_structure(
     prototype: str,
     elements: Dict[str, str],
     lattice_constant: float,
-    c_over_a: float = 1.0
+    c_over_a: float = 1.0,
+    **kwargs
 ) -> Dict[str, Any]:
     """
     Generate a structure from a prototype template.
@@ -124,10 +126,15 @@ def generate_prototype_structure(
         elements: Mapping of site labels to elements (e.g., {'A': 'Ca', 'B': 'Ti', 'X': 'O'})
         lattice_constant: Lattice constant 'a' in Angstroms
         c_over_a: c/a ratio for non-cubic systems
+        **kwargs: Additional parameters to prevent crashes
     
     Returns:
         Dictionary with structure data
     """
+    # Handle aliases from kwargs if needed
+    if "a" in kwargs and lattice_constant == 4.0: # Default value
+         lattice_constant = kwargs["a"]
+
     if prototype not in PROTOTYPE_TEMPLATES:
         available = list(PROTOTYPE_TEMPLATES.keys())
         return {
@@ -776,9 +783,63 @@ def generate_mof_structure(
 # HELPER FUNCTIONS
 # ============================================================================
 
+def get_space_group_info(structure: Any, symprec: float = 1e-3) -> Dict[str, Any]:
+    """
+    Extract space group info using spglib.
+    Handles both Pymatgen Structure and ASE Atoms.
+    """
+    if structure is None:
+        return {"number": 1, "symbol": "P1", "crystal_system": "triclinic"}
+
+    cell = None
+    if hasattr(structure, "lattice") and hasattr(structure, "frac_coords"):
+        # Pymatgen Structure
+        cell = (
+            structure.lattice.matrix,
+            structure.frac_coords,
+            structure.atomic_numbers
+        )
+    elif hasattr(structure, "get_cell") and hasattr(structure, "get_scaled_positions"):
+        # ASE Atoms
+        cell = (
+            structure.get_cell(),
+            structure.get_scaled_positions(),
+            structure.get_atomic_numbers()
+        )
+    
+    if cell is None:
+        return {"number": 1, "symbol": "P1", "crystal_system": "triclinic"}
+
+    dataset = spglib.get_symmetry_dataset(cell, symprec=symprec)
+    if dataset is None:
+        return {"number": 1, "symbol": "P1", "crystal_system": "triclinic"}
+
+    number = dataset.get("number", 1)
+    symbol = dataset.get("international", "P1")
+    
+    # Simple mapping for crystal system
+    # 1-2: triclinic, 3-15: monoclinic, 16-74: orthorhombic
+    # 75-142: tetragonal, 143-167: trigonal, 168-194: hexagonal, 195-230: cubic
+    crystal_system = "triclinic"
+    if 3 <= number <= 15: crystal_system = "monoclinic"
+    elif 16 <= number <= 74: crystal_system = "orthorhombic"
+    elif 75 <= number <= 142: crystal_system = "tetragonal"
+    elif 143 <= number <= 167: crystal_system = "trigonal"
+    elif 168 <= number <= 194: crystal_system = "hexagonal"
+    elif 195 <= number <= 230: crystal_system = "cubic"
+
+    return {
+        "number": int(number),
+        "symbol": str(symbol),
+        "crystal_system": crystal_system
+    }
+
+
 def structure_to_dict(structure: Structure) -> Dict[str, Any]:
     """Convert Pymatgen Structure to dictionary."""
     lattice = structure.lattice
+    space_group = get_space_group_info(structure)
+    
     return {
         "lattice": {
             "a": lattice.a,
@@ -798,6 +859,7 @@ def structure_to_dict(structure: Structure) -> Dict[str, Any]:
             }
             for site in structure
         ],
+        "space_group": space_group,
         "metadata": {
             "formula": structure.formula,
             "n_atoms": len(structure),
@@ -827,6 +889,8 @@ def atoms_to_dict(atoms: Atoms) -> Dict[str, Any]:
     inv_cell = np.linalg.inv(cell) if volume > 1e-6 else np.eye(3)
     frac_coords = positions @ inv_cell
     
+    space_group = get_space_group_info(atoms)
+    
     return {
         "lattice": {
             "a": float(a),
@@ -846,6 +910,7 @@ def atoms_to_dict(atoms: Atoms) -> Dict[str, Any]:
             }
             for i, sym in enumerate(symbols)
         ],
+        "space_group": space_group,
         "metadata": {
             "formula": atoms.get_chemical_formula(),
             "n_atoms": len(atoms)

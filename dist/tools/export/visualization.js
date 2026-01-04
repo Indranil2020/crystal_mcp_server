@@ -22,17 +22,26 @@ export async function handleVisualization(args) {
         return {
             content: [{
                     type: "text",
-                    text: `❌ ** Visualization Failed **\n\n${result.error.message} `
+                    text: `** Visualization Failed **\n\n${result.error.message} `
                 }],
             isError: true
         };
     }
     const data = result.data;
+    // Include raw JSON data for the frontend viewer
+    const jsonData = JSON.stringify({
+        success: true,
+        data: data
+    });
     return {
         content: [
             {
                 type: "text",
                 text: JSON.stringify(data, null, 2)
+            },
+            {
+                type: "text",
+                text: `\n\n<json-data>\n${jsonData}\n</json-data>`
             }
         ]
     };

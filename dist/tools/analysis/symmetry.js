@@ -29,17 +29,32 @@ export async function handleAnalyzeSymmetry(args) {
         return {
             content: [{
                     type: "text",
-                    text: `❌ **Symmetry Analysis Failed**\n\n${result.error.message}`
+                    text: `**Symmetry Analysis Failed**\n\n${result.error.message}`
                 }],
             isError: true
         };
     }
     const outputText = formatSymmetryOutput(result.data);
+    // Include raw JSON data for the frontend viewer
+    // Prefer conventional cell, then primitive cell, then null
+    const structure = result.data.conventional_cell || result.data.primitive_cell;
+    const jsonData = JSON.stringify({
+        success: true,
+        structure: structure,
+        space_group: result.data.space_group,
+        symmetry_operations: result.data.symmetry_operations
+    });
     return {
-        content: [{
+        content: [
+            {
                 type: "text",
                 text: outputText
-            }]
+            },
+            {
+                type: "text",
+                text: `\n\n<json-data>\n${jsonData}\n</json-data>`
+            }
+        ]
     };
 }
 //# sourceMappingURL=symmetry.js.map

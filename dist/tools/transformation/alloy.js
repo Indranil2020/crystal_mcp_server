@@ -31,18 +31,30 @@ export async function handleCreateAlloy(args) {
         return {
             content: [{
                     type: "text",
-                    text: `❌ **Alloy Creation Failed**\n\n${result.error.message}`
+                    text: `**Alloy Creation Failed**\n\n${result.error.message}`
                 }],
             isError: true
         };
     }
     const data = result.data;
     const outputText = formatStructureOutput(data.alloy_structure, undefined);
+    // Include raw JSON data for the frontend viewer
+    const jsonData = JSON.stringify({
+        success: true,
+        structure: data.alloy_structure,
+        substitutions: data.substitutions
+    });
     return {
-        content: [{
+        content: [
+            {
                 type: "text",
-                text: `## 🧪 Alloy Created\n\n${outputText}`
-            }]
+                text: `## Alloy Created\n\n${outputText}`
+            },
+            {
+                type: "text",
+                text: `\n\n<json-data>\n${jsonData}\n</json-data>`
+            }
+        ]
     };
 }
 //# sourceMappingURL=alloy.js.map

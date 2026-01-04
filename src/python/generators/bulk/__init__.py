@@ -84,9 +84,9 @@ else:
     generate_epitaxial_strain = None
 
 # Import generate_strained_structure from external_fields if available
-try:
+if _module_available("generators.external_fields.strain_fields"):
     from ..external_fields.strain_fields import generate_strained_structure
-except ImportError:
+else:
     generate_strained_structure = None
 
 if _module_available(f"{_BASE_MODULE}.polytypes"):

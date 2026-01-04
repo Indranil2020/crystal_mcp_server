@@ -213,19 +213,25 @@ def atoms_to_dict(atoms) -> Dict[str, Any]:
     c = np.linalg.norm(cell[2])
     
     # Angles
-    # Very basic angle calc if needed, or assume orthogonal if simple box
-    # For general case:
     def angle(v1, v2):
-        return np.degrees(np.arccos(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))))
+        norm = np.linalg.norm(v1) * np.linalg.norm(v2)
+        if norm < 1e-10: return 90.0
+        return np.degrees(np.arccos(np.clip(np.dot(v1, v2) / norm, -1.0, 1.0)))
         
     alpha = angle(cell[1], cell[2])
     beta = angle(cell[0], cell[2])
     gamma = angle(cell[0], cell[1])
 
+    volume = abs(np.linalg.det(cell))
+    
+    # Fractional coordinates
+    inv_cell = np.linalg.inv(cell) if volume > 1e-6 else np.eye(3)
+    frac_coords = atoms.positions @ inv_cell
+    
     return {
         "lattice": {
             "matrix": cell.tolist(),
-            "volume": float(atoms.get_volume()),
+            "volume": float(volume),
             "a": float(a),
             "b": float(b),
             "c": float(c),
@@ -236,11 +242,16 @@ def atoms_to_dict(atoms) -> Dict[str, Any]:
         "atoms": [
             {
                 "element": atom.symbol,
-                "coords": atoms.get_scaled_positions()[i].tolist(),
+                "coords": frac_coords[i].tolist(),
                 "cartesian": atom.position.tolist()
             }
             for i, atom in enumerate(atoms)
         ],
+        "space_group": {
+            "number": 1,
+            "symbol": "P1",
+            "crystal_system": "triclinic"
+        },
         "metadata": {
             "formula": atoms.get_chemical_formula(),
             "natoms": len(atoms),

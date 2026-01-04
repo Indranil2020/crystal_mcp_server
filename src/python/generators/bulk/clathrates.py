@@ -10,6 +10,7 @@ Comprehensive clathrate generation:
 from typing import Dict, Any, List, Optional
 import numpy as np
 from pymatgen.core import Structure, Lattice
+from .base import structure_to_dict
 
 
 # Clathrate type database
@@ -90,16 +91,6 @@ CAGE_TYPES = {
         "n_small": 16, "n_large": 8
     },
 }
-
-
-def structure_to_dict(structure: Structure) -> Dict[str, Any]:
-    lattice = structure.lattice
-    return {
-        "lattice": {"a": lattice.a, "b": lattice.b, "c": lattice.c,
-                    "matrix": lattice.matrix.tolist()},
-        "atoms": [{"element": str(s.specie), "coords": list(s.frac_coords)} for s in structure],
-        "metadata": {"formula": structure.formula, "n_atoms": len(structure)}
-    }
 
 
 def generate_clathrate(

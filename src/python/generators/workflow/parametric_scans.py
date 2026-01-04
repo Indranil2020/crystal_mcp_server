@@ -178,6 +178,7 @@ def generate_z_scan(
     result = {
         "success": True,
         "operation": "z_scan",
+        "structure": structures[0] if structures else None,  # Representative structure for visualization
         "structures": structures,
         "z_values": z_values.tolist(),
         "n_frames": n_frames,
@@ -321,6 +322,7 @@ def generate_distance_scan(
     return {
         "success": True,
         "operation": "distance_scan",
+        "structure": structures[0] if structures else None,
         "structures": structures,
         "distances": distances.tolist(),
         "n_frames": n_frames,
@@ -428,6 +430,7 @@ def generate_rotation_scan(
     return {
         "success": True,
         "operation": "rotation_scan",
+        "structure": structures[0] if structures else None,
         "structures": structures,
         "angles": angles.tolist(),
         "n_frames": n_frames,
@@ -660,6 +663,7 @@ def generate_multi_parameter_scan(
     return {
         "success": True,
         "operation": "multi_parameter_scan",
+        "structure": structures[0] if structures else None,
         "generator": generator_name,
         "scan_params": scan_params,
         "scan_type": scan_type,
@@ -761,14 +765,12 @@ def _ase_molecule_or_none(name: str):
     from ase.build import molecule as ase_molecule
 
     known = set(getattr(g2, "names", []))
-    try:
+    
+    if importlib.util.find_spec("ase.build.molecule") is not None:
         ase_molecule_module = importlib.import_module("ase.build.molecule")
         extra = getattr(ase_molecule_module, "extra", {})
         if isinstance(extra, dict):
             known.update(extra.keys())
-    except Exception:
-        # Fallback: extra molecule catalog is optional across ASE versions.
-        pass
 
     if name in known:
         return ase_molecule(name)
@@ -802,14 +804,60 @@ def _dict_to_atoms(structure: Dict[str, Any]):
 
 
 def _atoms_to_dict(atoms) -> Dict[str, Any]:
-    """Convert ASE Atoms to structure dict."""
+    """Convert ASE Atoms to structure dict compatible with frontend."""
+    cell = atoms.get_cell()
+    positions = atoms.positions
+    symbols = atoms.get_chemical_symbols()
+    
+    # Calculate lattice parameters
+    a = np.linalg.norm(cell[0])
+    b = np.linalg.norm(cell[1])
+    c = np.linalg.norm(cell[2])
+    
+    def angle(v1, v2):
+        norm_prod = np.linalg.norm(v1) * np.linalg.norm(v2)
+        if norm_prod < 1e-10: return 90.0
+        return np.degrees(np.arccos(np.clip(np.dot(v1, v2) / norm_prod, -1.0, 1.0)))
+        
+    alpha = angle(cell[1], cell[2])
+    beta = angle(cell[0], cell[2])
+    gamma = angle(cell[0], cell[1])
+    
+    volume = abs(np.linalg.det(cell))
+    
+    # Fractional coordinates
+    inv_cell = np.linalg.inv(cell) if volume > 1e-6 else np.eye(3)
+    frac_coords = positions @ inv_cell
+
     return {
-        "species": list(atoms.get_chemical_symbols()),
-        "positions": atoms.positions.tolist(),
-        "cell": atoms.get_cell().tolist(),
-        "pbc": list(atoms.pbc),
-        "n_atoms": len(atoms),
-        "formula": atoms.get_chemical_formula()
+        "lattice": {
+            "a": float(a),
+            "b": float(b),
+            "c": float(c),
+            "alpha": float(alpha),
+            "beta": float(beta),
+            "gamma": float(gamma),
+            "matrix": cell.tolist(),
+            "volume": float(volume)
+        },
+        "atoms": [
+            {
+                "element": sym,
+                "coords": frac_coords[i].tolist(),
+                "cartesian": positions[i].tolist()
+            }
+            for i, sym in enumerate(symbols)
+        ],
+        "space_group": {
+            "number": 1,
+            "symbol": "P1",
+            "crystal_system": "triclinic"
+        },
+        "metadata": {
+            "formula": atoms.get_chemical_formula(),
+            "natoms": len(atoms),
+            "pbc": list(atoms.pbc)
+        }
     }
 
 

@@ -12,6 +12,7 @@ import json
 import sys
 import time
 import numpy as np
+import spglib
 from ase import Atoms
 from ase.optimize import BFGS, FIRE, LBFGS, GPMin
 from ase.constraints import FixAtoms, UnitCellFilter
@@ -240,6 +241,36 @@ def atoms_to_dict(atoms: Atoms) -> Dict[str, Any]:
     # Get lattice parameters
     a, b, c, alpha, beta, gamma = atoms.cell.cellpar()
     
+    # Get space group info using spglib
+    # ASE atoms to spglib cell tuple: (lattice, positions, numbers)
+    # lattice is 3x3 matrix, positions are fractional, numbers are atomic numbers
+    spg_cell = (cell, positions_fractional, atoms.get_atomic_numbers())
+    
+    # Defensive programming: Handle spglib potential failures without try-except
+    dataset = spglib.get_symmetry_dataset(spg_cell, symprec=1e-3)
+    
+    if dataset:
+        sg_number = int(dataset["number"])
+        sg_symbol = str(dataset["international"])
+        hall = str(dataset["hall"])
+        point_group = str(dataset["pointgroup"])
+        # Determine crystal system (simple map)
+        if 1 <= sg_number <= 2: crystal_system = "triclinic"
+        elif 3 <= sg_number <= 15: crystal_system = "monoclinic"
+        elif 16 <= sg_number <= 74: crystal_system = "orthorhombic"
+        elif 75 <= sg_number <= 142: crystal_system = "tetragonal"
+        elif 143 <= sg_number <= 167: crystal_system = "trigonal"
+        elif 168 <= sg_number <= 194: crystal_system = "hexagonal"
+        elif 195 <= sg_number <= 230: crystal_system = "cubic"
+        else: crystal_system = "unknown"
+    else:
+        # Fallback
+        sg_number = 1
+        sg_symbol = "P1"
+        hall = "P 1"
+        point_group = "1"
+        crystal_system = "triclinic"
+
     structure = {
         "lattice": {
             "a": float(a),
@@ -250,6 +281,13 @@ def atoms_to_dict(atoms: Atoms) -> Dict[str, Any]:
             "gamma": float(gamma),
             "matrix": cell.tolist(),
             "volume": float(atoms.get_volume())
+        },
+        "space_group": {
+            "number": sg_number,
+            "symbol": sg_symbol,
+            "hall_symbol": hall,
+            "point_group": point_group,
+            "crystal_system": crystal_system
         },
         "atoms": [],
         "metadata": {

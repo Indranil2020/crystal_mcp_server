@@ -56,17 +56,28 @@ export async function handleExploreSymmetryRelations(args) {
         return {
             content: [{
                     type: "text",
-                    text: `❌ **Symmetry Analysis Failed**\n\n${result.error.message}`
+                    text: `**Symmetry Analysis Failed**\n\n${result.error.message}`
                 }],
             isError: true
         };
     }
     const outputText = formatSymmetryRelationsOutput(result.data);
+    // Include raw JSON data for the frontend viewer
+    const jsonData = JSON.stringify({
+        success: true,
+        relations: result.data
+    });
     return {
-        content: [{
+        content: [
+            {
                 type: "text",
                 text: outputText
-            }]
+            },
+            {
+                type: "text",
+                text: `\n\n<json-data>\n${jsonData}\n</json-data>`
+            }
+        ]
     };
 }
 //# sourceMappingURL=symmetry-relations.js.map

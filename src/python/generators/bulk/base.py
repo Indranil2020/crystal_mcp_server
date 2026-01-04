@@ -71,6 +71,9 @@ def structure_to_dict(structure: Structure) -> Dict[str, Any]:
     sga = SpacegroupAnalyzer(structure, symprec=0.1)
     sg_symbol = sga.get_space_group_symbol()
     sg_number = sga.get_space_group_number()
+    hall = sga.get_hall()
+    point_group = sga.get_point_group_symbol()
+    crystal_system = sga.get_crystal_system()
     
     return {
         "lattice": {
@@ -93,7 +96,10 @@ def structure_to_dict(structure: Structure) -> Dict[str, Any]:
         ],
         "space_group": {
             "number": sg_number,
-            "symbol": sg_symbol
+            "symbol": sg_symbol,
+            "hall_symbol": hall,
+            "point_group": point_group,
+            "crystal_system": crystal_system
         },
         "metadata": {
             "formula": structure.formula,

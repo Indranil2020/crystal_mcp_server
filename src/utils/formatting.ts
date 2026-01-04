@@ -81,7 +81,7 @@ export function formatStructureOutput(
   // Validation results
   if (validation) {
     if (!validation.valid || validation.issues.length > 0) {
-      output += `### ⚠️ Validation Issues\n\n`;
+      output += `### Validation Issues\n\n`;
       validation.issues.forEach(issue => {
         output += `- **${issue}**\n`;
       });
@@ -89,7 +89,7 @@ export function formatStructureOutput(
     }
     
     if (validation.warnings.length > 0) {
-      output += `### ℹ️ Warnings\n\n`;
+      output += `### Warnings\n\n`;
       validation.warnings.forEach(warning => {
         output += `- ${warning}\n`;
       });
@@ -147,7 +147,7 @@ export function formatStructureOutput(
  * Format space group scan results.
  */
 export function formatSpaceGroupScanOutput(results: any[]): string {
-  let output = `## 🔍 Space Group Scan Results\n\n`;
+  let output = `## Space Group Scan Results\n\n`;
   
   const successful = results.filter(r => r.success);
   const failed = results.filter(r => !r.success);
@@ -157,7 +157,7 @@ export function formatSpaceGroupScanOutput(results: any[]): string {
   output += `**Failed:** ${failed.length}\n\n`;
   
   if (successful.length > 0) {
-    output += `### ✅ Successfully Generated\n\n`;
+    output += `### Successfully Generated\n\n`;
     output += `| Space Group | Symbol | Crystal System | Atoms | Volume (A^3) |\n`;
     output += `|-------------|--------|----------------|-------|------------|\n`;
 
@@ -176,7 +176,7 @@ export function formatSpaceGroupScanOutput(results: any[]): string {
   }
   
   if (failed.length > 0) {
-    output += `### ❌ Failed to Generate\n\n`;
+    output += `### Failed to Generate\n\n`;
     output += `| Space Group | Error |\n`;
     output += `|-------------|-------|\n`;
 
@@ -196,7 +196,7 @@ export function formatSpaceGroupScanOutput(results: any[]): string {
  * Format optimization results.
  */
 export function formatOptimizationOutput(result: any): string {
-  let output = `## ⚡ MLFF Optimization Results\n\n`;
+  let output = `## MLFF Optimization Results\n\n`;
   
   output += `### Energy\n\n`;
   output += `| Property | Value |\n`;
@@ -216,9 +216,9 @@ export function formatOptimizationOutput(result: any): string {
   output += `| Property | Value |\n`;
   output += `|----------|-------|\n`;
   output += `| Steps | ${result.n_steps} |\n`;
-  output += `| Converged | ${result.converged ? 'Yes ✅' : 'No ❌'} |\n`;
+  output += `| Converged | ${result.converged ? 'Yes' : 'No'} |\n`;
   if (result.preserved_symmetry !== undefined) {
-    output += `| Symmetry Preserved | ${result.preserved_symmetry ? 'Yes ✅' : 'No ❌'} |\n`;
+    output += `| Symmetry Preserved | ${result.preserved_symmetry ? 'Yes' : 'No'} |\n`;
   }
   output += `\n`;
   
@@ -313,7 +313,7 @@ export function formatSymmetryOutput(result: any): string {
   if (result.conventional_cell) {
     output += `### Conventional Cell\n\n`;
     output += `**Atoms:** ${result.conventional_cell.metadata.natoms}\n`;
-    output += `**Standardized:** ${result.is_standardized ? 'Yes ✅' : 'No'}\n\n`;
+    output += `**Standardized:** ${result.is_standardized ? 'Yes' : 'No'}\n\n`;
   }
   
   return output;
@@ -323,7 +323,7 @@ export function formatSymmetryOutput(result: any): string {
  * Format validation results.
  */
 export function formatValidationOutput(result: any): string {
-  let output = `## ✓ Structure Validation Results\n\n`;
+  let output = `## Structure Validation Results\n\n`;
   
   output += `**Status:** ${result.valid ? '✅ Valid' : '❌ Invalid'}\n\n`;
   

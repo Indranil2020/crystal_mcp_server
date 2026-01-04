@@ -53,7 +53,7 @@ export async function handleGenerateMolecularCrystal(args: unknown): Promise<any
         return {
             content: [{
                 type: "text",
-                text: `❌ **Molecular Crystal Generation Failed**\n\n${result.error.message}`
+                text: `**Molecular Crystal Generation Failed**\n\n${result.error.message}`
             }],
             isError: true
         };
@@ -62,10 +62,23 @@ export async function handleGenerateMolecularCrystal(args: unknown): Promise<any
     const data = result.data;
     const outputText = formatStructureOutput(data.structure, data.validation);
 
+    // Include raw JSON data for the frontend viewer
+    const jsonData = JSON.stringify({
+        success: true,
+        structure: data.structure,
+        validation: data.validation
+    });
+
     return {
-        content: [{
-            type: "text",
-            text: `## 🧪 Molecular Crystal Generated\n\n${outputText}`
-        }]
+        content: [
+            {
+                type: "text",
+                text: `## Molecular Crystal Generated\n\n${outputText}`
+            },
+            {
+                type: "text",
+                text: `\n\n<json-data>\n${jsonData}\n</json-data>`
+            }
+        ]
     };
 }
