@@ -8,9 +8,13 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CrystalStructure {
     pub lattice: Lattice,
+    #[serde(default)]
     pub atoms: Vec<Atom>,
+    #[serde(default)]
+    pub sites: Option<Vec<Atom>>,
     pub space_group: SpaceGroup,
-    pub metadata: Metadata,
+    #[serde(default)]
+    pub metadata: Option<Metadata>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -21,8 +25,10 @@ pub struct Lattice {
     pub alpha: f64,
     pub beta: f64,
     pub gamma: f64,
-    pub matrix: [[f64; 3]; 3],
-    pub volume: f64,
+    #[serde(default)]
+    pub matrix: Option<Vec<Vec<f64>>>,
+    #[serde(default)]
+    pub volume: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -37,14 +43,20 @@ pub struct Atom {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpaceGroup {
     pub number: u32,
-    pub symbol: String,
+    #[serde(default)]
+    pub symbol: Option<String>,
+    #[serde(default)]
+    pub crystal_system: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Metadata {
-    pub formula: String,
-    pub natoms: u32,
-    pub volume: f64,
+    #[serde(default)]
+    pub formula: Option<String>,
+    #[serde(default)]
+    pub natoms: Option<u32>,
+    #[serde(default)]
+    pub volume: Option<f64>,
     #[serde(default)]
     pub density: Option<f64>,
 }
@@ -163,7 +175,16 @@ impl CrystalViewer {
         let mut positions = Vec::new();
         
         if let Some(ref structure) = self.structure {
-            for atom in &structure.atoms {
+            // Use atoms if available, otherwise try sites
+            let atoms = if !structure.atoms.is_empty() {
+                &structure.atoms
+            } else if let Some(ref sites) = structure.sites {
+                sites
+            } else {
+                return positions;
+            };
+            
+            for atom in atoms {
                 let pos = [
                     atom.cartesian[0] as f32,
                     atom.cartesian[1] as f32,
@@ -182,10 +203,28 @@ impl CrystalViewer {
         let mut lines = Vec::new();
         
         if let Some(ref structure) = self.structure {
-            let m = &structure.lattice.matrix;
-            let a = [m[0][0] as f32, m[0][1] as f32, m[0][2] as f32];
-            let b = [m[1][0] as f32, m[1][1] as f32, m[1][2] as f32];
-            let c = [m[2][0] as f32, m[2][1] as f32, m[2][2] as f32];
+            // Get lattice vectors from matrix or calculate from parameters
+            let (a, b, c) = if let Some(ref m) = structure.lattice.matrix {
+                if m.len() >= 3 && m[0].len() >= 3 && m[1].len() >= 3 && m[2].len() >= 3 {
+                    (
+                        [m[0][0] as f32, m[0][1] as f32, m[0][2] as f32],
+                        [m[1][0] as f32, m[1][1] as f32, m[1][2] as f32],
+                        [m[2][0] as f32, m[2][1] as f32, m[2][2] as f32],
+                    )
+                } else {
+                    // Fallback to simple cubic
+                    let la = structure.lattice.a as f32;
+                    let lb = structure.lattice.b as f32;
+                    let lc = structure.lattice.c as f32;
+                    ([la, 0.0, 0.0], [0.0, lb, 0.0], [0.0, 0.0, lc])
+                }
+            } else {
+                // No matrix, use lattice parameters (assume orthorhombic for simplicity)
+                let la = structure.lattice.a as f32;
+                let lb = structure.lattice.b as f32;
+                let lc = structure.lattice.c as f32;
+                ([la, 0.0, 0.0], [0.0, lb, 0.0], [0.0, 0.0, lc])
+            };
             let o = [0.0f32, 0.0, 0.0];
             
             fn add(p1: [f32; 3], p2: [f32; 3]) -> [f32; 3] {
@@ -211,13 +250,23 @@ impl CrystalViewer {
 
     pub fn get_structure_info(&self) -> Option<String> {
         self.structure.as_ref().map(|s| {
+            let formula = s.metadata.as_ref()
+                .and_then(|m| m.formula.as_ref())
+                .map(|f| f.as_str())
+                .unwrap_or("Unknown");
+            let symbol = s.space_group.symbol.as_deref().unwrap_or("?");
+            let natoms = s.metadata.as_ref()
+                .and_then(|m| m.natoms)
+                .unwrap_or(0);
+            let volume = s.lattice.volume.unwrap_or(0.0);
+            
             format!(
                 "Formula: {}\nSpace Group: {} ({})\nAtoms: {}\nVolume: {:.2} Å³\nLattice: a={:.3} b={:.3} c={:.3}\nAngles: α={:.1}° β={:.1}° γ={:.1}°",
-                s.metadata.formula,
-                s.space_group.symbol,
+                formula,
+                symbol,
                 s.space_group.number,
-                s.metadata.natoms,
-                s.metadata.volume,
+                natoms,
+                volume,
                 s.lattice.a, s.lattice.b, s.lattice.c,
                 s.lattice.alpha, s.lattice.beta, s.lattice.gamma
             )

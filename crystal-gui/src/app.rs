@@ -30,13 +30,13 @@ pub struct CrystalApp {
     ollama_url: String,
     ollama_model: String,
     mcp_server_path: String,
+    current_structure_json: Option<Value>,
 }
 
 impl CrystalApp {
     pub fn new(_cc: &eframe::CreationContext<'_>) -> Self {
-        let mcp_server_path = std::env::current_dir()
-            .map(|p| p.parent().unwrap_or(&p).join("dist/index.js").to_string_lossy().to_string())
-            .unwrap_or_else(|_| "/home/niel/git/crystal-mcp-server/dist/index.js".to_string());
+        // Use absolute path - can be overridden in settings
+        let mcp_server_path = "/home/niel/git/crystal-mcp-server/dist/index.js".to_string();
 
         Self {
             mcp_client: Arc::new(Mutex::new(None)),
@@ -61,6 +61,7 @@ impl CrystalApp {
             ollama_url: "http://localhost:11434".to_string(),
             ollama_model: "llama3.2:1b".to_string(),
             mcp_server_path,
+            current_structure_json: None,
         }
     }
 
@@ -121,22 +122,68 @@ impl CrystalApp {
         self.chat_input.clear();
 
         if !self.llm_connected {
+            self.connect_llm();
+        }
+        if !self.llm_connected {
             self.chat_history.push(ChatMessage {
                 role: "assistant".to_string(),
-                content: "LLM not connected. Please connect to Ollama first.".to_string(),
+                content: "LLM not connected. Is Ollama running?".to_string(),
             });
             return;
         }
 
-        let tools_desc = self.available_tools.join(", ");
+        if !self.mcp_connected {
+            self.connect_mcp();
+        }
+        if !self.mcp_connected {
+            self.chat_history.push(ChatMessage {
+                role: "assistant".to_string(),
+                content: "MCP not connected. Please check MCP server path in Settings.".to_string(),
+            });
+            return;
+        }
+
+        let tools_desc = self.available_tools.join("\n");
         let client = self.llm_client.lock().unwrap();
-        
+
         match client.chat_with_tools(&self.chat_history, &tools_desc) {
             Ok(response) => {
-                self.chat_history.push(ChatMessage {
-                    role: "assistant".to_string(),
-                    content: response,
-                });
+                // Try to parse tool call from response
+                let tool_call = self.parse_tool_call(&response);
+                
+                if let Some((tool_name, params)) = tool_call {
+                    if !self.available_tools.iter().any(|t| t == &tool_name) {
+                        self.chat_history.push(ChatMessage {
+                            role: "assistant".to_string(),
+                            content: format!(
+                                "Tool `{}` is not available. Available tools:\n{}",
+                                tool_name,
+                                self.available_tools.join("\n")
+                            ),
+                        });
+                        return;
+                    }
+
+                    // Auto-fill tool parameters
+                    self.selected_tool = Some(tool_name.clone());
+                    self.tool_params = serde_json::to_string_pretty(&params).unwrap_or_default();
+                    
+                    self.chat_history.push(ChatMessage {
+                        role: "assistant".to_string(),
+                        content: format!("Executing `{}`...", tool_name),
+                    });
+                    
+                    // Auto-execute if MCP is connected
+                    drop(client); // Release lock before calling tool
+                    if self.mcp_connected {
+                        self.call_tool();
+                    }
+                } else {
+                    self.chat_history.push(ChatMessage {
+                        role: "assistant".to_string(),
+                        content: response,
+                    });
+                }
             }
             Err(e) => {
                 self.chat_history.push(ChatMessage {
@@ -146,46 +193,274 @@ impl CrystalApp {
             }
         }
     }
+    
+    fn parse_tool_call(&self, response: &str) -> Option<(String, Value)> {
+        // Try to extract JSON from response
+        let json_str = if let Some(start) = response.find("```json") {
+            let start = start + 7;
+            if let Some(end) = response[start..].find("```") {
+                response[start..start + end].trim()
+            } else {
+                return None;
+            }
+        } else if let Some(start) = response.find('{') {
+            if let Some(end) = response.rfind('}') {
+                &response[start..=end]
+            } else {
+                return None;
+            }
+        } else {
+            return None;
+        };
+        
+        // Parse JSON
+        let parsed: Value = serde_json::from_str(json_str).ok()?;
+        let tool_name = parsed.get("tool")?.as_str()?.to_string();
+        let params = parsed.get("params")?.clone();
+        
+        Some((tool_name, params))
+    }
 
     fn call_tool(&mut self) {
         let Some(ref tool_name) = self.selected_tool else {
-            self.status_message = "No tool selected.".to_string();
+            self.status_message = "No tool selected. Please select a tool first.".to_string();
             return;
         };
 
-        let params: Value = serde_json::from_str(&self.tool_params).unwrap_or(json!({}));
+        let params: Value = match serde_json::from_str(&self.tool_params) {
+            Ok(p) => p,
+            Err(e) => {
+                self.status_message = format!("Invalid JSON params: {}", e);
+                return;
+            }
+        };
         
-        let mut client_guard = self.mcp_client.lock().unwrap();
-        let Some(ref mut client) = *client_guard else {
-            self.status_message = "MCP not connected.".to_string();
-            return;
-        };
-
-        match client.call_tool(tool_name, params) {
+        self.status_message = format!("Executing {}...", tool_name);
+        
+        // Call MCP tool and get result
+        let tool_result = {
+            let mut client_guard = self.mcp_client.lock().unwrap();
+            let Some(ref mut client) = *client_guard else {
+                self.status_message = "MCP not connected. Click 'Connect MCP' first.".to_string();
+                return;
+            };
+            client.call_tool(tool_name, params)
+        }; // client_guard dropped here
+        
+        match tool_result {
             Ok(result) => {
                 self.status_message = format!("Tool {} executed.", tool_name);
                 
+                // Check for errors first
+                if result.is_error {
+                    if let Some(content) = result.content.first() {
+                        self.status_message = format!("Tool error: {}", content.text);
+                        self.chat_history.push(ChatMessage {
+                            role: "assistant".to_string(),
+                            content: self.status_message.clone(),
+                        });
+                    }
+                    return;
+                }
+
+                for content in &result.content {
+                    if content.content_type != "text" {
+                        continue;
+                    }
+                    let trimmed = content.text.trim();
+                    if trimmed.starts_with("<json-data>") && trimmed.ends_with("</json-data>") {
+                        continue;
+                    }
+                    if trimmed.contains("<json-data>") && trimmed.contains("</json-data>") {
+                        continue;
+                    }
+
+                    self.chat_history.push(ChatMessage {
+                        role: "assistant".to_string(),
+                        content: content.text.clone(),
+                    });
+                }
+                
+                // Try to extract structure from response
+                let mut found_structure = false;
+                let mut parse_error: Option<String> = None;
+                
                 for content in &result.content {
                     if content.content_type == "text" {
-                        if let Ok(structure) = serde_json::from_str::<CrystalStructure>(&content.text) {
+                        // Check for <json-data> tag format from MCP server
+                        if content.text.contains("<json-data>") {
+                            if let Some(start) = content.text.find("<json-data>") {
+                                let json_start = start + "<json-data>".len();
+                                if let Some(end) = content.text[json_start..].find("</json-data>") {
+                                    let json_str = content.text[json_start..json_start + end].trim();
+                                    if let Ok(wrapper) = serde_json::from_str::<Value>(json_str) {
+                                        if let Some(structure_val) = wrapper.get("structure").or_else(|| wrapper.get("data").and_then(|d| d.get("structure"))) {
+                                            self.current_structure_json = Some(structure_val.clone());
+                                            match serde_json::from_value::<CrystalStructure>(structure_val.clone()) {
+                                                Ok(structure) => {
+                                                    self.crystal_viewer.set_structure(structure);
+                                                    found_structure = true;
+                                                    break;
+                                                }
+                                                Err(e) => {
+                                                    parse_error = Some(e.to_string());
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        if let Some(slab_val) = wrapper.get("slab").or_else(|| wrapper.get("data").and_then(|d| d.get("slab"))) {
+                                            self.current_structure_json = Some(slab_val.clone());
+                                            match serde_json::from_value::<CrystalStructure>(slab_val.clone()) {
+                                                Ok(structure) => {
+                                                    self.crystal_viewer.set_structure(structure);
+                                                    found_structure = true;
+                                                    break;
+                                                }
+                                                Err(e) => {
+                                                    parse_error = Some(e.to_string());
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        else if let Ok(structure) = serde_json::from_str::<CrystalStructure>(&content.text) {
+                            self.current_structure_json = Some(serde_json::to_value(&structure).unwrap_or_default());
                             self.crystal_viewer.set_structure(structure);
-                            self.status_message = "Structure loaded into viewer.".to_string();
-                        } else if content.text.contains("\"structure\"") {
+                            found_structure = true;
+                            break;
+                        }
+                        else if content.text.contains("\"structure\"") {
                             if let Ok(wrapper) = serde_json::from_str::<Value>(&content.text) {
-                                if let Some(structure_val) = wrapper.get("structure") {
-                                    if let Ok(structure) = serde_json::from_value::<CrystalStructure>(structure_val.clone()) {
-                                        self.crystal_viewer.set_structure(structure);
-                                        self.status_message = "Structure loaded into viewer.".to_string();
+                                if let Some(structure_val) = wrapper.get("structure").or_else(|| wrapper.get("data").and_then(|d| d.get("structure"))) {
+                                    self.current_structure_json = Some(structure_val.clone());
+                                    match serde_json::from_value::<CrystalStructure>(structure_val.clone()) {
+                                        Ok(structure) => {
+                                            self.crystal_viewer.set_structure(structure);
+                                            found_structure = true;
+                                            break;
+                                        }
+                                        Err(e) => {
+                                            parse_error = Some(e.to_string());
+                                            break;
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
+                
+                if found_structure {
+                    self.status_message = "Structure generated. View in Crystal Viewer panel.".to_string();
+                } else if let Some(err) = parse_error {
+                    self.status_message = format!("Structure payload received but failed to load in viewer: {}", err);
+                    self.chat_history.push(ChatMessage {
+                        role: "assistant".to_string(),
+                        content: self.status_message.clone(),
+                    });
+                } else if !result.content.is_empty() {
+                    self.status_message = format!("Tool {} completed (no structure to display).", tool_name);
+                }
             }
             Err(e) => {
                 self.status_message = format!("Tool error: {}", e);
+                self.chat_history.push(ChatMessage {
+                    role: "assistant".to_string(),
+                    content: self.status_message.clone(),
+                });
             }
+        }
+    }
+    
+    fn generate_and_show_visualization(&mut self) {
+        let Some(ref structure) = self.current_structure_json else {
+            self.status_message = "No structure to visualize.".to_string();
+            return;
+        };
+        
+        // Save structure to temp file
+        let input_path = "/tmp/crystal_viz_input.json";
+        let output_path = "/tmp/crystal_structure.png";
+        
+        let json_str = match serde_json::to_string(structure) {
+            Ok(s) => s,
+            Err(e) => {
+                self.status_message = format!("Failed to serialize: {}", e);
+                return;
+            }
+        };
+        
+        if let Err(e) = std::fs::write(input_path, &json_str) {
+            self.status_message = format!("Failed to write input file: {}", e);
+            return;
+        }
+        
+        // Generate PNG using inline Python script (ASE)
+        let python_script = format!(r#"
+import json
+import numpy as np
+from ase import Atoms
+from ase.visualize.plot import plot_atoms
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+with open('{}') as f:
+    structure = json.load(f)
+
+lattice = structure.get('lattice', {{}})
+atoms_data = structure.get('atoms', structure.get('sites', []))
+
+if not lattice or not atoms_data:
+    print("Invalid structure")
+    exit(1)
+
+cell = np.array(lattice.get('matrix', [[10,0,0],[0,10,0],[0,0,10]]))
+symbols = [a.get('element', 'X') for a in atoms_data]
+positions = [a.get('cartesian', a.get('coords', [0,0,0])) for a in atoms_data]
+
+atoms = Atoms(symbols=symbols, positions=positions, cell=cell, pbc=True)
+
+fig, ax = plt.subplots(figsize=(10, 10))
+ax.axis('off')
+ax.set_title(f"{{len(symbols)}} atoms: {{', '.join(set(symbols))}}", fontsize=14)
+plot_atoms(atoms, ax, radii=0.8, rotation='10x,10y,10z')
+fig.savefig('{}', bbox_inches='tight', dpi=150, facecolor='white')
+plt.close()
+print("OK")
+"#, input_path, output_path);
+        
+        let output = std::process::Command::new("python3")
+            .arg("-c")
+            .arg(&python_script)
+            .output();
+            
+        match output {
+            Ok(o) => {
+                let stdout = String::from_utf8_lossy(&o.stdout);
+                if !stdout.contains("OK") {
+                    let stderr = String::from_utf8_lossy(&o.stderr);
+                    self.status_message = format!("Visualization failed: {}", stderr);
+                    return;
+                }
+            }
+            Err(e) => {
+                self.status_message = format!("Failed to run visualization: {}", e);
+                return;
+            }
+        }
+        
+        // Open PNG with image viewer
+        if std::path::Path::new(output_path).exists() {
+            let _ = std::process::Command::new("xdg-open")
+                .arg(output_path)
+                .spawn();
+            self.status_message = "Structure visualization opened.".to_string();
+        } else {
+            self.status_message = "Visualization file not created.".to_string();
         }
     }
 
@@ -281,14 +556,50 @@ impl CrystalApp {
     fn render_tools_panel(&mut self, ui: &mut egui::Ui) {
         ui.heading("Tools");
         
-        if !self.mcp_connected {
+        // Connection controls
+        ui.horizontal(|ui| {
+            if self.mcp_connected {
+                ui.label(format!("✓ {} tools loaded", self.available_tools.len()));
+                if ui.button("Disconnect").clicked() {
+                    self.disconnect_mcp();
+                }
+            } else {
+                ui.label("Not connected");
+                if ui.button("Connect MCP").clicked() {
+                    self.connect_mcp();
+                }
+            }
+        });
+        
+        ui.separator();
+        
+        if !self.mcp_connected || self.available_tools.is_empty() {
             ui.label("Connect to MCP server to see tools.");
+            
+            // Still show quick actions even when not connected
+            ui.add_space(16.0);
+            ui.heading("Quick Actions (requires MCP)");
+            
+            if ui.button("Generate Si (Diamond)").clicked() {
+                self.selected_tool = Some("generate_crystal".to_string());
+                self.tool_params = r#"{
+  "composition": ["Si", "Si", "Si", "Si", "Si", "Si", "Si", "Si"],
+  "space_group": 227
+}"#.to_string();
+                if !self.mcp_connected {
+                    self.connect_mcp();
+                }
+            }
             return;
         }
         
-        egui::ComboBox::from_label("Select Tool")
-            .selected_text(self.selected_tool.as_deref().unwrap_or("None"))
+        // Tool selection dropdown
+        ui.label("Select Tool:");
+        egui::ComboBox::from_id_salt("tool_selector")
+            .selected_text(self.selected_tool.as_deref().unwrap_or("-- Select --"))
+            .width(250.0)
             .show_ui(ui, |ui| {
+                ui.selectable_value(&mut self.selected_tool, None, "-- Select --");
                 for tool in &self.available_tools {
                     ui.selectable_value(&mut self.selected_tool, Some(tool.clone()), tool);
                 }
@@ -303,40 +614,32 @@ impl CrystalApp {
         );
         
         ui.add_space(8.0);
-        if ui.button("Execute Tool").clicked() {
-            self.call_tool();
-        }
         
-        ui.add_space(16.0);
-        ui.heading("Quick Actions");
+        let mut should_clear = false;
         
-        if ui.button("Generate Si (Diamond)").clicked() {
-            self.selected_tool = Some("generate_crystal".to_string());
-            self.tool_params = r#"{
-  "composition": ["Si", "Si", "Si", "Si", "Si", "Si", "Si", "Si"],
-  "space_group": 227
-}"#.to_string();
-        }
+        ui.horizontal(|ui| {
+            if ui.button("Clear").clicked() {
+                should_clear = true;
+            }
+        });
         
-        if ui.button("Generate NaCl (Rocksalt)").clicked() {
-            self.selected_tool = Some("generate_prototype".to_string());
-            self.tool_params = r#"{
-  "prototype": "rocksalt",
-  "elements": {"A": "Na", "X": "Cl"}
-}"#.to_string();
-        }
-        
-        if ui.button("Generate Perovskite").clicked() {
-            self.selected_tool = Some("generate_prototype".to_string());
-            self.tool_params = r#"{
-  "prototype": "perovskite",
-  "elements": {"A": "Ca", "B": "Ti", "X": "O"}
-}"#.to_string();
+        if should_clear {
+            self.tool_params.clear();
+            self.selected_tool = None;
         }
     }
 
     fn render_viewer_panel(&mut self, ui: &mut egui::Ui) {
-        ui.heading("Crystal Viewer");
+        ui.horizontal(|ui| {
+            ui.heading("Crystal Viewer");
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if self.current_structure_json.is_some() {
+                    if ui.button("Show Structure").clicked() {
+                        self.generate_and_show_visualization();
+                    }
+                }
+            });
+        });
         
         if let Some(info) = self.crystal_viewer.get_structure_info() {
             ui.label(info);

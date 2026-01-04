@@ -2,8 +2,8 @@
 //! 
 //! Implements JSON-RPC over stdio to communicate with the MCP server.
 
-use std::io::{BufRead, BufReader, Write};
-use std::process::{Child, Command, Stdio};
+use std::io::{BufRead, BufReader, BufWriter, Write};
+use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde::{Deserialize, Serialize};
@@ -31,14 +31,16 @@ pub enum McpError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Tool {
     pub name: String,
-    pub description: String,
-    pub input_schema: Value,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(rename = "inputSchema", default)]
+    pub input_schema: Option<Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ToolResult {
     pub content: Vec<ContentItem>,
-    #[serde(default)]
+    #[serde(rename = "isError", default)]
     pub is_error: bool,
 }
 
@@ -51,6 +53,8 @@ pub struct ContentItem {
 
 pub struct McpClient {
     process: Option<Child>,
+    stdin: Option<BufWriter<ChildStdin>>,
+    stdout: Option<BufReader<ChildStdout>>,
     request_id: AtomicU64,
     initialized: bool,
     tools: Vec<Tool>,
@@ -61,6 +65,8 @@ impl McpClient {
     pub fn new(server_path: String) -> Self {
         Self {
             process: None,
+            stdin: None,
+            stdout: None,
             request_id: AtomicU64::new(1),
             initialized: false,
             tools: Vec::new(),
@@ -73,15 +79,21 @@ impl McpClient {
     }
 
     pub fn start(&mut self) -> Result<(), McpError> {
-        let child = Command::new("node")
+        let mut child = Command::new("node")
             .arg(&self.server_path)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
             .spawn()
-            .map_err(|e| McpError::SpawnError(e.to_string()))?;
+            .map_err(|e| McpError::SpawnError(format!("{}: {}", e, self.server_path)))?;
 
+        let stdin = child.stdin.take().ok_or(McpError::SendError("Failed to get stdin".to_string()))?;
+        let stdout = child.stdout.take().ok_or(McpError::ReadError("Failed to get stdout".to_string()))?;
+        
+        self.stdin = Some(BufWriter::new(stdin));
+        self.stdout = Some(BufReader::new(stdout));
         self.process = Some(child);
+        
         self.initialize()?;
         self.list_tools()?;
         Ok(())
@@ -96,19 +108,18 @@ impl McpClient {
             "params": params
         });
 
-        let process = self.process.as_mut().ok_or(McpError::NotInitialized)?;
-        
-        {
-            let stdin = process.stdin.as_mut().ok_or(McpError::SendError("No stdin".to_string()))?;
-            let request_str = serde_json::to_string(&request)?;
-            writeln!(stdin, "{}", request_str).map_err(|e| McpError::SendError(e.to_string()))?;
-            stdin.flush().map_err(|e| McpError::SendError(e.to_string()))?;
-        }
+        let stdin = self.stdin.as_mut().ok_or(McpError::NotInitialized)?;
+        let request_str = serde_json::to_string(&request)?;
+        writeln!(stdin, "{}", request_str).map_err(|e| McpError::SendError(e.to_string()))?;
+        stdin.flush().map_err(|e| McpError::SendError(e.to_string()))?;
 
-        let stdout = process.stdout.as_mut().ok_or(McpError::ReadError("No stdout".to_string()))?;
-        let mut reader = BufReader::new(stdout);
+        let stdout = self.stdout.as_mut().ok_or(McpError::NotInitialized)?;
         let mut line = String::new();
-        reader.read_line(&mut line).map_err(|e| McpError::ReadError(e.to_string()))?;
+        stdout.read_line(&mut line).map_err(|e| McpError::ReadError(e.to_string()))?;
+
+        if line.is_empty() {
+            return Err(McpError::ReadError("Empty response from server".to_string()));
+        }
 
         let response: Value = serde_json::from_str(&line)?;
         
@@ -122,14 +133,13 @@ impl McpClient {
     }
 
     fn send_notification(&mut self, method: &str) -> Result<(), McpError> {
-        let process = self.process.as_mut().ok_or(McpError::NotInitialized)?;
+        let stdin = self.stdin.as_mut().ok_or(McpError::NotInitialized)?;
         
         let notification = json!({
             "jsonrpc": "2.0",
             "method": method
         });
 
-        let stdin = process.stdin.as_mut().ok_or(McpError::SendError("No stdin".to_string()))?;
         let notification_str = serde_json::to_string(&notification)?;
         writeln!(stdin, "{}", notification_str).map_err(|e| McpError::SendError(e.to_string()))?;
         stdin.flush().map_err(|e| McpError::SendError(e.to_string()))?;
@@ -155,10 +165,17 @@ impl McpClient {
     fn list_tools(&mut self) -> Result<(), McpError> {
         let result = self.send_request("tools/list", json!({}))?;
         
-        if let Some(tools) = result.get("tools").and_then(|t| t.as_array()) {
-            self.tools = tools
+        // MCP returns {"tools": [...]}
+        if let Some(tools_array) = result.get("tools").and_then(|t| t.as_array()) {
+            self.tools = tools_array
                 .iter()
-                .filter_map(|t| serde_json::from_value(t.clone()).ok())
+                .filter_map(|t| {
+                    // Extract just name and description
+                    let name = t.get("name")?.as_str()?.to_string();
+                    let description = t.get("description").and_then(|d| d.as_str()).map(|s| s.to_string());
+                    let input_schema = t.get("inputSchema").cloned();
+                    Some(Tool { name, description, input_schema })
+                })
                 .collect();
         }
         Ok(())
