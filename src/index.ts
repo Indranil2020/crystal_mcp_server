@@ -4,9 +4,20 @@
  * Crystal MCP Server Entry Point
  * 
  * Main entry point with environment verification.
+ * CRITICAL: No output to stdout except JSON-RPC messages.
  */
 
 import { startServer } from "./server.js";
+
+// Suppress all uncaught errors from going to stdout/stderr
+// This is critical for MCP protocol compliance
+process.on('uncaughtException', () => {
+  process.exit(1);
+});
+
+process.on('unhandledRejection', () => {
+  process.exit(1);
+});
 
 /**
  * Main entry point.
