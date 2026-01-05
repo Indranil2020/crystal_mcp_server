@@ -114,44 +114,56 @@ MOLECULE_DATABASE = {
 
 def generate_molecule(
     formula: str,
-    optimize: bool = False
+    optimize: bool = False,
+    allow_external: bool = True
 ) -> Dict[str, Any]:
     """
     Generate small molecule structure.
     
     Args:
-        formula: Molecule formula from database
-        optimize: Whether to optimize geometry (placeholder)
+        formula: Molecule formula from database, or any identifier if allow_external=True
+        optimize: Whether to optimize geometry (uses RDKit force field if external)
+        allow_external: Whether to fall back to universal generation for unknown molecules
     
     Returns:
         Molecule structure
     """
-    if formula not in MOLECULE_DATABASE:
+    if formula in MOLECULE_DATABASE:
+        info = MOLECULE_DATABASE[formula]
+        
+        mol = Molecule(info["atoms"], info["coords"])
+        
         return {
-            "success": False,
-            "error": {"code": "INVALID_MOLECULE", "message": f"Unknown molecule '{formula}'",
-                      "available": list(MOLECULE_DATABASE.keys())}
+            "success": True,
+            "source": "local_database",
+            "formula": formula,
+            "n_atoms": len(info["atoms"]),
+            "atoms": info["atoms"],
+            "coords": info["coords"],
+            "spin_multiplicity": 2 * info.get("spin", 0) + 1,
+            "is_radical": info.get("radical", False),
+            "symmetry": info.get("symmetry", ""),
+            "is_linear": info.get("linear", False),
+            "bond_angle_deg": info.get("angle_deg", 0),
+            "molecule": {
+                "species": [str(s) for s in mol.species],
+                "coords": [list(c) for c in mol.cart_coords]
+            }
         }
     
-    info = MOLECULE_DATABASE[formula]
-    
-    mol = Molecule(info["atoms"], info["coords"])
+    # Fallback to universal generation if allowed
+    if allow_external:
+        try:
+            from .universal_molecule import generate_molecule_universal
+            return generate_molecule_universal(formula, optimize=optimize, allow_external=True)
+        except ImportError:
+            pass
     
     return {
-        "success": True,
-        "formula": formula,
-        "n_atoms": len(info["atoms"]),
-        "atoms": info["atoms"],
-        "coords": info["coords"],
-        "spin_multiplicity": 2 * info.get("spin", 0) + 1,
-        "is_radical": info.get("radical", False),
-        "symmetry": info.get("symmetry", ""),
-        "is_linear": info.get("linear", False),
-        "bond_angle_deg": info.get("angle_deg", 0),
-        "molecule": {
-            "species": [str(s) for s in mol.species],
-            "coords": [list(c) for c in mol.cart_coords]
-        }
+        "success": False,
+        "error": {"code": "INVALID_MOLECULE", "message": f"Unknown molecule '{formula}'",
+                  "available": list(MOLECULE_DATABASE.keys()),
+                  "suggestion": "Provide a SMILES string or enable external lookup"}
     }
 
 

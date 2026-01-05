@@ -1158,8 +1158,14 @@ GENERATOR_REGISTRY: Dict[str, Dict[str, Any]] = {
             "generate_molecule": {
                 "module": "generators.molecule.small_molecules",
                 "function": "generate_molecule",
-                "params": ['formula', 'optimize'],
-                "description": "Generate small molecule structure."
+                "params": ['formula', 'optimize', 'allow_external'],
+                "description": "Generate small molecule from local database or any identifier via universal generation. Accepts common names (H2O, CO2, aspirin), SMILES (c1ccccc1), IUPAC names, PubChem CIDs. Fast for local DB (~35 molecules), falls back to PubChem/RDKit for any other molecule."
+            },
+            "generate_molecule_universal": {
+                "module": "generators.molecule.universal_molecule",
+                "function": "generate_molecule_universal",
+                "params": ['identifier', 'input_type', 'optimize', 'allow_external'],
+                "description": "Universal molecule generation. Accepts ANY molecule identifier: common names (aspirin, PTCDA, benzene, caffeine), SMILES strings (c1ccccc1, CCO), IUPAC names (perylene-3,4,9,10-tetracarboxylic dianhydride), PubChem CIDs (2244), or InChI. Uses RDKit for 3D structure from SMILES, PubChem API for ~130M molecules."
             },
             "generate_nanobud": {
                 "module": "generators.molecule.carbon_nanostructures",
