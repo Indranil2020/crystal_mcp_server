@@ -24,6 +24,15 @@ htmlcov/
 *.tmp
 *.log
 
+# Rust artifacts
+target/
+**/target/
+
+# Python environment
+.venv/
+venv/
+ENV/
+
 # Databases
 *.db
 *.sqlite
