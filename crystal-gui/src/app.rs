@@ -3,7 +3,7 @@
 //! Implements the egui-based GUI with chat interface and crystal visualization.
 
 use eframe::egui;
-use serde_json::{json, Value};
+use serde_json::Value;
 use std::sync::{Arc, Mutex};
 
 use crate::crystal_viewer::{CrystalStructure, CrystalViewer};
@@ -703,80 +703,11 @@ print("OK")
             ui.separator();
         }
         
-        let available_size = ui.available_size();
-        let (response, painter) = ui.allocate_painter(available_size, egui::Sense::drag());
+        ui.add_space(4.0);
         
-        if response.dragged() {
-            let delta = response.drag_delta();
-            self.crystal_viewer.rotate(delta.x, delta.y);
-        }
-        
-        if response.hovered() {
-            let scroll = ui.input(|i| i.raw_scroll_delta.y);
-            if scroll > 0.0 {
-                self.crystal_viewer.zoom_in();
-            } else if scroll < 0.0 {
-                self.crystal_viewer.zoom_out();
-            }
-        }
-        
-        let rect = response.rect;
-        let center = rect.center();
-        
-        painter.rect_filled(rect, 0.0, egui::Color32::from_rgb(30, 30, 40));
-        
-        if self.crystal_viewer.structure.is_some() {
-            let scale = 20.0 * self.crystal_viewer.zoom;
-            let rot = self.crystal_viewer.rotation;
-            
-            let project = |pos: [f32; 3]| -> egui::Pos2 {
-                let x = pos[0];
-                let y = pos[1];
-                let z = pos[2];
-                
-                let cos_y = rot[1].cos();
-                let sin_y = rot[1].sin();
-                let x1 = x * cos_y - z * sin_y;
-                let z1 = x * sin_y + z * cos_y;
-                
-                let cos_x = rot[0].cos();
-                let sin_x = rot[0].sin();
-                let y1 = y * cos_x - z1 * sin_x;
-                
-                egui::Pos2::new(
-                    center.x + x1 * scale,
-                    center.y - y1 * scale,
-                )
-            };
-            
-            if self.crystal_viewer.show_unit_cell {
-                for (p1, p2) in self.crystal_viewer.get_unit_cell_lines() {
-                    let pos1 = project(p1);
-                    let pos2 = project(p2);
-                    painter.line_segment([pos1, pos2], egui::Stroke::new(1.0, egui::Color32::from_rgb(100, 100, 100)));
-                }
-            }
-            
-            for (pos, element, color, radius) in self.crystal_viewer.get_atom_positions() {
-                let screen_pos = project(pos);
-                let screen_radius = radius * scale * 0.5;
-                let egui_color = egui::Color32::from_rgb(
-                    (color[0] * 255.0) as u8,
-                    (color[1] * 255.0) as u8,
-                    (color[2] * 255.0) as u8,
-                );
-                painter.circle_filled(screen_pos, screen_radius, egui_color);
-                painter.circle_stroke(screen_pos, screen_radius, egui::Stroke::new(1.0, egui::Color32::BLACK));
-            }
-        } else {
-            painter.text(
-                center,
-                egui::Align2::CENTER_CENTER,
-                "No structure loaded.\nGenerate or load a crystal structure.",
-                egui::FontId::proportional(16.0),
-                egui::Color32::GRAY,
-            );
-        }
+        // Delegate rendering and interaction to the viewer component
+        // This handles projection, sorting, bonding, and mouse interaction (rotation/zoom)
+        self.crystal_viewer.render(ui);
         
         ui.horizontal(|ui| {
             ui.label("Atom Scale:");

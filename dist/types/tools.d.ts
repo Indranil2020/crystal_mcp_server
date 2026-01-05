@@ -844,17 +844,141 @@ export declare const ExploreSymmetryRelationsSchema: z.ZodEffects<z.ZodObject<{
     max_depth?: number | undefined;
 }>;
 export type ExploreSymmetryRelationsInput = z.infer<typeof ExploreSymmetryRelationsSchema>;
+/**
+ * Schema for build_molecule tool
+ *
+ * Universal molecule generation supporting:
+ * - Common names: H2O, CO2, aspirin, caffeine, PTCDA, benzene
+ * - SMILES strings: c1ccccc1 (benzene), CC(=O)OC1=CC=CC=C1C(=O)O (aspirin)
+ * - IUPAC names: perylene-3,4,9,10-tetracarboxylic dianhydride
+ * - PubChem CIDs: 2244 for aspirin
+ *
+ * Priority: Local DB → Aliases → RDKit from SMILES → PubChem API → OPSIN
+ */
 export declare const BuildMoleculeSchema: z.ZodObject<{
     name: z.ZodString;
+    input_type: z.ZodOptional<z.ZodDefault<z.ZodEnum<["auto", "name", "smiles", "iupac", "cid"]>>>;
+    optimize: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     vacuum: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
 }, "strip", z.ZodTypeAny, {
     name: string;
     vacuum?: number | undefined;
+    input_type?: "name" | "auto" | "smiles" | "iupac" | "cid" | undefined;
+    optimize?: boolean | undefined;
 }, {
     name: string;
     vacuum?: number | undefined;
+    input_type?: "name" | "auto" | "smiles" | "iupac" | "cid" | undefined;
+    optimize?: boolean | undefined;
 }>;
 export type BuildMoleculeInput = z.infer<typeof BuildMoleculeSchema>;
+export declare const BuildMolecularClusterSchema: z.ZodObject<{
+    molecules: z.ZodArray<z.ZodObject<{
+        identifier: z.ZodString;
+        count: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+        input_type: z.ZodOptional<z.ZodDefault<z.ZodEnum<["auto", "name", "smiles", "iupac", "cid"]>>>;
+    }, "strip", z.ZodTypeAny, {
+        identifier: string;
+        input_type?: "name" | "auto" | "smiles" | "iupac" | "cid" | undefined;
+        count?: number | undefined;
+    }, {
+        identifier: string;
+        input_type?: "name" | "auto" | "smiles" | "iupac" | "cid" | undefined;
+        count?: number | undefined;
+    }>, "many">;
+    stacking: z.ZodOptional<z.ZodDefault<z.ZodEnum<["auto", "pi_pi_parallel", "parallel", "stacked", "pi_pi_antiparallel", "antiparallel", "pi_pi_offset", "offset", "slip_stacked", "t_shaped", "edge_to_face", "herringbone", "h_bonded", "hydrogen_bonded", "van_der_waals", "vdw", "linear", "circular", "ring", "spherical", "swastika", "custom"]>>>;
+    intermolecular_distance: z.ZodOptional<z.ZodNumber>;
+    offset_x: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+    offset_y: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+    rotation_x: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+    rotation_y: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+    rotation_z: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+    rotation_per_molecule: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+    axis: z.ZodOptional<z.ZodDefault<z.ZodEnum<["x", "y", "z"]>>>;
+    positions: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        x: z.ZodDefault<z.ZodNumber>;
+        y: z.ZodDefault<z.ZodNumber>;
+        z: z.ZodDefault<z.ZodNumber>;
+    }, "strip", z.ZodTypeAny, {
+        x: number;
+        y: number;
+        z: number;
+    }, {
+        x?: number | undefined;
+        y?: number | undefined;
+        z?: number | undefined;
+    }>, "many">>;
+    rotations: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        x: z.ZodDefault<z.ZodNumber>;
+        y: z.ZodDefault<z.ZodNumber>;
+        z: z.ZodDefault<z.ZodNumber>;
+    }, "strip", z.ZodTypeAny, {
+        x: number;
+        y: number;
+        z: number;
+    }, {
+        x?: number | undefined;
+        y?: number | undefined;
+        z?: number | undefined;
+    }>, "many">>;
+    optimize: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+    vacuum: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+}, "strip", z.ZodTypeAny, {
+    molecules: {
+        identifier: string;
+        input_type?: "name" | "auto" | "smiles" | "iupac" | "cid" | undefined;
+        count?: number | undefined;
+    }[];
+    vacuum?: number | undefined;
+    optimize?: boolean | undefined;
+    stacking?: "custom" | "parallel" | "auto" | "pi_pi_parallel" | "stacked" | "pi_pi_antiparallel" | "antiparallel" | "pi_pi_offset" | "offset" | "slip_stacked" | "t_shaped" | "edge_to_face" | "herringbone" | "h_bonded" | "hydrogen_bonded" | "van_der_waals" | "vdw" | "linear" | "circular" | "ring" | "spherical" | "swastika" | undefined;
+    intermolecular_distance?: number | undefined;
+    offset_x?: number | undefined;
+    offset_y?: number | undefined;
+    rotation_x?: number | undefined;
+    rotation_y?: number | undefined;
+    rotation_z?: number | undefined;
+    rotation_per_molecule?: number | undefined;
+    axis?: "x" | "y" | "z" | undefined;
+    positions?: {
+        x: number;
+        y: number;
+        z: number;
+    }[] | undefined;
+    rotations?: {
+        x: number;
+        y: number;
+        z: number;
+    }[] | undefined;
+}, {
+    molecules: {
+        identifier: string;
+        input_type?: "name" | "auto" | "smiles" | "iupac" | "cid" | undefined;
+        count?: number | undefined;
+    }[];
+    vacuum?: number | undefined;
+    optimize?: boolean | undefined;
+    stacking?: "custom" | "parallel" | "auto" | "pi_pi_parallel" | "stacked" | "pi_pi_antiparallel" | "antiparallel" | "pi_pi_offset" | "offset" | "slip_stacked" | "t_shaped" | "edge_to_face" | "herringbone" | "h_bonded" | "hydrogen_bonded" | "van_der_waals" | "vdw" | "linear" | "circular" | "ring" | "spherical" | "swastika" | undefined;
+    intermolecular_distance?: number | undefined;
+    offset_x?: number | undefined;
+    offset_y?: number | undefined;
+    rotation_x?: number | undefined;
+    rotation_y?: number | undefined;
+    rotation_z?: number | undefined;
+    rotation_per_molecule?: number | undefined;
+    axis?: "x" | "y" | "z" | undefined;
+    positions?: {
+        x?: number | undefined;
+        y?: number | undefined;
+        z?: number | undefined;
+    }[] | undefined;
+    rotations?: {
+        x?: number | undefined;
+        y?: number | undefined;
+        z?: number | undefined;
+    }[] | undefined;
+}>;
+export type BuildMolecularClusterInput = z.infer<typeof BuildMolecularClusterSchema>;
 /**
  * Schema for create_alloy tool
  */
@@ -991,15 +1115,15 @@ export declare const GenerateTwistedBilayerSchema: z.ZodObject<{
     material: "graphene" | "MoS2" | "WS2" | "hBN";
     twist_angle: number;
     vacuum: number;
-    layers: number;
     stacking: "AA" | "AB";
+    layers: number;
     interlayer_distance: number;
 }, {
     twist_angle: number;
     material?: "graphene" | "MoS2" | "WS2" | "hBN" | undefined;
     vacuum?: number | undefined;
-    layers?: number | undefined;
     stacking?: "AA" | "AB" | undefined;
+    layers?: number | undefined;
     interlayer_distance?: number | undefined;
 }>;
 export type GenerateTwistedBilayerInput = z.infer<typeof GenerateTwistedBilayerSchema>;

@@ -9,6 +9,7 @@
 mod mcp_client;
 mod llm_client;
 mod crystal_viewer;
+mod structure_export;
 mod app;
 
 use app::CrystalApp;

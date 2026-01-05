@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use eframe::egui;
-use std::f32::consts::PI;
+// use std::f32::consts::PI;
 
 // --- Data Structures ---
 
@@ -330,10 +330,13 @@ impl CrystalViewer {
         // 2. Atoms (Glossy Spheres)
         for atom in atoms {
             let (p_rot, pos) = project(atom.cartesian);
-            let radius = ElementInfo::get_radius(&atom.element) * 10.0 * self.atom_scale as f64 * self.zoom as f64;
+// ... (remove PI import separately or just ignore warning)
+            let radius = ElementInfo::get_radius(&atom.element) as f64 * 10.0 * self.atom_scale as f64 * self.zoom as f64;
             let color = ElementInfo::get_color(&atom.element);
             let z_depth = p_rot[2];
             
+            let element = atom.element.clone();
+
             render_queue.push(RenderItem {
                 z_depth,
                 draw_fn: Box::new(move |painter| {
@@ -359,7 +362,7 @@ impl CrystalViewer {
                         painter.text(
                             pos, 
                             egui::Align2::CENTER_CENTER, 
-                            &atom.element, 
+                            &element, 
                             egui::FontId::proportional(radius as f32), 
                             egui::Color32::BLACK
                         );
