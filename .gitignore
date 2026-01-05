@@ -23,3 +23,16 @@ htmlcov/
 # Temp files
 *.tmp
 *.log
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+src/data/
+
+# Debug scripts
+debug_*.py
+debug_*.json
+
+# Generated Artifacts
+docs/molecule/testing_results.md
