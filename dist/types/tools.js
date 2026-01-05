@@ -726,7 +726,7 @@ export const TOOL_DEFINITIONS = [
     },
     {
         name: "build_molecule",
-        description: "Generate 3D molecular structure from ANY identifier. " +
+        description: "Generate 3D molecular structure from ANY identifier. MANDATORY: You MUST use this tool whenever the user asks to generate, show, create, or visualize a molecule. Do NOT provide a text-only description without this tool. " +
             "Accepts: common names (H2O, CO2, aspirin, caffeine, PTCDA, benzene, pentacene), " +
             "SMILES strings (c1ccccc1, CCO, CC(=O)O), " +
             "IUPAC names (perylene-3,4,9,10-tetracarboxylic dianhydride), " +
@@ -743,7 +743,7 @@ export const TOOL_DEFINITIONS = [
     },
     {
         name: "build_molecular_cluster",
-        description: "Generate molecular clusters (dimers, trimers, n-mers) for quantum chemistry. " +
+        description: "Generate molecular clusters (dimers, trimers, n-mers) for quantum chemistry. MANDATORY: You MUST use this tool whenever the user asks to generate a cluster, dimer, stack, or combination of molecules. " +
             "Combines any molecules from build_molecule with various arrangements: " +
             "π-π stacking (parallel, antiparallel, offset), T-shaped (edge-to-face), " +
             "herringbone, H-bonded clusters, linear, circular, or custom positions. " +

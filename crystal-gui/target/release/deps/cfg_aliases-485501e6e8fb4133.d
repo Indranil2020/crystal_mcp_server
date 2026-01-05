@@ -1,7 +1,0 @@
-/home/niel/git/crystal-mcp-server/crystal-gui/target/release/deps/cfg_aliases-485501e6e8fb4133.d: /home/niel/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cfg_aliases-0.1.1/src/lib.rs
-
-/home/niel/git/crystal-mcp-server/crystal-gui/target/release/deps/libcfg_aliases-485501e6e8fb4133.rlib: /home/niel/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cfg_aliases-0.1.1/src/lib.rs
-
-/home/niel/git/crystal-mcp-server/crystal-gui/target/release/deps/libcfg_aliases-485501e6e8fb4133.rmeta: /home/niel/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cfg_aliases-0.1.1/src/lib.rs
-
-/home/niel/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cfg_aliases-0.1.1/src/lib.rs:
