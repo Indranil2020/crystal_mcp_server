@@ -353,6 +353,6 @@ Tool schemas are defined using Zod in TypeScript and automatically converted to 
 
 ## Version
 
-- Document Version: 1.0
-- Last Updated: 2026-01-04
-- Total Tools: 26
+- Document Version: 1.1
+- Last Updated: 2026-01-05
+- Total Tools: 27

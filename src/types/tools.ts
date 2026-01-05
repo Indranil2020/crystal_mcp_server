@@ -31,7 +31,8 @@ const ElementPairKeySchema = z.string().regex(
   "Expected element pair like 'Si-O'"
 );
 
-const StructureInputSchema = z.union([z.string(), z.any()]);
+const StructureInputSchema = z.union([z.string(), z.any()])
+  .describe('Structure input: either a prototype object like {"prototype": "diamond", "elements": {"A": "Si"}, "lattice_constant": 5.43} or {"prototype": "fcc", "elements": {"A": "Al"}, "lattice_constant": 4.05} or {"prototype": "rocksalt", "elements": {"A": "Na", "B": "Cl"}, "lattice_constant": 5.64}');
 
 const SpaceGroupSchema = z.union([
   z.number().int().min(1).max(230),
@@ -68,10 +69,10 @@ const CrystalSystemSchema: z.ZodType<CrystalSystem> = z.enum([
  */
 export const GenerateCrystalSchema = z.object({
   composition: CompositionSchema
-    .describe("Chemical composition as array of element symbols, e.g., ['Si', 'Si'] or ['Na', 'Cl']"),
+    .describe('Chemical composition as array: ["Si", "Si"] for Si2, ["Ga", "As"] for GaAs, ["Ba", "Ti", "O", "O", "O"] for BaTiO3'),
 
   space_group: SpaceGroupSchema
-    .describe("Space group number (1-230) or Hermann-Mauguin symbol"),
+    .describe("Space group number: 227 for diamond-Si, 216 for zincblende-GaAs, 225 for rocksalt-NaCl, 221 for perovskite"),
 
   num_atoms: z.number().int().positive().optional()
     .describe("Total number of atoms in the unit cell"),
@@ -247,13 +248,13 @@ export type MakeSupercellInput = z.infer<typeof MakeSupercellSchema>;
  */
 export const GenerateSlabSchema = z.object({
   structure: StructureInputSchema
-    .describe("Crystal structure as input"),
+    .describe('Bulk structure as prototype object. Examples: {"prototype": "diamond", "elements": {"A": "Si"}, "lattice_constant": 5.43} for Si, {"prototype": "fcc", "elements": {"A": "Al"}, "lattice_constant": 4.05} for Al, {"prototype": "rocksalt", "elements": {"A": "Na", "B": "Cl"}, "lattice_constant": 5.64} for NaCl'),
 
   miller_indices: Vector3Schema
-    .describe("Miller indices [h, k, l] defining the surface plane"),
+    .describe("Miller indices [h, k, l] as array, e.g. [1,0,0] for (100), [1,1,0] for (110), [1,1,1] for (111)"),
 
   thickness: z.number().int().positive()
-    .describe("Slab thickness - used as minimum slab size in Angstroms (see min_slab_size for explicit Angstrom control)"),
+    .describe("Number of atomic layers in the slab (integer, e.g. 3, 4, 5)"),
 
   vacuum: z.number().positive()
     .describe("Vacuum thickness in Angstroms"),
@@ -575,12 +576,12 @@ const NanowireParamsSchema = z.object({
 
 export const GenerateNanostructureSchema = z.discriminatedUnion("type", [
   z.object({
-    type: z.literal("nanotube").describe("Carbon nanotube"),
-    params: NanotubeParamsSchema
+    type: z.literal("nanotube").describe("Carbon nanotube with chiral indices (n,m)"),
+    params: NanotubeParamsSchema.describe("Nanotube params: {n: 5, m: 5, length: 3, vacuum: 15}")
   }),
   z.object({
-    type: z.literal("graphene").describe("Graphene sheet"),
-    params: GrapheneParamsSchema
+    type: z.literal("graphene").describe("Graphene monolayer sheet"),
+    params: GrapheneParamsSchema.describe("Graphene params: {size: [4, 4, 1], vacuum: 15.0}")
   }),
   z.object({
     type: z.literal("nanoribbon").describe("Graphene nanoribbon"),
@@ -719,11 +720,11 @@ export const GeneratePrototypeSchema = z.object({
   prototype: z.enum([
     "rocksalt", "zincblende", "wurtzite", "fluorite", "antifluorite",
     "perovskite", "spinel", "heusler", "rutile", "diamond", "bcc", "fcc", "hcp"
-  ]).describe("Prototype structure type"),
+  ]).describe("Prototype type: diamond for Si/Ge/C, fcc for Al/Cu/Au, bcc for Fe/W, rocksalt for NaCl/MgO, zincblende for GaAs/ZnS, perovskite for BaTiO3/CaTiO3"),
   elements: z.record(z.string(), ElementSymbolSchema)
-    .describe("Mapping of site labels to elements, e.g., {A: 'Ca', B: 'Ti', X: 'O'}"),
+    .describe('Element mapping: {"A": "Si"} for diamond/fcc/bcc, {"A": "Na", "B": "Cl"} for rocksalt/zincblende, {"A": "Ba", "B": "Ti", "X": "O"} for perovskite'),
   lattice_constant: z.number().positive().optional()
-    .describe("Lattice constant 'a' in Angstroms"),
+    .describe("Lattice constant in Angstroms: Si=5.43, Ge=5.66, Al=4.05, Cu=3.61, Fe=2.87, NaCl=5.64, GaAs=5.65"),
   c_over_a: z.number().positive().default(1.0)
     .describe("c/a ratio for non-cubic systems")
 });
@@ -734,9 +735,9 @@ export type GeneratePrototypeInput = z.infer<typeof GeneratePrototypeSchema>;
  */
 export const GenerateTwistedBilayerSchema = z.object({
   material: z.enum(["graphene", "MoS2", "WS2", "hBN"]).default("graphene")
-    .describe("Base 2D material"),
+    .describe("Base material: graphene, MoS2, WS2, or hBN"),
   twist_angle: z.number().min(0).max(60)
-    .describe("Twist angle in degrees"),
+    .describe("Twist angle in degrees (e.g. 1.1 for magic angle, 21.8, 30)"),
   layers: z.number().int().min(2).default(2)
     .describe("Number of layers"),
   stacking: z.enum(["AA", "AB"]).default("AB")
@@ -772,9 +773,9 @@ export type GenerateHighEntropyAlloyInput = z.infer<typeof GenerateHighEntropyAl
  */
 export const Generate2DMaterialSchema = z.object({
   material: z.enum(["hBN", "MoS2", "WS2", "MoSe2", "WSe2", "phosphorene", "silicene", "MXene"])
-    .describe("2D material type"),
+    .describe("2D material: hBN, MoS2, WS2, MoSe2, WSe2, phosphorene, silicene, or MXene"),
   size: IntVector3Schema.default([1, 1, 1])
-    .describe("Supercell size"),
+    .describe("Supercell size as [nx, ny, nz] array, e.g. [3, 3, 1] for 3x3 supercell"),
   vacuum: z.number().positive().default(15.0)
     .describe("Vacuum padding"),
   extra_params: z.record(z.string(), z.any()).optional()
