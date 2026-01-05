@@ -40,6 +40,7 @@ anyhow = "1"
 
 # UUID for request IDs
 uuid = { version = "1", features = ["v4"] }
+rfd = "0.17.1"
 
 [profile.release]
 opt-level = 3

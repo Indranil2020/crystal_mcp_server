@@ -9,6 +9,8 @@ use std::sync::{Arc, Mutex};
 use crate::crystal_viewer::{CrystalStructure, CrystalViewer};
 use crate::llm_client::{ChatMessage, LlmClient};
 use crate::mcp_client::{McpClient, Tool};
+use crate::structure_export::save_structure;
+use rfd::FileDialog;
 
 pub struct CrystalApp {
     mcp_client: Arc<Mutex<Option<McpClient>>>,
@@ -504,6 +506,26 @@ print("OK")
             ui.menu_button("File", |ui| {
                 if ui.button("Settings").clicked() {
                     self.show_settings = true;
+                    ui.close_menu();
+                }
+                if ui.button("Save Structure...").clicked() {
+                    if let Some(structure) = &self.crystal_viewer.structure {
+                        if let Some(path) = FileDialog::new()
+                            .add_filter("CIF", &["cif"])
+                            .add_filter("POSCAR", &["vasp", "poscar"])
+                            .add_filter("XYZ", &["xyz"])
+                            .add_filter("JSON", &["json"])
+                            .save_file() 
+                        {
+                            let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("cif");
+                            match save_structure(structure, path.to_str().unwrap(), ext) {
+                                Ok(_) => self.status_message = format!("Saved to {:?}", path),
+                                Err(e) => self.status_message = format!("Failed to save: {}", e),
+                            }
+                        }
+                    } else {
+                        self.status_message = "No structure to save.".to_string();
+                    }
                     ui.close_menu();
                 }
                 ui.separator();

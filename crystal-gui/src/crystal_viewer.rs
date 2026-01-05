@@ -1,9 +1,8 @@
-//! 3D Crystal Structure Viewer
-//! 
-//! Renders crystal structures using three-d for 3D visualization.
-//! Similar to Materials Project visualization style.
-
 use serde::{Deserialize, Serialize};
+use eframe::egui;
+use std::f32::consts::PI;
+
+// --- Data Structures ---
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CrystalStructure {
@@ -35,6 +34,7 @@ pub struct Lattice {
 pub struct Atom {
     pub element: String,
     pub coords: [f64; 3],
+    #[serde(default)]
     pub cartesian: [f64; 3],
     #[serde(default)]
     pub wyckoff: Option<String>,
@@ -45,8 +45,6 @@ pub struct SpaceGroup {
     pub number: u32,
     #[serde(default)]
     pub symbol: Option<String>,
-    #[serde(default)]
-    pub crystal_system: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -55,74 +53,82 @@ pub struct Metadata {
     pub formula: Option<String>,
     #[serde(default)]
     pub natoms: Option<u32>,
-    #[serde(default)]
-    pub volume: Option<f64>,
-    #[serde(default)]
-    pub density: Option<f64>,
 }
 
-pub struct ElementColors;
+// --- Colors & Radii ---
 
-impl ElementColors {
-    pub fn get_color(element: &str) -> [f32; 3] {
-        match element {
-            "H" => [1.0, 1.0, 1.0],
-            "C" => [0.3, 0.3, 0.3],
-            "N" => [0.0, 0.0, 1.0],
-            "O" => [1.0, 0.0, 0.0],
-            "F" => [0.0, 1.0, 0.0],
-            "Si" => [0.5, 0.5, 0.8],
-            "P" => [1.0, 0.5, 0.0],
-            "S" => [1.0, 1.0, 0.0],
-            "Cl" => [0.0, 1.0, 0.0],
-            "Fe" => [0.8, 0.4, 0.0],
-            "Cu" => [0.8, 0.5, 0.2],
-            "Zn" => [0.5, 0.5, 0.5],
-            "Al" => [0.7, 0.7, 0.8],
-            "Na" => [0.7, 0.0, 0.7],
-            "K" => [0.5, 0.0, 0.5],
-            "Ca" => [0.0, 0.8, 0.0],
-            "Ti" => [0.6, 0.6, 0.6],
-            "Mg" => [0.0, 0.6, 0.0],
-            "Au" => [1.0, 0.84, 0.0],
-            "Ag" => [0.75, 0.75, 0.75],
-            _ => [0.5, 0.5, 0.5],
-        }
+pub struct ElementInfo;
+
+impl ElementInfo {
+    pub fn get_color(element: &str) -> egui::Color32 {
+        let (r, g, b) = match element {
+            "H" => (255, 255, 255),
+            "C" => (105, 105, 105), // Dark grey
+            "N" => (48, 80, 248),
+            "O" => (255, 13, 13),
+            "F" => (144, 224, 80),
+            "Si" => (240, 200, 160),
+            "P" => (255, 128, 0),
+            "S" => (255, 255, 48),
+            "Cl" => (31, 240, 31),
+            "Br" => (166, 41, 41),
+            "I" => (148, 0, 148),
+            "Fe" => (224, 102, 51),
+            "Cu" => (200, 115, 51),
+            "Zn" => (125, 128, 176),
+            "Au" => (255, 209, 35),
+            "Ag" => (192, 192, 192),
+            "Mg" => (0, 100, 0),
+            "Ca" => (61, 255, 0),
+            "Li" => (204, 128, 255),
+            "Na" => (171, 92, 242),
+            "K" => (143, 64, 212),
+            _ => (255, 192, 203), // Pink default
+        };
+        egui::Color32::from_rgb(r, g, b)
     }
 
     pub fn get_radius(element: &str) -> f32 {
         match element {
             "H" => 0.31,
-            "C" => 0.77,
+            "C" => 0.76,
             "N" => 0.71,
             "O" => 0.66,
             "F" => 0.57,
             "Si" => 1.11,
             "P" => 1.07,
             "S" => 1.05,
-            "Cl" => 1.02,
-            "Fe" => 1.26,
+            "Cl" => 0.99,
+            "Br" => 1.14,
+            "I" => 1.33,
+            "Fe" => 1.25,
             "Cu" => 1.28,
             "Zn" => 1.22,
-            "Al" => 1.21,
-            "Na" => 1.66,
-            "K" => 2.03,
-            "Ca" => 1.76,
-            "Ti" => 1.47,
-            "Mg" => 1.41,
             "Au" => 1.44,
             "Ag" => 1.45,
+            "Li" => 1.28,
+            "Na" => 1.66,
+            "K" => 2.03,
+            "Mg" => 1.41,
+            "Ca" => 1.76,
             _ => 1.0,
         }
     }
 }
 
+// --- Viewer ---
+
 pub struct CrystalViewer {
     pub structure: Option<CrystalStructure>,
-    pub rotation: [f32; 3],
-    pub zoom: f32,
-    pub show_unit_cell: bool,
+    
+    // Camera state
+    rotation: [f32; 2], // X and Y rotation
+    zoom: f32,
+    pan: [f32; 2],
+    
+    // Settings
     pub show_bonds: bool,
+    pub show_unit_cell: bool,
     pub atom_scale: f32,
 }
 
@@ -130,10 +136,11 @@ impl Default for CrystalViewer {
     fn default() -> Self {
         Self {
             structure: None,
-            rotation: [0.0, 0.0, 0.0],
+            rotation: [0.0, 0.0],
             zoom: 1.0,
-            show_unit_cell: true,
+            pan: [0.0, 0.0],
             show_bonds: true,
+            show_unit_cell: true,
             atom_scale: 0.5,
         }
     }
@@ -148,19 +155,20 @@ impl CrystalViewer {
         self.structure = Some(structure);
         self.reset_view();
     }
-
+    
     pub fn clear_structure(&mut self) {
         self.structure = None;
     }
 
     pub fn reset_view(&mut self) {
-        self.rotation = [0.0, 0.0, 0.0];
+        self.rotation = [0.0, 0.0];
         self.zoom = 1.0;
+        self.pan = [0.0, 0.0];
     }
-
+    
     pub fn rotate(&mut self, dx: f32, dy: f32) {
-        self.rotation[0] += dy * 0.01;
-        self.rotation[1] += dx * 0.01;
+        self.rotation[0] += dx * 0.01;
+        self.rotation[1] += dy * 0.01;
     }
 
     pub fn zoom_in(&mut self) {
@@ -170,106 +178,206 @@ impl CrystalViewer {
     pub fn zoom_out(&mut self) {
         self.zoom /= 1.1;
     }
-
-    pub fn get_atom_positions(&self) -> Vec<([f32; 3], String, [f32; 3], f32)> {
-        let mut positions = Vec::new();
-        
-        if let Some(ref structure) = self.structure {
-            // Use atoms if available, otherwise try sites
-            let atoms = if !structure.atoms.is_empty() {
-                &structure.atoms
-            } else if let Some(ref sites) = structure.sites {
-                sites
-            } else {
-                return positions;
-            };
-            
-            for atom in atoms {
-                let pos = [
-                    atom.cartesian[0] as f32,
-                    atom.cartesian[1] as f32,
-                    atom.cartesian[2] as f32,
-                ];
-                let color = ElementColors::get_color(&atom.element);
-                let radius = ElementColors::get_radius(&atom.element) * self.atom_scale;
-                positions.push((pos, atom.element.clone(), color, radius));
-            }
-        }
-        
-        positions
-    }
-
-    pub fn get_unit_cell_lines(&self) -> Vec<([f32; 3], [f32; 3])> {
-        let mut lines = Vec::new();
-        
-        if let Some(ref structure) = self.structure {
-            // Get lattice vectors from matrix or calculate from parameters
-            let (a, b, c) = if let Some(ref m) = structure.lattice.matrix {
-                if m.len() >= 3 && m[0].len() >= 3 && m[1].len() >= 3 && m[2].len() >= 3 {
-                    (
-                        [m[0][0] as f32, m[0][1] as f32, m[0][2] as f32],
-                        [m[1][0] as f32, m[1][1] as f32, m[1][2] as f32],
-                        [m[2][0] as f32, m[2][1] as f32, m[2][2] as f32],
-                    )
-                } else {
-                    // Fallback to simple cubic
-                    let la = structure.lattice.a as f32;
-                    let lb = structure.lattice.b as f32;
-                    let lc = structure.lattice.c as f32;
-                    ([la, 0.0, 0.0], [0.0, lb, 0.0], [0.0, 0.0, lc])
-                }
-            } else {
-                // No matrix, use lattice parameters (assume orthorhombic for simplicity)
-                let la = structure.lattice.a as f32;
-                let lb = structure.lattice.b as f32;
-                let lc = structure.lattice.c as f32;
-                ([la, 0.0, 0.0], [0.0, lb, 0.0], [0.0, 0.0, lc])
-            };
-            let o = [0.0f32, 0.0, 0.0];
-            
-            fn add(p1: [f32; 3], p2: [f32; 3]) -> [f32; 3] {
-                [p1[0] + p2[0], p1[1] + p2[1], p1[2] + p2[2]]
-            }
-            
-            lines.push((o, a));
-            lines.push((o, b));
-            lines.push((o, c));
-            lines.push((a, add(a, b)));
-            lines.push((a, add(a, c)));
-            lines.push((b, add(b, a)));
-            lines.push((b, add(b, c)));
-            lines.push((c, add(c, a)));
-            lines.push((c, add(c, b)));
-            lines.push((add(a, b), add(add(a, b), c)));
-            lines.push((add(a, c), add(add(a, c), b)));
-            lines.push((add(b, c), add(add(b, c), a)));
-        }
-        
-        lines
-    }
-
+    
     pub fn get_structure_info(&self) -> Option<String> {
         self.structure.as_ref().map(|s| {
             let formula = s.metadata.as_ref()
-                .and_then(|m| m.formula.as_ref())
-                .map(|f| f.as_str())
-                .unwrap_or("Unknown");
-            let symbol = s.space_group.symbol.as_deref().unwrap_or("?");
+                .and_then(|m| m.formula.clone())
+                .unwrap_or_else(|| "Unknown".to_string());
             let natoms = s.metadata.as_ref()
                 .and_then(|m| m.natoms)
                 .unwrap_or(0);
-            let volume = s.lattice.volume.unwrap_or(0.0);
             
-            format!(
-                "Formula: {}\nSpace Group: {} ({})\nAtoms: {}\nVolume: {:.2} Å³\nLattice: a={:.3} b={:.3} c={:.3}\nAngles: α={:.1}° β={:.1}° γ={:.1}°",
-                formula,
-                symbol,
-                s.space_group.number,
-                natoms,
-                volume,
-                s.lattice.a, s.lattice.b, s.lattice.c,
-                s.lattice.alpha, s.lattice.beta, s.lattice.gamma
-            )
+            format!("Formula: {}\nAtoms: {}", formula, natoms)
         })
+    }
+    
+    /// Detect bonds based on distance
+    fn detect_bonds(atoms: &[Atom]) -> Vec<(usize, usize)> {
+        let mut bonds = Vec::new();
+        // Covalent radii sum * tolerance
+        let tolerance = 1.25; 
+        
+        for i in 0..atoms.len() {
+            for j in (i+1)..atoms.len() {
+                let p1 = atoms[i].cartesian;
+                let p2 = atoms[j].cartesian;
+                let elem1 = &atoms[i].element;
+                let elem2 = &atoms[j].element;
+                
+                let dist_sq = (p1[0]-p2[0]).powi(2) + (p1[1]-p2[1]).powi(2) + (p1[2]-p2[2]).powi(2);
+                let dist = dist_sq.sqrt();
+                
+                let r1 = ElementInfo::get_radius(elem1);
+                let r2 = ElementInfo::get_radius(elem2);
+                let max_dist = (r1 + r2) as f64 * tolerance;
+                
+                if dist < max_dist {
+                    bonds.push((i, j));
+                }
+            }
+        }
+        bonds
+    }
+
+    pub fn render(&mut self, ui: &mut egui::Ui) {
+        let available_size = ui.available_size();
+        let (response, painter) = ui.allocate_painter(available_size, egui::Sense::drag());
+        
+        let rect = response.rect;
+        let center = rect.center();
+        
+        // Background
+        painter.rect_filled(rect, 0.0, egui::Color32::from_rgb(20, 20, 30));
+        
+        // Input Handling
+        if response.dragged() {
+            let delta = response.drag_delta();
+            // Left click rotate, Right/Middle click pan (simplified: just rotate for now)
+            self.rotate(delta.x, delta.y);
+        }
+        
+        if response.hovered() {
+            let scroll = ui.input(|i| i.raw_scroll_delta.y);
+            if scroll > 0.0 { self.zoom_in(); }
+            else if scroll < 0.0 { self.zoom_out(); }
+        }
+        
+        let Some(structure) = &self.structure else {
+            painter.text(
+                center,
+                egui::Align2::CENTER_CENTER,
+                "No structure loaded",
+                egui::FontId::proportional(20.0),
+                egui::Color32::GRAY
+            );
+            return;
+        };
+        
+        let atoms = structure.atoms.as_slice();
+        let atoms = if atoms.is_empty() {
+             structure.sites.as_deref().unwrap_or(&[])
+        } else {
+             atoms
+        };
+        
+        if atoms.is_empty() { return; }
+
+        // 3D Projection Logic
+        // Rotate points
+        let rot_x = self.rotation[1]; // Pitch
+        let rot_y = self.rotation[0]; // Yaw
+        
+        let cos_x = rot_x.cos() as f64;
+        let sin_x = rot_x.sin() as f64;
+        let cos_y = rot_y.cos() as f64;
+        let sin_y = rot_y.sin() as f64;
+        
+        // View Scale
+        let scale = 30.0 * self.zoom;
+        
+        struct RenderItem {
+            z_depth: f64,
+            draw_fn: Box<dyn FnOnce(&egui::Painter)>,
+        }
+        
+        let mut render_queue: Vec<RenderItem> = Vec::new();
+        
+        let project = |p: [f64; 3]| -> ([f64; 3], egui::Pos2) {
+            // Rotate Y
+            let x1 = p[0] * cos_y - p[2] * sin_y;
+            let z1 = p[0] * sin_y + p[2] * cos_y;
+            // Rotate X
+            let y2 = p[1] * cos_x - z1 * sin_x;
+            let z2 = p[1] * sin_x + z1 * cos_x;
+            
+            // Perspective (optional, using Ortho for simplicity/clarity often preferred for schematics)
+            // Let's stick to weak perspective / orthographic for correct sizing
+            let screen_x = center.x as f64 + x1 * scale as f64 + self.pan[0] as f64;
+            let screen_y = center.y as f64 - y2 * scale as f64 + self.pan[1] as f64;
+            
+            ([x1, y2, z2], egui::Pos2::new(screen_x as f32, screen_y as f32))
+        };
+        
+        // 1. Bonds
+        if self.show_bonds {
+            let bonds = Self::detect_bonds(atoms);
+            for (idx1, idx2) in bonds {
+                let p1_raw = atoms[idx1].cartesian;
+                let p2_raw = atoms[idx2].cartesian;
+                
+                let (p1_rot, pos1) = project(p1_raw);
+                let (p2_rot, pos2) = project(p2_raw);
+                
+                // Average Z for sorting
+                let z_depth = (p1_rot[2] + p2_rot[2]) / 2.0;
+                
+                // Bond is a line
+                let bond_width = 4.0 * self.zoom * self.atom_scale;
+                let bond_color = egui::Color32::from_gray(180);
+                
+                render_queue.push(RenderItem {
+                    z_depth,
+                    draw_fn: Box::new(move |painter| {
+                        painter.line_segment([pos1, pos2], egui::Stroke::new(bond_width, bond_color));
+                        // Add highlights for cylinder effect? Too expensive/complex for 2D lines.
+                        // Simple shading: darker if further back?
+                    }),
+                });
+            }
+        }
+        
+        // 2. Atoms (Glossy Spheres)
+        for atom in atoms {
+            let (p_rot, pos) = project(atom.cartesian);
+            let radius = ElementInfo::get_radius(&atom.element) * 10.0 * self.atom_scale as f64 * self.zoom as f64;
+            let color = ElementInfo::get_color(&atom.element);
+            let z_depth = p_rot[2];
+            
+            render_queue.push(RenderItem {
+                z_depth,
+                draw_fn: Box::new(move |painter| {
+                    // Draw Glossy Sphere
+                    
+                    // 1. Base circle (darker edge)
+                    painter.circle_filled(pos, radius as f32, color);
+                    
+                    // 2. Outline/Shading (slight border)
+                    painter.circle_stroke(pos, radius as f32, egui::Stroke::new(1.0, egui::Color32::BLACK));
+                    
+                    // 3. Highlight (Specular reflection)
+                    // Offset highlight to top-left
+                    let highlight_offset = radius as f32 * 0.3;
+                    let highlight_pos = egui::Pos2::new(pos.x - highlight_offset, pos.y - highlight_offset);
+                    let highlight_radius = radius as f32 * 0.25;
+                    let highlight_color = egui::Color32::from_white_alpha(180); // Semi-transparent white
+                    
+                    painter.circle_filled(highlight_pos, highlight_radius, highlight_color);
+                    
+                    // 4. Element Symbol Text
+                    if radius > 8.0 {
+                        painter.text(
+                            pos, 
+                            egui::Align2::CENTER_CENTER, 
+                            &atom.element, 
+                            egui::FontId::proportional(radius as f32), 
+                            egui::Color32::BLACK
+                        );
+                    }
+                })
+            });
+        }
+        
+        // Sort by Z (painters algorithm: draw furthest first)
+        // Z increases towards viewer? p_rot calculated: 
+        // z2 = p[1]*sin + z1*cos. 
+        // Standard handedness: Z comes out of screen.
+        // So smaller Z (more negative) is further away.
+        render_queue.sort_by(|a, b| a.z_depth.partial_cmp(&b.z_depth).unwrap_or(std::cmp::Ordering::Equal));
+        
+        // Render
+        for item in render_queue {
+            (item.draw_fn)(&painter);
+        }
     }
 }
