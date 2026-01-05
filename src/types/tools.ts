@@ -622,12 +622,147 @@ export const ExploreSymmetryRelationsSchema = z.object({
 
 export type ExploreSymmetryRelationsInput = z.infer<typeof ExploreSymmetryRelationsSchema>;
 
+/**
+ * Schema for build_molecule tool
+ * 
+ * Universal molecule generation supporting:
+ * - Common names: H2O, CO2, aspirin, caffeine, PTCDA, benzene
+ * - SMILES strings: c1ccccc1 (benzene), CC(=O)OC1=CC=CC=C1C(=O)O (aspirin)
+ * - IUPAC names: perylene-3,4,9,10-tetracarboxylic dianhydride
+ * - PubChem CIDs: 2244 for aspirin
+ * 
+ * Priority: Local DB → Aliases → RDKit from SMILES → PubChem API → OPSIN
+ */
 export const BuildMoleculeSchema = z.object({
-  name: z.string().describe("Name of the molecule (e.g., 'H2O', 'C60', 'Benzene')"),
-  vacuum: z.number().default(10.0).optional().describe("Vacuum padding around the molecule (Angstroms)")
+  name: z.string()
+    .describe("Molecule identifier - pass the identifier directly as this value. Accepts: " +
+      "common names (aspirin, caffeine, PTCDA, benzene), " +
+      "SMILES strings (pass the SMILES directly like 'c1ccccc1' for benzene, 'CCO' for ethanol), " +
+      "IUPAC names (perylene-3,4,9,10-tetracarboxylic dianhydride), " +
+      "or PubChem CIDs (2244 for aspirin). " +
+      "For SMILES: set name='c1ccc2ccccc2c1' (the SMILES itself, not a description)."),
+
+  input_type: z.enum(["auto", "name", "smiles", "iupac", "cid"]).default("auto").optional()
+    .describe("Input type hint: 'auto' (default, auto-detect), 'name' (common name), 'smiles' (SMILES string), 'iupac' (IUPAC systematic name), 'cid' (PubChem CID)"),
+
+  optimize: z.boolean().default(true).optional()
+    .describe("Optimize 3D geometry using MMFF94/UFF force field (default: true)"),
+
+  vacuum: z.number().default(10.0).optional()
+    .describe("Vacuum padding around the molecule in Angstroms (default: 10.0)")
 });
 
 export type BuildMoleculeInput = z.infer<typeof BuildMoleculeSchema>;
+
+
+/**
+ * Schema for build_molecular_cluster tool
+ * 
+ * Generate molecular clusters for quantum chemistry:
+ * - Homo/hetero dimers, trimers, n-mers
+ * - π-π stacking (parallel, antiparallel, offset)
+ * - T-shaped (edge-to-face) arrangements
+ * - H-bonded clusters
+ * - Custom arrangements with full rotation control
+ */
+
+const MoleculeSpecSchema = z.object({
+  identifier: z.string()
+    .describe("Molecule identifier (name, SMILES, IUPAC, CID, ChEMBL ID)"),
+  count: z.number().int().min(1).default(1).optional()
+    .describe("Number of copies of this molecule (default: 1)"),
+  input_type: z.enum(["auto", "name", "smiles", "iupac", "cid"]).default("auto").optional()
+    .describe("Input type hint")
+});
+
+const Position3DSchema = z.object({
+  x: z.number().default(0),
+  y: z.number().default(0),
+  z: z.number().default(0)
+}).describe("3D position in Angstroms");
+
+const Rotation3DSchema = z.object({
+  x: z.number().default(0).describe("Rotation around x-axis in degrees"),
+  y: z.number().default(0).describe("Rotation around y-axis in degrees"),
+  z: z.number().default(0).describe("Rotation around z-axis in degrees")
+}).describe("3D rotation in degrees");
+
+export const BuildMolecularClusterSchema = z.object({
+  // Molecules list
+  molecules: z.array(MoleculeSpecSchema).min(1)
+    .describe("List of molecules to combine. Example: [{\"identifier\": \"benzene\", \"count\": 2}] for benzene dimer, or [{\"identifier\": \"water\"}, {\"identifier\": \"benzene\"}] for hetero-dimer"),
+
+  // Stacking/arrangement type  
+  stacking: z.enum([
+    "auto",              // Auto-detect based on molecule types
+    "pi_pi_parallel",    // Face-to-face π-stacking (3.4Å)
+    "parallel",          // Alias for pi_pi_parallel
+    "stacked",           // Alias for pi_pi_parallel
+    "pi_pi_antiparallel",// π-stacking with 180° rotation
+    "antiparallel",      // Alias for pi_pi_antiparallel
+    "pi_pi_offset",      // Offset/slip-stacked
+    "offset",            // Alias for pi_pi_offset
+    "slip_stacked",      // Alias for pi_pi_offset
+    "t_shaped",          // Edge-to-face perpendicular
+    "edge_to_face",      // Alias for t_shaped
+    "herringbone",       // Alternating tilted (organic crystals)
+    "h_bonded",          // Hydrogen bonded (2.8Å)
+    "hydrogen_bonded",   // Alias for h_bonded
+    "van_der_waals",     // General vdW contact
+    "vdw",               // Alias for van_der_waals
+    "linear",            // In a line along axis
+    "circular",          // Ring arrangement
+    "ring",              // Alias for circular
+    "spherical",         // 3D spherical distribution
+    "swastika",          // 4-molecule cross pattern
+    "custom"             // User-defined positions/rotations
+  ]).default("auto").optional()
+    .describe("Arrangement type. 'auto' selects based on molecule chemistry: aromatics → π-stacking, H-bond capable → H-bonded."),
+
+  // Distance control
+  intermolecular_distance: z.number().positive().optional()
+    .describe("Distance between molecule centers in Angstroms. Defaults: π-stacking=3.4Å, H-bonded=2.8Å, vdW=3.5Å"),
+
+  // Offsets for stacking
+  offset_x: z.number().default(0).optional()
+    .describe("Lateral offset in x-direction (Angstroms)"),
+  offset_y: z.number().default(0).optional()
+    .describe("Lateral offset in y-direction (Angstroms)"),
+
+  // Global rotation (applied to entire cluster)
+  rotation_x: z.number().default(0).optional()
+    .describe("Rotate entire cluster around x-axis (degrees)"),
+  rotation_y: z.number().default(0).optional()
+    .describe("Rotate entire cluster around y-axis (degrees)"),
+  rotation_z: z.number().default(0).optional()
+    .describe("Rotate entire cluster around z-axis (degrees)"),
+
+  // Per-molecule rotation increment (for stacking)
+  rotation_per_molecule: z.number().default(0).optional()
+    .describe("Incremental rotation per stacked molecule (degrees). E.g., 45° for spiral stacking."),
+
+  // Axis for linear arrangement
+  axis: z.enum(["x", "y", "z"]).default("z").optional()
+    .describe("Axis for linear arrangement (default: z)"),
+
+  // Custom positions (for 'custom' stacking)
+  positions: z.array(Position3DSchema).optional()
+    .describe("Custom positions for each molecule when stacking='custom'"),
+
+  // Custom rotations (for 'custom' stacking)
+  rotations: z.array(Rotation3DSchema).optional()
+    .describe("Custom rotations for each molecule when stacking='custom'"),
+
+  // Optimization
+  optimize: z.boolean().default(false).optional()
+    .describe("Optimize cluster geometry with force field (can be slow for large clusters)"),
+
+  // Vacuum box
+  vacuum: z.number().default(10.0).optional()
+    .describe("Vacuum padding around the cluster in Angstroms")
+});
+
+export type BuildMolecularClusterInput = z.infer<typeof BuildMolecularClusterSchema>;
 
 
 /**
@@ -826,8 +961,31 @@ export const TOOL_DEFINITIONS: readonly ToolMetadata[] = [
   },
   {
     name: "build_molecule",
-    description: "Generate an isolated molecular structure from a name (e.g., H2O, C60, Benzene).",
+    description: "Generate 3D molecular structure from ANY identifier. " +
+      "Accepts: common names (H2O, CO2, aspirin, caffeine, PTCDA, benzene, pentacene), " +
+      "SMILES strings (c1ccccc1, CCO, CC(=O)O), " +
+      "IUPAC names (perylene-3,4,9,10-tetracarboxylic dianhydride), " +
+      "or PubChem CIDs. " +
+      "Uses RDKit for 3D generation and PubChem API for name resolution. " +
+      "Supports ~130M molecules via PubChem lookup.",
     inputSchema: BuildMoleculeSchema,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true
+    }
+  },
+  {
+    name: "build_molecular_cluster",
+    description: "Generate molecular clusters (dimers, trimers, n-mers) for quantum chemistry. " +
+      "Combines any molecules from build_molecule with various arrangements: " +
+      "π-π stacking (parallel, antiparallel, offset), T-shaped (edge-to-face), " +
+      "herringbone, H-bonded clusters, linear, circular, or custom positions. " +
+      "Auto-detects optimal stacking based on molecule chemistry. " +
+      "Supports full rotation control around x/y/z axes. " +
+      "Example: {molecules: [{identifier: 'benzene', count: 2}], stacking: 'pi_pi_parallel'} for benzene dimer.",
+    inputSchema: BuildMolecularClusterSchema,
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,
