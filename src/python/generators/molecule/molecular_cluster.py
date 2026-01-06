@@ -835,7 +835,7 @@ def generate_molecular_cluster(
     species = combined["atoms"]
     coords = combined["coords"]
     
-    # Fractional coordinates
+    # Fractional coordinates (centered in box)
     frac_coords = []
     for c in coords:
         frac_coords.append([
@@ -844,10 +844,28 @@ def generate_molecular_cluster(
             (c[2] + cell["c"]/2) / cell["c"],
         ])
     
+    # Cartesian coordinates (also centered in box)
+    cart_coords = []
+    for c in coords:
+        cart_coords.append([
+            c[0] + cell["a"]/2,
+            c[1] + cell["b"]/2,
+            c[2] + cell["c"]/2,
+        ])
+    
+    # Build atoms array for GUI viewer (requires element, coords, cartesian)
+    atoms = []
+    for i, (elem, frac, cart) in enumerate(zip(species, frac_coords, cart_coords)):
+        atoms.append({
+            "element": elem,
+            "coords": frac,
+            "cartesian": cart,
+            "species": [{"element": elem, "occupation": 1.0}]
+        })
+    
     structure = {
-        "species": species,
-        "coords": coords,
-        "frac_coords": frac_coords,
+        "atoms": atoms,
+        "sites": atoms,  # Alias for compatibility
         "lattice": {
             "a": cell["a"],
             "b": cell["b"],
@@ -859,7 +877,13 @@ def generate_molecular_cluster(
                 [cell["a"], 0, 0],
                 [0, cell["b"], 0],
                 [0, 0, cell["c"]]
-            ]
+            ],
+            "volume": cell["a"] * cell["b"] * cell["c"]
+        },
+        "space_group": {
+            "number": 1,
+            "symbol": "P1",
+            "crystal_system": "triclinic"
         },
         "metadata": {
             "formula": "+".join(combined["formulas"]),

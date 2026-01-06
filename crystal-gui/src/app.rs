@@ -237,6 +237,16 @@ impl CrystalApp {
                 }
                 
                 // Plain text response
+                // Handle empty response - LLM couldn't understand the request
+                if response.trim().is_empty() {
+                    self.chat_history.push(ChatMessage {
+                        role: "assistant".to_string(),
+                        content: "I couldn't process that request. Could you please rephrase? \n\nExamples:\n- \"generate benzene molecule\"\n- \"create PTCDA dimer\"\n- \"make 3 water molecules stacked\"".to_string(),
+                        tool_calls: None,
+                    });
+                    return;
+                }
+                
                 self.chat_history.push(ChatMessage {
                     role: "assistant".to_string(),
                     content: response,

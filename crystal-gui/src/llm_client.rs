@@ -169,7 +169,7 @@ impl LlmClient {
             .collect();
 
         // Use messages as-is - no hardcoded system prompts
-        // The tool schemas should be descriptive enough for the LLM
+        // Tool schemas are sent via the tools parameter (standard MCP/OpenAI format)
         let request = OllamaChatRequest {
             model: self.model.clone(),
             messages: messages.to_vec(),
@@ -179,11 +179,12 @@ impl LlmClient {
             } else {
                 Some(ollama_tools)
             },
-            // Force JSON output like the end-to-end test does
-            format: Some("json".to_string()),
+            // DO NOT use format: "json" - it DISABLES native tool calling!
+            // Native tool calling returns tool_calls array, which is the proper MCP-compatible approach
+            format: None,
         };
         
-        // DEBUG: Print exact LLM request
+        // DEBUG: Print exact LLM request including tool schemas
         eprintln!("\n[DEBUG] ========== LLM REQUEST ==========");
         eprintln!("[DEBUG] Model: {}", request.model);
         eprintln!("[DEBUG] Messages ({}):", request.messages.len());
@@ -191,12 +192,17 @@ impl LlmClient {
             eprintln!("[DEBUG]   [{}] {}: {}", i, msg.role, &msg.content[..msg.content.len().min(200)]);
         }
         if let Some(ref tools) = request.tools {
-            eprintln!("[DEBUG] Tools ({}):", tools.len());
+            eprintln!("[DEBUG] Tools ({}) with FULL SCHEMAS:", tools.len());
             for t in tools {
-                eprintln!("[DEBUG]   - {}", t.function.name);
+                eprintln!("[DEBUG]   - {} ({})", t.function.name, t.function.description.chars().take(60).collect::<String>());
+                // Show schema parameters
+                if let Some(props) = t.function.parameters.get("properties") {
+                    let keys: Vec<_> = props.as_object().map(|o| o.keys().cloned().collect()).unwrap_or_default();
+                    eprintln!("[DEBUG]     Parameters: {:?}", keys);
+                }
             }
         }
-        eprintln!("[DEBUG] Format: {:?}", request.format);
+        eprintln!("[DEBUG] Format: {:?} (None = native tool calling)", request.format);
         eprintln!("[DEBUG] =====================================\n");
 
         let response = self.client.post(&url).json(&request).send()?;
