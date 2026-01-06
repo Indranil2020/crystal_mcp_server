@@ -7,7 +7,7 @@ use serde_json::Value;
 use std::sync::{Arc, Mutex};
 
 use crate::crystal_viewer::{CrystalStructure, CrystalViewer};
-use crate::llm_client::{ChatMessage, LlmClient};
+use crate::llm_client::{ChatMessage, ChatResult, LlmClient};
 use crate::mcp_client::{McpClient, Tool};
 use crate::structure_export::save_structure;
 use rfd::FileDialog;
@@ -48,6 +48,7 @@ impl CrystalApp {
             chat_history: vec![ChatMessage {
                 role: "system".to_string(),
                 content: "You are a helpful assistant for crystal structure generation. Help users create and analyze crystal structures.".to_string(),
+                tool_calls: None,
             }],
             chat_input: String::new(),
             
@@ -111,34 +112,18 @@ impl CrystalApp {
         }
     }
 
-    fn format_tools_for_llm(&self) -> String {
-        let mut output = String::new();
-        for tool in &self.available_tools {
-            output.push_str(&format!("## {}\n", tool.name));
-            if let Some(ref desc) = tool.description {
-                output.push_str(&format!("{}\n", desc));
-            }
-            if let Some(ref schema) = tool.input_schema {
-                if let Some(props) = schema.get("properties") {
-                    output.push_str("Parameters:\n");
-                    if let Some(obj) = props.as_object() {
-                        for (key, val) in obj {
-                            let type_str = val.get("type").and_then(|t| t.as_str()).unwrap_or("any");
-                            let desc_str = val.get("description").and_then(|d| d.as_str()).unwrap_or("");
-                            output.push_str(&format!("  - {}: {} - {}\n", key, type_str, desc_str));
-                        }
-                    }
-                }
-                if let Some(required) = schema.get("required").and_then(|r| r.as_array()) {
-                    let req_strs: Vec<&str> = required.iter().filter_map(|v| v.as_str()).collect();
-                    if !req_strs.is_empty() {
-                        output.push_str(&format!("Required: {}\n", req_strs.join(", ")));
-                    }
-                }
-            }
-            output.push('\n');
-        }
-        output
+    /// Get tools as JSON array for native Ollama tool calling
+    fn get_tools_json(&self) -> Vec<Value> {
+        self.available_tools
+            .iter()
+            .map(|tool| {
+                serde_json::json!({
+                    "name": tool.name,
+                    "description": tool.description.clone().unwrap_or_default(),
+                    "inputSchema": tool.input_schema.clone().unwrap_or(serde_json::json!({}))
+                })
+            })
+            .collect()
     }
 
     fn get_tool_names(&self) -> Vec<String> {
@@ -153,6 +138,7 @@ impl CrystalApp {
         let user_message = ChatMessage {
             role: "user".to_string(),
             content: self.chat_input.clone(),
+            tool_calls: None,
         };
         self.chat_history.push(user_message);
         self.chat_input.clear();
@@ -164,6 +150,7 @@ impl CrystalApp {
             self.chat_history.push(ChatMessage {
                 role: "assistant".to_string(),
                 content: "LLM not connected. Is Ollama running?".to_string(),
+                tool_calls: None,
             });
             return;
         }
@@ -175,20 +162,22 @@ impl CrystalApp {
             self.chat_history.push(ChatMessage {
                 role: "assistant".to_string(),
                 content: "MCP not connected. Please check MCP server path in Settings.".to_string(),
+                tool_calls: None,
             });
             return;
         }
 
-        let tools_desc = self.format_tools_for_llm();
+        let tools_json = self.get_tools_json();
         let tool_names = self.get_tool_names();
         let client = self.llm_client.lock().unwrap();
 
-        match client.chat_with_tools(&self.chat_history, &tools_desc) {
-            Ok(response) => {
-                // Try to parse tool call from response
-                let tool_call = self.parse_tool_call(&response);
-                
-                if let Some((tool_name, params)) = tool_call {
+        match client.chat_with_tools(&self.chat_history, &tools_json) {
+            Ok(ChatResult::ToolCalls(tool_calls)) => {
+                // Handle native tool calls from Ollama
+                if let Some(first_call) = tool_calls.first() {
+                    let tool_name = first_call.function.name.clone();
+                    let params = first_call.function.arguments.clone();
+                    
                     if !tool_names.iter().any(|t| t == &tool_name) {
                         self.chat_history.push(ChatMessage {
                             role: "assistant".to_string(),
@@ -197,6 +186,7 @@ impl CrystalApp {
                                 tool_name,
                                 tool_names.join("\n")
                             ),
+                            tool_calls: None,
                         });
                         return;
                     }
@@ -208,41 +198,78 @@ impl CrystalApp {
                     self.chat_history.push(ChatMessage {
                         role: "assistant".to_string(),
                         content: format!("Executing `{}`...", tool_name),
+                        tool_calls: None,
                     });
                     
                     // Auto-execute if MCP is connected
-                    drop(client); // Release lock before calling tool
+                    drop(client);
                     if self.mcp_connected {
                         self.call_tool();
                     }
-                } else {
-                    self.chat_history.push(ChatMessage {
-                        role: "assistant".to_string(),
-                        content: response,
-                    });
                 }
+            }
+            Ok(ChatResult::Text(response)) => {
+                // DEBUG: Show LLM text response
+                eprintln!("[DEBUG] LLM returned TEXT response:");
+                eprintln!("[DEBUG]   Response: {}", &response[..response.len().min(500)]);
+                
+                // Fallback: try to parse tool call from text (for models that don't support native tools)
+                let tool_call = self.parse_tool_call(&response);
+                eprintln!("[DEBUG]   Parsed tool call: {:?}", tool_call);
+                
+                if let Some((tool_name, params)) = tool_call {
+                    if tool_names.iter().any(|t| t == &tool_name) {
+                        self.selected_tool = Some(tool_name.clone());
+                        self.tool_params = serde_json::to_string_pretty(&params).unwrap_or_default();
+                        
+                        self.chat_history.push(ChatMessage {
+                            role: "assistant".to_string(),
+                            content: format!("Executing `{}`...", tool_name),
+                            tool_calls: None,
+                        });
+                        
+                        drop(client);
+                        if self.mcp_connected {
+                            self.call_tool();
+                        }
+                        return;
+                    }
+                }
+                
+                // Plain text response
+                self.chat_history.push(ChatMessage {
+                    role: "assistant".to_string(),
+                    content: response,
+                    tool_calls: None,
+                });
             }
             Err(e) => {
                 self.chat_history.push(ChatMessage {
                     role: "assistant".to_string(),
                     content: format!("Error: {}", e),
+                    tool_calls: None,
                 });
             }
         }
     }
     
     fn parse_tool_call(&self, response: &str) -> Option<(String, Value)> {
+        // Clean up the response - remove tool_call tags that some models append
+        let cleaned = response
+            .replace("</tool_call>", "")
+            .replace("<tool_call>", "");
+        
         // Try to extract JSON from response
-        let json_str = if let Some(start) = response.find("```json") {
+        let json_str = if let Some(start) = cleaned.find("```json") {
             let start = start + 7;
-            if let Some(end) = response[start..].find("```") {
-                response[start..start + end].trim()
+            if let Some(end) = cleaned[start..].find("```") {
+                cleaned[start..start + end].trim()
             } else {
                 return None;
             }
-        } else if let Some(start) = response.find('{') {
-            if let Some(end) = response.rfind('}') {
-                &response[start..=end]
+        } else if let Some(start) = cleaned.find('{') {
+            if let Some(end) = cleaned.rfind('}') {
+                &cleaned[start..=end]
             } else {
                 return None;
             }
@@ -252,10 +279,34 @@ impl CrystalApp {
         
         // Parse JSON
         let parsed: Value = serde_json::from_str(json_str).ok()?;
-        let tool_name = parsed.get("tool")?.as_str()?.to_string();
-        let params = parsed.get("params")?.clone();
         
-        Some((tool_name, params))
+        // Try format 1: {"tool": "name", "params": {...}} (original GUI format)
+        if let (Some(tool), Some(params)) = (
+            parsed.get("tool").and_then(|v| v.as_str()),
+            parsed.get("params")
+        ) {
+            return Some((tool.to_string(), params.clone()));
+        }
+        
+        // Try format 2: {"name": "name", "arguments": {...}} (Ollama native format)
+        if let (Some(name), Some(args)) = (
+            parsed.get("name").and_then(|v| v.as_str()),
+            parsed.get("arguments")
+        ) {
+            return Some((name.to_string(), args.clone()));
+        }
+        
+        // Try format 3: {"function": {"name": "name", "arguments": {...}}} (OpenAI format)
+        if let Some(func) = parsed.get("function") {
+            if let (Some(name), Some(args)) = (
+                func.get("name").and_then(|v| v.as_str()),
+                func.get("arguments")
+            ) {
+                return Some((name.to_string(), args.clone()));
+            }
+        }
+        
+        None
     }
 
     fn call_tool(&mut self) {
@@ -295,6 +346,7 @@ impl CrystalApp {
                         self.chat_history.push(ChatMessage {
                             role: "assistant".to_string(),
                             content: self.status_message.clone(),
+                            tool_calls: None,
                         });
                     }
                     return;
@@ -315,6 +367,7 @@ impl CrystalApp {
                     self.chat_history.push(ChatMessage {
                         role: "assistant".to_string(),
                         content: content.text.clone(),
+                        tool_calls: None,
                     });
                 }
                 
@@ -397,6 +450,7 @@ impl CrystalApp {
                     self.chat_history.push(ChatMessage {
                         role: "assistant".to_string(),
                         content: self.status_message.clone(),
+                        tool_calls: None,
                     });
                 } else if !result.content.is_empty() {
                     self.status_message = format!("Tool {} completed (no structure to display).", tool_name);
@@ -407,6 +461,7 @@ impl CrystalApp {
                 self.chat_history.push(ChatMessage {
                     role: "assistant".to_string(),
                     content: self.status_message.clone(),
+                    tool_calls: None,
                 });
             }
         }

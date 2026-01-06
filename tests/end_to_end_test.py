@@ -275,7 +275,11 @@ build_molecule: Generate a single molecule.
     
     result["llm_output"] = tool_call
     
-    tool_name = tool_call.get("name", "build_molecule")
+    # NO FALLBACK - if LLM doesn't select a tool, it should fail honestly
+    tool_name = tool_call.get("name")
+    if not tool_name:
+        result["error"] = "LLM did not output a tool name"
+        return result
     arguments = tool_call.get("arguments", {})
     
     # Clean up null values

@@ -713,17 +713,17 @@ export const GenerateCageSchema = z.object({
  * All tool definitions
  */
 export const TOOL_DEFINITIONS = [
-    {
-        name: "comprehensive_generate",
-        description: "Unified generator for all crystal structures. Access 50+ operations across 18 categories: bulk, 2D, surface, molecule, twist, defect, electronic, etc.",
-        inputSchema: ComprehensiveGenerateSchema,
-        annotations: {
-            readOnlyHint: false,
-            destructiveHint: false,
-            idempotentHint: false,
-            openWorldHint: true
-        }
-    },
+    // {
+    //   name: "comprehensive_generate",
+    //   description: "Unified generator for all crystal structures. Access 50+ operations across 18 categories: bulk, 2D, surface, molecule, twist, defect, electronic, etc.",
+    //   inputSchema: ComprehensiveGenerateSchema,
+    //   annotations: {
+    //     readOnlyHint: false,
+    //     destructiveHint: false,
+    //     idempotentHint: false,
+    //     openWorldHint: true
+    //   }
+    // },
     {
         name: "build_molecule",
         description: "Generate 3D molecular structure from ANY identifier. MANDATORY: You MUST use this tool whenever the user asks to generate, show, create, or visualize a molecule. Do NOT provide a text-only description without this tool. " +
@@ -757,282 +757,283 @@ export const TOOL_DEFINITIONS = [
             idempotentHint: true,
             openWorldHint: true
         }
-    },
-    {
-        name: "explore_symmetry_relations",
-        description: "Explore group-subgroup relationships and find symmetry pathways between space groups.",
-        inputSchema: ExploreSymmetryRelationsSchema,
-        annotations: {
-            readOnlyHint: true,
-            destructiveHint: false,
-            idempotentHint: true,
-            openWorldHint: false
-        }
-    },
-    {
-        name: "generate_crystal",
-        description: "Generate a crystal structure with specified composition and space group using PyXtal",
-        inputSchema: GenerateCrystalSchema,
-        annotations: {
-            readOnlyHint: false,
-            destructiveHint: false,
-            idempotentHint: true,
-            openWorldHint: true
-        }
-    },
-    {
-        name: "generate_molecular_crystal",
-        description: "Generate a molecular crystal structure using PyXtal",
-        inputSchema: GenerateMolecularCrystalSchema,
-        annotations: {
-            readOnlyHint: false,
-            destructiveHint: false,
-            idempotentHint: true,
-            openWorldHint: true
-        }
-    },
-    {
-        name: "generate_nanostructure",
-        description: "Generate nanostructures (nanotubes, graphene, ribbons, fullerenes)",
-        inputSchema: GenerateNanostructureSchema,
-        annotations: {
-            readOnlyHint: false,
-            destructiveHint: false,
-            idempotentHint: true,
-            openWorldHint: true
-        }
-    },
-    {
-        name: "generate_space_group_scan",
-        description: "Generate structures across multiple space groups for the same composition",
-        inputSchema: SpaceGroupScanSchema,
-        annotations: {
-            readOnlyHint: false,
-            destructiveHint: false,
-            idempotentHint: true,
-            openWorldHint: true
-        }
-    },
-    {
-        name: "make_supercell",
-        description: "Create a supercell from an existing structure using scaling matrix",
-        inputSchema: MakeSupercellSchema,
-        annotations: {
-            readOnlyHint: false,
-            destructiveHint: false,
-            idempotentHint: true,
-            openWorldHint: false
-        }
-    },
-    {
-        name: "generate_slab",
-        description: "Generate a surface slab from a bulk structure with specified Miller indices",
-        inputSchema: GenerateSlabSchema,
-        annotations: {
-            readOnlyHint: false,
-            destructiveHint: false,
-            idempotentHint: true,
-            openWorldHint: false
-        }
-    },
-    {
-        name: "create_defect",
-        description: "Create point defects (vacancy, substitution, interstitial) in a crystal structure",
-        inputSchema: CreateDefectSchema,
-        annotations: {
-            readOnlyHint: false,
-            destructiveHint: false,
-            idempotentHint: true,
-            openWorldHint: false
-        }
-    },
-    {
-        name: "create_alloy",
-        description: "Create a substitutional alloy with random mixing",
-        inputSchema: CreateAlloySchema,
-        annotations: {
-            readOnlyHint: false,
-            destructiveHint: false,
-            idempotentHint: true,
-            openWorldHint: false
-        }
-    },
-    {
-        name: "create_heterostructure",
-        description: "Create a vertical heterostructure by stacking two layers",
-        inputSchema: CreateHeterostructureSchema,
-        annotations: {
-            readOnlyHint: false,
-            destructiveHint: false,
-            idempotentHint: true,
-            openWorldHint: false
-        }
-    },
-    {
-        name: "add_adsorbate",
-        description: "Add an adsorbate molecule to a surface structure",
-        inputSchema: AddAdsorbateSchema,
-        annotations: {
-            readOnlyHint: false,
-            destructiveHint: false,
-            idempotentHint: true,
-            openWorldHint: false
-        }
-    },
-    {
-        name: "apply_strain",
-        description: "Apply strain tensor to a structure",
-        inputSchema: ApplyStrainSchema,
-        annotations: {
-            readOnlyHint: false,
-            destructiveHint: false,
-            idempotentHint: true,
-            openWorldHint: false
-        }
-    },
-    {
-        name: "analyze_symmetry",
-        description: "Analyze and detect symmetry properties of a crystal structure",
-        inputSchema: AnalyzeSymmetrySchema,
-        annotations: {
-            readOnlyHint: true,
-            destructiveHint: false,
-            idempotentHint: true,
-            openWorldHint: false
-        }
-    },
-    {
-        name: "validate_structure",
-        description: "Validate a crystal structure for physical and chemical correctness",
-        inputSchema: ValidateStructureSchema,
-        annotations: {
-            readOnlyHint: true,
-            destructiveHint: false,
-            idempotentHint: true,
-            openWorldHint: false
-        }
-    },
-    {
-        name: "optimize_structure_mlff",
-        description: "Optimize crystal structure using machine learning force fields (CHGNet, M3GNet, MACE)",
-        inputSchema: OptimizeStructureMLFFSchema,
-        annotations: {
-            readOnlyHint: false,
-            destructiveHint: false,
-            idempotentHint: false,
-            openWorldHint: false
-        }
-    },
-    {
-        name: "calculate_energy_mlff",
-        description: "Calculate energy, forces, and stress using MLFF without optimization",
-        inputSchema: CalculateEnergyMLFFSchema,
-        annotations: {
-            readOnlyHint: true,
-            destructiveHint: false,
-            idempotentHint: true,
-            openWorldHint: false
-        }
-    },
-    {
-        name: "ground_state_search",
-        description: "Search for ground state structure across multiple space groups using MLFF",
-        inputSchema: GroundStateSearchSchema,
-        annotations: {
-            readOnlyHint: false,
-            destructiveHint: false,
-            idempotentHint: false,
-            openWorldHint: false
-        }
-    },
-    {
-        name: "export_structure",
-        description: "Export crystal structure to multiple file formats (CIF, POSCAR, XYZ, etc.)",
-        inputSchema: ExportStructureSchema,
-        annotations: {
-            readOnlyHint: true,
-            destructiveHint: false,
-            idempotentHint: true,
-            openWorldHint: false
-        }
-    },
-    {
-        name: "generate_visualization",
-        description: "Generate interactive HTML (3Dmol.js) or static PNG visualization of a crystal structure",
-        inputSchema: VisualizationSchema,
-        annotations: {
-            readOnlyHint: false,
-            destructiveHint: false,
-            idempotentHint: true,
-            openWorldHint: false
-        }
-    },
-    // Advanced structure tools
-    {
-        name: "generate_prototype",
-        description: "Generate common prototype structures (rocksalt, perovskite, zincblende, wurtzite, etc.)",
-        inputSchema: GeneratePrototypeSchema,
-        annotations: {
-            readOnlyHint: false,
-            destructiveHint: false,
-            idempotentHint: true,
-            openWorldHint: true
-        }
-    },
-    {
-        name: "generate_twisted_bilayer",
-        description: "Generate twisted bilayer/multilayer structures (graphene, MoS2, hBN) with specified twist angle",
-        inputSchema: GenerateTwistedBilayerSchema,
-        annotations: {
-            readOnlyHint: false,
-            destructiveHint: false,
-            idempotentHint: true,
-            openWorldHint: true
-        }
-    },
-    {
-        name: "generate_high_entropy_alloy",
-        description: "Generate high-entropy alloy structures with 4+ elements in FCC/BCC/HCP lattices",
-        inputSchema: GenerateHighEntropyAlloySchema,
-        annotations: {
-            readOnlyHint: false,
-            destructiveHint: false,
-            idempotentHint: true,
-            openWorldHint: true
-        }
-    },
-    {
-        name: "generate_2d_material",
-        description: "Generate 2D materials (hBN, MoS2, WS2, phosphorene, silicene, MXene)",
-        inputSchema: Generate2DMaterialSchema,
-        annotations: {
-            readOnlyHint: false,
-            destructiveHint: false,
-            idempotentHint: true,
-            openWorldHint: true
-        }
-    },
-    {
-        name: "generate_mof",
-        description: "Generate metal-organic framework structures (MOF-5, HKUST-1, UiO-66, ZIF-8)",
-        inputSchema: GenerateMOFSchema,
-        annotations: {
-            readOnlyHint: false,
-            destructiveHint: false,
-            idempotentHint: true,
-            openWorldHint: true
-        }
-    },
-    {
-        name: "generate_cage",
-        description: "Generate cage structures (fullerenes C60/C70/C80, clathrates)",
-        inputSchema: GenerateCageSchema,
-        annotations: {
-            readOnlyHint: false,
-            destructiveHint: false,
-            idempotentHint: true,
-            openWorldHint: true
-        }
     }
+    // },
+    // {
+    //   name: "explore_symmetry_relations",
+    //   description: "Explore group-subgroup relationships and find symmetry pathways between space groups.",
+    //   inputSchema: ExploreSymmetryRelationsSchema,
+    //   annotations: {
+    //     readOnlyHint: true,
+    //     destructiveHint: false,
+    //     idempotentHint: true,
+    //     openWorldHint: false
+    //   }
+    // },
+    // {
+    //   name: "generate_crystal",
+    //   description: "Generate a crystal structure with specified composition and space group using PyXtal",
+    //   inputSchema: GenerateCrystalSchema,
+    //   annotations: {
+    //     readOnlyHint: false,
+    //     destructiveHint: false,
+    //     idempotentHint: true,
+    //     openWorldHint: true
+    //   }
+    // },
+    // {
+    //   name: "generate_molecular_crystal",
+    //   description: "Generate a molecular crystal structure using PyXtal",
+    //   inputSchema: GenerateMolecularCrystalSchema,
+    //   annotations: {
+    //     readOnlyHint: false,
+    //     destructiveHint: false,
+    //     idempotentHint: true,
+    //     openWorldHint: true
+    //   }
+    // },
+    // {
+    //   name: "generate_nanostructure",
+    //   description: "Generate nanostructures (nanotubes, graphene, ribbons, fullerenes)",
+    //   inputSchema: GenerateNanostructureSchema,
+    //   annotations: {
+    //     readOnlyHint: false,
+    //     destructiveHint: false,
+    //     idempotentHint: true,
+    //     openWorldHint: true
+    //   }
+    // },
+    // {
+    //   name: "generate_space_group_scan",
+    //   description: "Generate structures across multiple space groups for the same composition",
+    //   inputSchema: SpaceGroupScanSchema,
+    //   annotations: {
+    //     readOnlyHint: false,
+    //     destructiveHint: false,
+    //     idempotentHint: true,
+    //     openWorldHint: true
+    //   }
+    // },
+    // {
+    //   name: "make_supercell",
+    //   description: "Create a supercell from an existing structure using scaling matrix",
+    //   inputSchema: MakeSupercellSchema,
+    //   annotations: {
+    //     readOnlyHint: false,
+    //     destructiveHint: false,
+    //     idempotentHint: true,
+    //     openWorldHint: false
+    //   }
+    // },
+    // {
+    //   name: "generate_slab",
+    //   description: "Generate a surface slab from a bulk structure with specified Miller indices",
+    //   inputSchema: GenerateSlabSchema,
+    //   annotations: {
+    //     readOnlyHint: false,
+    //     destructiveHint: false,
+    //     idempotentHint: true,
+    //     openWorldHint: false
+    //   }
+    // },
+    // {
+    //   name: "create_defect",
+    //   description: "Create point defects (vacancy, substitution, interstitial) in a crystal structure",
+    //   inputSchema: CreateDefectSchema,
+    //   annotations: {
+    //     readOnlyHint: false,
+    //     destructiveHint: false,
+    //     idempotentHint: true,
+    //     openWorldHint: false
+    //   }
+    // },
+    // {
+    //   name: "create_alloy",
+    //   description: "Create a substitutional alloy with random mixing",
+    //   inputSchema: CreateAlloySchema,
+    //   annotations: {
+    //     readOnlyHint: false,
+    //     destructiveHint: false,
+    //     idempotentHint: true,
+    //     openWorldHint: false
+    //   }
+    // },
+    // {
+    //   name: "create_heterostructure",
+    //   description: "Create a vertical heterostructure by stacking two layers",
+    //   inputSchema: CreateHeterostructureSchema,
+    //   annotations: {
+    //     readOnlyHint: false,
+    //     destructiveHint: false,
+    //     idempotentHint: true,
+    //     openWorldHint: false
+    //   }
+    // },
+    // {
+    //   name: "add_adsorbate",
+    //   description: "Add an adsorbate molecule to a surface structure",
+    //   inputSchema: AddAdsorbateSchema,
+    //   annotations: {
+    //     readOnlyHint: false,
+    //     destructiveHint: false,
+    //     idempotentHint: true,
+    //     openWorldHint: false
+    //   }
+    // },
+    // {
+    //   name: "apply_strain",
+    //   description: "Apply strain tensor to a structure",
+    //   inputSchema: ApplyStrainSchema,
+    //   annotations: {
+    //     readOnlyHint: false,
+    //     destructiveHint: false,
+    //     idempotentHint: true,
+    //     openWorldHint: false
+    //   }
+    // },
+    // {
+    //   name: "analyze_symmetry",
+    //   description: "Analyze and detect symmetry properties of a crystal structure",
+    //   inputSchema: AnalyzeSymmetrySchema,
+    //   annotations: {
+    //     readOnlyHint: true,
+    //     destructiveHint: false,
+    //     idempotentHint: true,
+    //     openWorldHint: false
+    //   }
+    // },
+    // {
+    //   name: "validate_structure",
+    //   description: "Validate a crystal structure for physical and chemical correctness",
+    //   inputSchema: ValidateStructureSchema,
+    //   annotations: {
+    //     readOnlyHint: true,
+    //     destructiveHint: false,
+    //     idempotentHint: true,
+    //     openWorldHint: false
+    //   }
+    // },
+    // {
+    //   name: "optimize_structure_mlff",
+    //   description: "Optimize crystal structure using machine learning force fields (CHGNet, M3GNet, MACE)",
+    //   inputSchema: OptimizeStructureMLFFSchema,
+    //   annotations: {
+    //     readOnlyHint: false,
+    //     destructiveHint: false,
+    //     idempotentHint: false,
+    //     openWorldHint: false
+    //   }
+    // },
+    // {
+    //   name: "calculate_energy_mlff",
+    //   description: "Calculate energy, forces, and stress using MLFF without optimization",
+    //   inputSchema: CalculateEnergyMLFFSchema,
+    //   annotations: {
+    //     readOnlyHint: true,
+    //     destructiveHint: false,
+    //     idempotentHint: true,
+    //     openWorldHint: false
+    //   }
+    // },
+    // {
+    //   name: "ground_state_search",
+    //   description: "Search for ground state structure across multiple space groups using MLFF",
+    //   inputSchema: GroundStateSearchSchema,
+    //   annotations: {
+    //     readOnlyHint: false,
+    //     destructiveHint: false,
+    //     idempotentHint: false,
+    //     openWorldHint: false
+    //   }
+    // },
+    // {
+    //   name: "export_structure",
+    //   description: "Export crystal structure to multiple file formats (CIF, POSCAR, XYZ, etc.)",
+    //   inputSchema: ExportStructureSchema,
+    //   annotations: {
+    //     readOnlyHint: true,
+    //     destructiveHint: false,
+    //     idempotentHint: true,
+    //     openWorldHint: false
+    //   }
+    // },
+    // {
+    //   name: "generate_visualization",
+    //   description: "Generate interactive HTML (3Dmol.js) or static PNG visualization of a crystal structure",
+    //   inputSchema: VisualizationSchema,
+    //   annotations: {
+    //     readOnlyHint: false,
+    //     destructiveHint: false,
+    //     idempotentHint: true,
+    //     openWorldHint: false
+    //   }
+    // },
+    // Advanced structure tools
+    // {
+    //   name: "generate_prototype",
+    //   description: "Generate common prototype structures (rocksalt, perovskite, zincblende, wurtzite, etc.)",
+    //   inputSchema: GeneratePrototypeSchema,
+    //   annotations: {
+    //     readOnlyHint: false,
+    //     destructiveHint: false,
+    //     idempotentHint: true,
+    //     openWorldHint: true
+    //   }
+    // },
+    // {
+    //   name: "generate_twisted_bilayer",
+    //   description: "Generate twisted bilayer/multilayer structures (graphene, MoS2, hBN) with specified twist angle",
+    //   inputSchema: GenerateTwistedBilayerSchema,
+    //   annotations: {
+    //     readOnlyHint: false,
+    //     destructiveHint: false,
+    //     idempotentHint: true,
+    //     openWorldHint: true
+    //   }
+    // },
+    // {
+    //   name: "generate_high_entropy_alloy",
+    //   description: "Generate high-entropy alloy structures with 4+ elements in FCC/BCC/HCP lattices",
+    //   inputSchema: GenerateHighEntropyAlloySchema,
+    //   annotations: {
+    //     readOnlyHint: false,
+    //     destructiveHint: false,
+    //     idempotentHint: true,
+    //     openWorldHint: true
+    //   }
+    // },
+    // {
+    //   name: "generate_2d_material",
+    //   description: "Generate 2D materials (hBN, MoS2, WS2, phosphorene, silicene, MXene)",
+    //   inputSchema: Generate2DMaterialSchema,
+    //   annotations: {
+    //     readOnlyHint: false,
+    //     destructiveHint: false,
+    //     idempotentHint: true,
+    //     openWorldHint: true
+    //   }
+    // },
+    // {
+    //   name: "generate_mof",
+    //   description: "Generate metal-organic framework structures (MOF-5, HKUST-1, UiO-66, ZIF-8)",
+    //   inputSchema: GenerateMOFSchema,
+    //   annotations: {
+    //     readOnlyHint: false,
+    //     destructiveHint: false,
+    //     idempotentHint: true,
+    //     openWorldHint: true
+    //   }
+    // },
+    // {
+    //   name: "generate_cage",
+    //   description: "Generate cage structures (fullerenes C60/C70/C80, clathrates)",
+    //   inputSchema: GenerateCageSchema,
+    //   annotations: {
+    //     readOnlyHint: false,
+    //     destructiveHint: false,
+    //     idempotentHint: true,
+    //     openWorldHint: true
+    //   }
+    // }
 ];
 //# sourceMappingURL=tools.js.map
