@@ -752,6 +752,8 @@ print("OK")
     }
 
     fn render_viewer_panel(&mut self, ui: &mut egui::Ui) {
+        let viewer_rect = ui.available_rect_before_wrap();
+        
         ui.horizontal(|ui| {
             ui.heading("Crystal Viewer");
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -773,6 +775,21 @@ print("OK")
         // Delegate rendering and interaction to the viewer component
         // This handles projection, sorting, bonding, and mouse interaction (rotation/zoom)
         self.crystal_viewer.render(ui);
+        
+        // Overlay Home Button
+        let button_size = 24.0;
+        let padding = 10.0;
+        let home_rect = egui::Rect::from_min_size(
+            viewer_rect.right_top() + egui::vec2(-button_size - padding, padding + 30.0), // Offset below header
+            egui::vec2(button_size, button_size)
+        );
+        
+        // Manual button placement
+        ui.allocate_ui_at_rect(home_rect, |ui| {
+            if ui.button("🏠").clicked() {
+                self.crystal_viewer.reset_view();
+            }
+        });
         
         ui.horizontal(|ui| {
             ui.label("Atom Scale:");

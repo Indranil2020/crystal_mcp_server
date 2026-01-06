@@ -528,9 +528,10 @@ export const BuildMolecularClusterSchema = z.object({
         "ring", // Alias for circular
         "spherical", // 3D spherical distribution
         "swastika", // 4-molecule cross pattern
+        "swastic", // Alias for swastika (typo tolerance)
         "custom" // User-defined positions/rotations
     ]).default("auto").optional()
-        .describe("Arrangement type. 'auto' selects based on molecule chemistry: aromatics → π-stacking, H-bond capable → H-bonded."),
+        .describe("Arrangement type. IMPORTANT: Use 'linear' if user specifies a direction (e.g. 'along x') or distance. Use 'auto' only for general stacking."),
     // Distance control
     intermolecular_distance: z.number().positive().optional()
         .describe("Distance between molecule centers in Angstroms. Defaults: π-stacking=3.4Å, H-bonded=2.8Å, vdW=3.5Å"),
@@ -743,13 +744,15 @@ export const TOOL_DEFINITIONS = [
     },
     {
         name: "build_molecular_cluster",
-        description: "Generate molecular clusters (dimers, trimers, n-mers) for quantum chemistry. MANDATORY: You MUST use this tool whenever the user asks to generate a cluster, dimer, stack, or combination of molecules. " +
-            "Combines any molecules from build_molecule with various arrangements: " +
-            "π-π stacking (parallel, antiparallel, offset), T-shaped (edge-to-face), " +
-            "herringbone, H-bonded clusters, linear, circular, or custom positions. " +
-            "Auto-detects optimal stacking based on molecule chemistry. " +
-            "Supports full rotation control around x/y/z axes. " +
-            "Example: {molecules: [{identifier: 'benzene', count: 2}], stacking: 'pi_pi_parallel'} for benzene dimer.",
+        description: "Generate molecular clusters (dimers, trimers, n-mers) or COMBINATIONS of different molecules. " +
+            "MANDATORY: Use this tool whenever the user asks for: " +
+            "1. A cluster/dimer/stack (e.g. 'benzene dimer') " +
+            "2. A LIST of molecules (e.g. 'generate water and benzene', 'create NTCDA and PTCDA'). " +
+            "Combines any molecules from build_molecule with various arrangements. " +
+            "Auto-detects optimal stacking. Supports full rotation. " +
+            "Examples: " +
+            "- 'benzene dimer': {molecules: [{identifier: 'benzene', count: 2}], stacking: 'pi_pi_parallel'} " +
+            "- 'water and benzene': {molecules: [{identifier: 'water'}, {identifier: 'benzene'}], stacking: 'auto'}",
         inputSchema: BuildMolecularClusterSchema,
         annotations: {
             readOnlyHint: false,

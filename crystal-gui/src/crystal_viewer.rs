@@ -151,7 +151,39 @@ impl CrystalViewer {
         Self::default()
     }
 
-    pub fn set_structure(&mut self, structure: CrystalStructure) {
+    pub fn set_structure(&mut self, mut structure: CrystalStructure) {
+        // Auto-center structure: shift atoms so geometric center is at (0,0,0)
+        let atoms = if !structure.atoms.is_empty() {
+            &mut structure.atoms
+        } else if let Some(sites) = &mut structure.sites {
+            sites
+        } else {
+            &mut structure.atoms
+        };
+
+        if !atoms.is_empty() {
+            let mut sum_x = 0.0;
+            let mut sum_y = 0.0;
+            let mut sum_z = 0.0;
+            let count = atoms.len() as f64;
+
+            for atom in atoms.iter() {
+                sum_x += atom.cartesian[0];
+                sum_y += atom.cartesian[1];
+                sum_z += atom.cartesian[2];
+            }
+
+            let center_x = sum_x / count;
+            let center_y = sum_y / count;
+            let center_z = sum_z / count;
+
+            for atom in atoms.iter_mut() {
+                atom.cartesian[0] -= center_x;
+                atom.cartesian[1] -= center_y;
+                atom.cartesian[2] -= center_z;
+            }
+        }
+
         self.structure = Some(structure);
         self.reset_view();
     }
@@ -233,8 +265,14 @@ impl CrystalViewer {
         // Input Handling
         if response.dragged() {
             let delta = response.drag_delta();
-            // Left click rotate, Right/Middle click pan (simplified: just rotate for now)
-            self.rotate(delta.x, delta.y);
+            // Left click rotate, Right/Middle click pan
+            if ui.input(|i| i.pointer.button_down(egui::PointerButton::Secondary)) || 
+               ui.input(|i| i.pointer.button_down(egui::PointerButton::Middle)) {
+                self.pan[0] += delta.x;
+                self.pan[1] += delta.y;
+            } else {
+                self.rotate(delta.x, delta.y);
+            }
         }
         
         if response.hovered() {
@@ -254,6 +292,7 @@ impl CrystalViewer {
             return;
         };
         
+        // Get atoms (either from atoms list or sites - unified)
         let atoms = structure.atoms.as_slice();
         let atoms = if atoms.is_empty() {
              structure.sites.as_deref().unwrap_or(&[])
@@ -283,7 +322,7 @@ impl CrystalViewer {
         
         let mut render_queue: Vec<RenderItem> = Vec::new();
         
-        let project = |p: [f64; 3]| -> ([f64; 3], egui::Pos2) {
+        let project = |p: [f64; 3], offset_screen: egui::Vec2| -> ([f64; 3], egui::Pos2) {
             // Rotate Y
             let x1 = p[0] * cos_y - p[2] * sin_y;
             let z1 = p[0] * sin_y + p[2] * cos_y;
@@ -291,14 +330,15 @@ impl CrystalViewer {
             let y2 = p[1] * cos_x - z1 * sin_x;
             let z2 = p[1] * sin_x + z1 * cos_x;
             
-            // Perspective (optional, using Ortho for simplicity/clarity often preferred for schematics)
-            // Let's stick to weak perspective / orthographic for correct sizing
-            let screen_x = center.x as f64 + x1 * scale as f64 + self.pan[0] as f64;
-            let screen_y = center.y as f64 - y2 * scale as f64 + self.pan[1] as f64;
+            // Perspective / Ortho
+            let screen_x = center.x as f64 + x1 * scale as f64 + self.pan[0] as f64 + offset_screen.x as f64;
+            let screen_y = center.y as f64 - y2 * scale as f64 + self.pan[1] as f64 - offset_screen.y as f64;
             
             ([x1, y2, z2], egui::Pos2::new(screen_x as f32, screen_y as f32))
         };
         
+        let standard_project = |p: [f64; 3]| project(p, egui::Vec2::ZERO);
+
         // 1. Bonds
         if self.show_bonds {
             let bonds = Self::detect_bonds(atoms);
@@ -306,13 +346,10 @@ impl CrystalViewer {
                 let p1_raw = atoms[idx1].cartesian;
                 let p2_raw = atoms[idx2].cartesian;
                 
-                let (p1_rot, pos1) = project(p1_raw);
-                let (p2_rot, pos2) = project(p2_raw);
+                let (p1_rot, pos1) = standard_project(p1_raw);
+                let (p2_rot, pos2) = standard_project(p2_raw);
                 
-                // Average Z for sorting
                 let z_depth = (p1_rot[2] + p2_rot[2]) / 2.0;
-                
-                // Bond is a line
                 let bond_width = 4.0 * self.zoom * self.atom_scale;
                 let bond_color = egui::Color32::from_gray(180);
                 
@@ -320,67 +357,76 @@ impl CrystalViewer {
                     z_depth,
                     draw_fn: Box::new(move |painter| {
                         painter.line_segment([pos1, pos2], egui::Stroke::new(bond_width, bond_color));
-                        // Add highlights for cylinder effect? Too expensive/complex for 2D lines.
-                        // Simple shading: darker if further back?
                     }),
                 });
             }
         }
         
-        // 2. Atoms (Glossy Spheres)
+        // 2. Atoms
         for atom in atoms {
-            let (p_rot, pos) = project(atom.cartesian);
-// ... (remove PI import separately or just ignore warning)
+            let (p_rot, pos) = standard_project(atom.cartesian);
             let radius = ElementInfo::get_radius(&atom.element) as f64 * 10.0 * self.atom_scale as f64 * self.zoom as f64;
             let color = ElementInfo::get_color(&atom.element);
             let z_depth = p_rot[2];
-            
             let element = atom.element.clone();
 
             render_queue.push(RenderItem {
                 z_depth,
                 draw_fn: Box::new(move |painter| {
-                    // Draw Glossy Sphere
-                    
-                    // 1. Base circle (darker edge)
                     painter.circle_filled(pos, radius as f32, color);
-                    
-                    // 2. Outline/Shading (slight border)
                     painter.circle_stroke(pos, radius as f32, egui::Stroke::new(1.0, egui::Color32::BLACK));
                     
-                    // 3. Highlight (Specular reflection)
-                    // Offset highlight to top-left
                     let highlight_offset = radius as f32 * 0.3;
                     let highlight_pos = egui::Pos2::new(pos.x - highlight_offset, pos.y - highlight_offset);
-                    let highlight_radius = radius as f32 * 0.25;
-                    let highlight_color = egui::Color32::from_white_alpha(180); // Semi-transparent white
+                    painter.circle_filled(highlight_pos, radius as f32 * 0.25, egui::Color32::from_white_alpha(180));
                     
-                    painter.circle_filled(highlight_pos, highlight_radius, highlight_color);
-                    
-                    // 4. Element Symbol Text
                     if radius > 8.0 {
-                        painter.text(
-                            pos, 
-                            egui::Align2::CENTER_CENTER, 
-                            &element, 
-                            egui::FontId::proportional(radius as f32), 
-                            egui::Color32::BLACK
-                        );
+                        painter.text(pos, egui::Align2::CENTER_CENTER, &element, egui::FontId::proportional(radius as f32), egui::Color32::BLACK);
                     }
                 })
             });
         }
         
-        // Sort by Z (painters algorithm: draw furthest first)
-        // Z increases towards viewer? p_rot calculated: 
-        // z2 = p[1]*sin + z1*cos. 
-        // Standard handedness: Z comes out of screen.
-        // So smaller Z (more negative) is further away.
+        // Sort and render atoms/bonds
         render_queue.sort_by(|a, b| a.z_depth.partial_cmp(&b.z_depth).unwrap_or(std::cmp::Ordering::Equal));
-        
-        // Render
         for item in render_queue {
             (item.draw_fn)(&painter);
         }
+
+        // --- COORDINATE AXES (Bottom Left) ---
+        // Separate mini-render for axes
+        let axes_origin = rect.left_bottom() + egui::vec2(50.0, -50.0);
+        let axis_len = 40.0;
+        
+        let project_axis = |p: [f64; 3]| -> egui::Pos2 {
+            // Rotate only (no pan/zoom effects from main view logic usually, but here we want same rotation)
+            let x1 = p[0] * cos_y - p[2] * sin_y;
+            let z1 = p[0] * sin_y + p[2] * cos_y;
+            let y2 = p[1] * cos_x - z1 * sin_x;
+            
+            // Fixed screen position (axes_origin) + rotated vector * length
+            egui::Pos2::new(
+                axes_origin.x + x1 as f32 * axis_len,
+                axes_origin.y - y2 as f32 * axis_len
+            )
+        };
+        
+        // Draw Axes (X=Red, Y=Green, Z=Blue)
+        let origin_pos = axes_origin; // (0,0,0) projects to origin
+        let x_pos = project_axis([1.0, 0.0, 0.0]);
+        let y_pos = project_axis([0.0, 1.0, 0.0]);
+        let z_pos = project_axis([0.0, 0.0, 1.0]);
+        
+        let stroke_width = 3.0;
+        
+        // Draw lines
+        painter.line_segment([origin_pos, x_pos], egui::Stroke::new(stroke_width, egui::Color32::RED));
+        painter.line_segment([origin_pos, y_pos], egui::Stroke::new(stroke_width, egui::Color32::GREEN));
+        painter.line_segment([origin_pos, z_pos], egui::Stroke::new(stroke_width, egui::Color32::BLUE));
+        
+        // Labels
+        painter.text(x_pos, egui::Align2::LEFT_TOP, "X", egui::FontId::monospace(12.0), egui::Color32::RED);
+        painter.text(y_pos, egui::Align2::CENTER_BOTTOM, "Y", egui::FontId::monospace(12.0), egui::Color32::GREEN);
+        painter.text(z_pos, egui::Align2::RIGHT_TOP, "Z", egui::FontId::monospace(12.0), egui::Color32::BLUE);
     }
 }

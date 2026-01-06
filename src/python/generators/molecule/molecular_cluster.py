@@ -54,6 +54,7 @@ class StackingType(Enum):
     CIRCULAR = "circular"                      # Ring arrangement
     SPHERICAL = "spherical"                    # 3D sphere distribution
     CUSTOM = "custom"                          # User-defined positions/rotations
+    SWASTIKA = "swastika"                      # 4-molecule cross pattern
 
 
 @dataclass
@@ -112,6 +113,10 @@ STACKING_DEFAULTS = {
     StackingType.SPHERICAL: StackingParameters(
         distance=5.0,
         description="Spherical distribution"
+    ),
+    StackingType.SWASTIKA: StackingParameters(
+        distance=3.4,  # Center-to-center
+        description="Swastika pattern (4-fold rotation)"
     ),
 }
 
@@ -755,8 +760,14 @@ def generate_molecular_cluster(
     stacking_lower = stacking.lower().replace("-", "_").replace(" ", "_")
     
     if stacking_lower == "auto":
-        stacking_type = auto_select_stacking(mol_properties)
-        logger.info(f"Auto-selected stacking: {stacking_type.value}")
+        # Heuristic: If axis is X or Y, user likely implies LINEAR arrangement
+        # (Standard stacking is usually Z/face-to-face)
+        if axis.lower() in ["x", "y"]:
+            stacking_type = StackingType.LINEAR
+            logger.info(f"Auto-selected stacking: {stacking_type.value} (inferred from axis={axis})")
+        else:
+            stacking_type = auto_select_stacking(mol_properties)
+            logger.info(f"Auto-selected stacking: {stacking_type.value}")
     else:
         # Map string to enum
         stacking_map = {
@@ -781,7 +792,8 @@ def generate_molecular_cluster(
             "ring": StackingType.CIRCULAR,
             "spherical": StackingType.SPHERICAL,
             "custom": StackingType.CUSTOM,
-            "swastika": StackingType.CUSTOM,  # Special handling below
+            "swastika": StackingType.SWASTIKA,
+            "swastic": StackingType.SWASTIKA,  # Typo tolerance
         }
         stacking_type = stacking_map.get(stacking_lower, StackingType.PI_PI_PARALLEL)
     
@@ -791,7 +803,7 @@ def generate_molecular_cluster(
         intermolecular_distance = params.distance
     
     # Step 3: Arrange molecules
-    if stacking_lower == "swastika":
+    if stacking_type == StackingType.SWASTIKA:
         arranged = arrange_swastika(mol_structures, arm_length=intermolecular_distance * 2)
     elif stacking_type == StackingType.CUSTOM and positions:
         arranged = arrange_custom(mol_structures, positions, rotations or [])
