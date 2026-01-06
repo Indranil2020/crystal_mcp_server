@@ -33,6 +33,14 @@ from .molecular_cluster import (
     STACKING_DEFAULTS,
 )
 
+# New unified arrangement adapter (Facade pattern)
+from .arrangement_adapter import (
+    generate_molecular_cluster as generate_molecular_cluster_unified,
+    create_arrangement_from_formula,
+    create_arrangement_with_constraints,
+    parse_natural_language,
+)
+
 from .frameworks import (
     generate_mof,
     generate_cof,
@@ -55,6 +63,9 @@ __all__ = [
     # Molecular clusters
     "generate_molecular_cluster", "create_dimer", "create_hetero_dimer", "create_stack",
     "StackingType", "STACKING_DEFAULTS",
+    # New unified arrangement (formula-based, constraint-based)
+    "generate_molecular_cluster_unified", "create_arrangement_from_formula",
+    "create_arrangement_with_constraints", "parse_natural_language",
     # Frameworks
     "generate_mof", "generate_cof",
     # Cages
