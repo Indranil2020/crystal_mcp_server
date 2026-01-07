@@ -1,0 +1,100 @@
+@import "tailwindcss";
+
+/* Custom variables */
+:root {
+  --color-primary: #3b82f6;
+  --color-secondary: #10b981;
+  --color-background: #0f172a;
+  --color-surface: #1e293b;
+  --color-text: #f8fafc;
+  --color-text-muted: #94a3b8;
+  --color-border: #334155;
+  --color-error: #ef4444;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+}
+
+/* Dark mode by default */
+body {
+  background-color: var(--color-background);
+  color: var(--color-text);
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#root {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Panel styling */
+.panel {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+/* Tool call visualization */
+.tool-call {
+  background: linear-gradient(135deg, #1e3a5f 0%, #1e293b 100%);
+  border-left: 3px solid var(--color-primary);
+  padding: 12px;
+  border-radius: 4px;
+  margin: 8px 0;
+}
+
+.tool-call.loading {
+  border-left-color: var(--color-warning);
+}
+
+.tool-call.success {
+  border-left-color: var(--color-success);
+}
+
+.tool-call.error {
+  border-left-color: var(--color-error);
+}
+
+/* Status bar */
+.status-bar {
+  background-color: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  padding: 4px 12px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* Viewer container */
+.viewer-container {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+/* MolStar overrides */
+.msp-plugin {
+  height: 100% !important;
+}
