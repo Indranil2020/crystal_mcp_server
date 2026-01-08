@@ -1,20 +1,23 @@
 /**
  * KekuleEditor - 2D Molecular Editor with Kekule.js
- * 
+ *
  * Professional-grade 2D structure editor for drawing and editing molecules.
  * Features: Drawing tools, templates, SMILES I/O, sync with 3D viewer.
+ *
+ * DEBUG: Comprehensive logging for initialization and operation tracking.
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useAppDispatch } from '../../store/hooks';
 import { addStructure } from '../../store/structureSlice';
 import { v4 as uuidv4 } from 'uuid';
+import { debug, debugError } from '../../debug';
 import type { StructureData } from '../../types';
 
 // Kekule.js imports - using global loaded from CDN for better compatibility
 declare global {
     interface Window {
-        Kekule: any;
+        Kekule: unknown;
     }
 }
 
@@ -33,57 +36,70 @@ export default function KekuleEditor({ className = '', onStructureChange }: Prop
 
     // Load Kekule.js from CDN
     useEffect(() => {
+        debug('VIEWERS', '═'.repeat(50));
+        debug('VIEWERS', '✏️ KEKULE EDITOR INITIALIZATION');
+
         // Check if already loaded
         if (window.Kekule) {
+            debug('VIEWERS', '  Kekule.js already loaded, initializing editor...');
             initEditor();
             return;
         }
 
-        // Load Kekule.js scripts
-        const loadKekule = async () => {
-            try {
-                // Load CSS
-                const css = document.createElement('link');
-                css.rel = 'stylesheet';
-                css.href = 'https://cdn.jsdelivr.net/npm/kekule/dist/themes/default/kekule.css';
-                document.head.appendChild(css);
+        debug('VIEWERS', '  Loading Kekule.js from CDN...');
 
-                // Load main script
-                const script = document.createElement('script');
-                script.src = 'https://cdn.jsdelivr.net/npm/kekule/dist/kekule.min.js';
-                script.onload = () => {
-                    console.log('[KekuleEditor] Kekule.js loaded');
-                    initEditor();
-                };
-                script.onerror = () => {
-                    setError('Failed to load Kekule.js');
-                };
-                document.head.appendChild(script);
-            } catch (err) {
-                console.error('[KekuleEditor] Load error:', err);
-                setError('Failed to load Kekule.js library');
-            }
+        // Load CSS
+        const css = document.createElement('link');
+        css.rel = 'stylesheet';
+        css.href = 'https://cdn.jsdelivr.net/npm/kekule/dist/themes/default/kekule.css';
+        document.head.appendChild(css);
+        debug('VIEWERS', '  CSS loaded');
+
+        // Load main script
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/kekule/dist/kekule.min.js';
+        script.onload = () => {
+            debug('VIEWERS', '  ✓ Kekule.js script loaded successfully');
+            initEditor();
         };
-
-        loadKekule();
+        script.onerror = () => {
+            debugError('VIEWERS', 'Failed to load Kekule.js from CDN', 'KekuleEditor');
+            setError('Failed to load Kekule.js');
+        };
+        document.head.appendChild(script);
+        debug('VIEWERS', '  Script tag added, waiting for load...');
+        debug('VIEWERS', '═'.repeat(50));
     }, []);
 
     // Initialize the Kekule Composer
     const initEditor = useCallback(() => {
-        if (!editorRef.current || !window.Kekule) return;
+        debug('VIEWERS', '  initEditor called');
+
+        if (!editorRef.current) {
+            debug('VIEWERS', '  ❌ editorRef not ready');
+            return;
+        }
+        if (!window.Kekule) {
+            debug('VIEWERS', '  ❌ window.Kekule not available');
+            return;
+        }
 
         const checkReadiness = (attempts = 0) => {
-            const Kekule = window.Kekule;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const Kekule = window.Kekule as any;
 
             // Check specific dependencies required for Composer
             const isKekuleReady = !!Kekule;
             const isWidgetReady = !!(Kekule && Kekule.Widget);
             const isClassReady = !!(Kekule && Kekule.Widget && Kekule.Widget.getPreferredWidgetClass);
 
+            debug('VIEWERS', `  Readiness check #${attempts}: Kekule=${isKekuleReady}, Widget=${isWidgetReady}, Class=${isClassReady}`);
+
             // If any dependency is missing, retry or determine unsupported
             if (!isKekuleReady || !isWidgetReady || !isClassReady) {
                 if (attempts > 20) {
-                    console.warn('[KekuleEditor] Kekule Widget subsystem unavailable (Headless environment detected)');
+                    debug('VIEWERS', '  ⚠️ Kekule Widget subsystem unavailable after 20 attempts');
+                    debug('VIEWERS', '  This usually indicates a headless browser environment');
                     setError('Kekule Widget system not available in this environment');
                     return;
                 }
@@ -91,9 +107,12 @@ export default function KekuleEditor({ className = '', onStructureChange }: Prop
                 return;
             }
 
+            debug('VIEWERS', '  ✓ All Kekule systems ready, creating Composer...');
+
             // All systems go - initialize directly
             const composer = new Kekule.Editor.Composer(editorRef.current);
             composer.setDimension('100%', '100%');
+            debug('VIEWERS', '  Composer created');
 
             // Configure toolbar - strict feature checks instead of try/catch
             if (typeof composer.setCommonToolButtons === 'function') {
@@ -103,6 +122,7 @@ export default function KekuleEditor({ className = '', onStructureChange }: Prop
                     'copy', 'cut', 'paste',
                     'zoomIn', 'zoomOut', 'reset',
                 ]);
+                debug('VIEWERS', '  Common tool buttons configured');
             }
 
             if (typeof composer.setChemToolButtons === 'function') {
@@ -110,6 +130,7 @@ export default function KekuleEditor({ className = '', onStructureChange }: Prop
                     'manipulate', 'erase', 'bond', 'atom',
                     'ring', 'charge', 'glyph',
                 ]);
+                debug('VIEWERS', '  Chem tool buttons configured');
             }
 
             // Listen for changes
@@ -117,6 +138,7 @@ export default function KekuleEditor({ className = '', onStructureChange }: Prop
                 const mol = composer.getChemObj();
                 if (mol && Kekule.IO && Kekule.IO.saveFormatData) {
                     const smiles = Kekule.IO.saveFormatData(mol, 'smi');
+                    debug('VIEWERS', `  Molecule updated: SMILES=${smiles}`);
                     setCurrentSmiles(smiles);
                     onStructureChange?.(smiles);
                 }
@@ -124,7 +146,7 @@ export default function KekuleEditor({ className = '', onStructureChange }: Prop
 
             composerRef.current = composer;
             setIsLoaded(true);
-            console.log('[KekuleEditor] Composer initialized successfully');
+            debug('VIEWERS', '  ✅ KEKULE COMPOSER INITIALIZED SUCCESSFULLY');
         };
 
         checkReadiness();
@@ -133,7 +155,8 @@ export default function KekuleEditor({ className = '', onStructureChange }: Prop
     // Load molecule from SMILES
     const loadFromSmiles = useCallback((smiles: string) => {
         if (!composerRef.current || !window.Kekule) return;
-        const Kekule = window.Kekule;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const Kekule = window.Kekule as any;
 
         if (Kekule.IO && Kekule.IO.loadFormatData) {
             const mol = Kekule.IO.loadFormatData(smiles, 'smi');

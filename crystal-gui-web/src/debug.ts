@@ -7,14 +7,15 @@
 // Set to true to enable verbose debug logging
 export const DEBUG_ENABLED = true;
 
-// Debug log levels
+// Debug log levels - ALL enabled for thorough debugging
 export const DEBUG_LEVELS = {
-    MCP_CLIENT: true,     // MCP bridge communication
-    LLM_CLIENT: true,     // Ollama API calls
-    TOOL_ORCHESTRATOR: true, // Tool call orchestration
-    REDUX_STORE: true,    // State changes
-    CONVERTERS: true,     // Structure conversion
-    VIEWERS: true,        // MolStar/Kekule loading
+    MCP_CLIENT: true,         // MCP bridge communication
+    LLM_CLIENT: true,         // Ollama API calls
+    TOOL_ORCHESTRATOR: true,  // Tool call orchestration (renamed from TOOL_ORCHESTRATOR)
+    REDUX_STORE: true,        // State changes
+    CONVERTERS: true,         // Structure conversion
+    VIEWERS: true,            // MolStar/Kekule loading
+    CHAT_PANEL: true,         // Chat UI interactions
 };
 
 // Timestamp helper

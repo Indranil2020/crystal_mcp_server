@@ -1,10 +1,10 @@
 /**
  * Crystal GUI Web - Main App Component
- * 
- * Layout: 
+ *
+ * Layout:
  * - Top: Toolbar
  * - Left: Chat Panel with LLM + Tool visualization
- * - Center: 3D Viewer (MolStar) 
+ * - Center: 3D Viewer (MolStar)
  * - Right: 2D Editor (Kekule.js)
  * - Bottom: Status Bar
  */
@@ -17,6 +17,15 @@ import ChatPanel from './components/ChatPanel/ChatPanel';
 import Toolbar from './components/Toolbar/Toolbar';
 import StatusBar from './components/StatusBar/StatusBar';
 import { ViewerErrorBoundary } from './components/ViewerErrorBoundary';
+
+// Startup banner - runs immediately when module loads
+console.log('%c==============================================================', 'color: #4CAF50; font-weight: bold');
+console.log('%c  [CRYSTAL GUI WEB] Starting...', 'color: #4CAF50; font-size: 16px; font-weight: bold');
+console.log('%c==============================================================', 'color: #4CAF50; font-weight: bold');
+console.log('%c  Required services:', 'color: #888');
+console.log('%c    1. MCP Bridge: python bridge/server.py (port 8080)', 'color: #FFB74D');
+console.log('%c    2. Ollama:     ollama serve (port 11434)', 'color: #FFB74D');
+console.log('%c==============================================================', 'color: #4CAF50; font-weight: bold');
 
 // Lazy load heavy viewer components (only if needed)
 const MolStarViewer = lazy(() => import('./components/Viewers/MolStarViewer'));
@@ -50,7 +59,7 @@ function NoWebGLFallback() {
   return (
     <div className="flex-1 flex items-center justify-center bg-slate-900">
       <div className="text-center text-amber-400 p-4">
-        <p className="text-lg">⚠️ 3D Viewer Unavailable</p>
+        <p className="text-lg">[WARNING] 3D Viewer Unavailable</p>
         <p className="text-sm mt-2 text-slate-400">WebGL is not supported in this browser.</p>
         <p className="text-xs mt-1 text-slate-500">(Headless browser or GPU disabled)</p>
       </div>
@@ -68,38 +77,46 @@ function App() {
   // Initialize connections on mount
   useEffect(() => {
     async function initializeConnections() {
+      console.log('%c[App] [INIT] Initializing connections...', 'color: #2196F3; font-weight: bold');
       dispatch(setConnectionStatus('connecting'));
 
-      try {
-        // Check LLM connection
-        const llmConnected = await llmClient.checkConnection();
-        console.log('[App] LLM connection:', llmConnected ? 'OK' : 'Failed');
-
-        // Check MCP bridge connection
-        const mcpConnected = await mcpClient.checkConnection();
-        if (!mcpConnected) {
-          dispatch(setError('MCP Bridge not available. Start: cd bridge && python server.py'));
-          dispatch(setConnectionStatus('error'));
-          return;
-        }
-
-        // Initialize MCP and fetch tools
-        await mcpClient.initialize();
-        const tools = await mcpClient.listTools();
-        dispatch(setTools(tools));
-
-        // Also initialize the tool orchestrator with the same tools
-        toolOrchestrator.setTools(tools);
-
-        dispatch(setConnectionStatus('connected'));
-
-        console.log('[App] Initialized with', tools.length, 'tools');
-        console.log('[App] WebGL support:', hasWebGL);
-      } catch (error) {
-        console.error('[App] Initialization error:', error);
-        dispatch(setError(error instanceof Error ? error.message : 'Connection failed'));
-        dispatch(setConnectionStatus('error'));
+      // Step 1: Check LLM connection
+      console.log('%c[App] Step 1/3: Checking Ollama LLM...', 'color: #888');
+      const llmConnected = await llmClient.checkConnection();
+      if (llmConnected) {
+        console.log('%c[App] [OK] Ollama LLM: Connected', 'color: #4CAF50');
+      } else {
+        console.log('%c[App] [WARN] Ollama LLM: Not available (chat will not work)', 'color: #FF9800');
       }
+
+      // Step 2: Check MCP bridge connection
+      console.log('%c[App] Step 2/3: Checking MCP Bridge at http://localhost:8080...', 'color: #888');
+      const mcpConnected = await mcpClient.checkConnection();
+      if (!mcpConnected) {
+        console.log('%c[App] [ERROR] MCP Bridge: Connection REFUSED!', 'color: #F44336; font-weight: bold');
+        console.log('%c[App] [INFO] To fix: Open a new terminal and run:', 'color: #FFB74D');
+        console.log('%c        cd crystal-gui-web/bridge && python server.py', 'color: #FFB74D; font-weight: bold');
+        dispatch(setError('MCP Bridge not available. Start: cd bridge && python server.py'));
+        dispatch(setConnectionStatus('error'));
+        return;
+      }
+      console.log('%c[App] [OK] MCP Bridge: Connected', 'color: #4CAF50');
+
+      // Step 3: Initialize MCP and fetch tools
+      console.log('%c[App] Step 3/3: Initializing MCP and fetching tools...', 'color: #888');
+      await mcpClient.initialize();
+      const tools = await mcpClient.listTools();
+      dispatch(setTools(tools));
+
+      // Also initialize the tool orchestrator with the same tools
+      toolOrchestrator.setTools(tools);
+
+      dispatch(setConnectionStatus('connected'));
+
+      console.log('%c[App] [SUCCESS] Initialization complete!', 'color: #4CAF50; font-weight: bold');
+      console.log(`%c[App] [INFO] Loaded ${tools.length} tools`, 'color: #4CAF50');
+      console.log(`%c[App] [INFO] WebGL: ${hasWebGL ? 'Supported' : 'Not available'}`, hasWebGL ? 'color: #4CAF50' : 'color: #FF9800');
+      console.log('%c==============================================================', 'color: #4CAF50; font-weight: bold');
     }
 
     initializeConnections();
@@ -120,9 +137,11 @@ function App() {
         {/* Center: 3D Viewer (MolStar) - only load if WebGL available */}
         <div className="flex-1 flex flex-col min-w-0">
           {hasWebGL ? (
-            <Suspense fallback={<ViewerLoading label="3D Viewer" />}>
-              <MolStarViewer />
-            </Suspense>
+            <ViewerErrorBoundary>
+              <Suspense fallback={<ViewerLoading label="3D Viewer" />}>
+                <MolStarViewer />
+              </Suspense>
+            </ViewerErrorBoundary>
           ) : (
             <NoWebGLFallback />
           )}

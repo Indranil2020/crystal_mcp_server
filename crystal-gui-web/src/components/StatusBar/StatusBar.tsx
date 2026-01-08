@@ -35,7 +35,7 @@ export default function StatusBar() {
 
                 {error && (
                     <span className="text-red-400 truncate max-w-md">
-                        ⚠ {error}
+                        [ERROR] {error}
                     </span>
                 )}
             </div>

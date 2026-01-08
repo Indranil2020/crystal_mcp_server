@@ -1,12 +1,15 @@
 /**
  * Tool Orchestrator - Coordinates LLM tool calls with MCP execution
- * 
+ *
  * Ported from: crystal-gui/src/app.rs (send_chat_message, parse_tool_call, call_tool)
+ *
+ * DEBUG: Comprehensive logging at every step of the orchestration pipeline.
  */
 
 import { v4 as uuidv4 } from 'uuid';
 import { mcpClient } from './mcpClient';
 import { llmClient } from './llmClient';
+import { debug, debugError } from '../debug';
 import type { McpTool, ChatResult, ToolCall, Structure, StructureData } from '../types';
 
 export interface ToolOrchestrationResult {
@@ -20,12 +23,14 @@ export interface ToolOrchestrationResult {
 
 /**
  * Tool Orchestrator Service
- * 
+ *
  * Handles the complete flow:
  * 1. User message → LLM with tool schemas
  * 2. Parse tool_calls from LLM response
  * 3. Execute via MCP client
  * 4. Parse structure from result
+ *
+ * DEBUG: Full logging enabled for pipeline tracing.
  */
 export class ToolOrchestrator {
     private tools: McpTool[] = [];
@@ -96,61 +101,72 @@ export class ToolOrchestrator {
     async executeTool(toolCall: ToolCall): Promise<ToolOrchestrationResult> {
         const { name, arguments: args } = toolCall.function;
 
-        console.debug('[ToolOrchestrator] Executing tool:', name, args);
+        debug('TOOL_ORCHESTRATOR', '═'.repeat(50));
+        debug('TOOL_ORCHESTRATOR', '🔧 EXECUTING TOOL');
+        debug('TOOL_ORCHESTRATOR', `  Tool: ${name}`);
+        debug('TOOL_ORCHESTRATOR', `  Arguments: ${JSON.stringify(args)}`);
 
-        try {
-            // Call MCP tool
-            const result = await mcpClient.callTool({
+        // Call MCP tool
+        debug('TOOL_ORCHESTRATOR', '  Calling MCP bridge...');
+        const result = await mcpClient.callTool({
+            name,
+            arguments: args as Record<string, unknown>,
+        });
+
+        debug('TOOL_ORCHESTRATOR', `  MCP result received: isError=${result.isError}, content items=${result.content.length}`);
+
+        // Parse structure from result
+        debug('TOOL_ORCHESTRATOR', '  Parsing structure from result...');
+        const structureResponse = mcpClient.parseStructureFromResult(result);
+
+        debug('TOOL_ORCHESTRATOR', `  Structure parsing: success=${structureResponse.success}`);
+        if (structureResponse.error) {
+            debug('TOOL_ORCHESTRATOR', `  Parse error: ${structureResponse.error}`);
+        }
+
+        if (structureResponse.success && structureResponse.structure) {
+            debug('TOOL_ORCHESTRATOR', '  ✓ Structure data extracted');
+            debug('TOOL_ORCHESTRATOR', `    Atoms: ${structureResponse.structure.atoms?.length || 0}`);
+            debug('TOOL_ORCHESTRATOR', `    Formula: ${structureResponse.structure.metadata?.formula || 'unknown'}`);
+
+            // Create Structure object for state
+            const structure = this.createStructureFromData(
+                structureResponse.structure,
                 name,
-                arguments: args as Record<string, unknown>,
-            });
+                structureResponse.source
+            );
 
-            // Parse structure from result
-            const structureResponse = mcpClient.parseStructureFromResult(result);
-
-            if (structureResponse.success && structureResponse.structure) {
-                // Create Structure object for state
-                const structure = this.createStructureFromData(
-                    structureResponse.structure,
-                    name,
-                    structureResponse.source
-                );
-
-                console.log('[ToolOrchestrator] Created structure from tool result:', {
-                    id: structure.id,
-                    name: structure.name,
-                    atoms: structure.data.atoms.length,
-                    lattice: structure.data.lattice
-                });
-
-                return {
-                    success: true,
-                    toolName: name,
-                    arguments: args as Record<string, unknown>,
-                    structure,
-                };
-            }
-
-            // Tool succeeded but no structure (e.g., analysis tool)
-            const textContent = result.content
-                .filter(c => c.type === 'text')
-                .map(c => c.text)
-                .join('\n');
+            debug('TOOL_ORCHESTRATOR', '  ✅ STRUCTURE CREATED FOR REDUX');
+            debug('TOOL_ORCHESTRATOR', `    ID: ${structure.id}`);
+            debug('TOOL_ORCHESTRATOR', `    Name: ${structure.name}`);
+            debug('TOOL_ORCHESTRATOR', `    Atoms: ${structure.data.atoms.length}`);
+            debug('TOOL_ORCHESTRATOR', `    Lattice: a=${structure.data.lattice.a.toFixed(2)}`);
+            debug('TOOL_ORCHESTRATOR', '═'.repeat(50));
 
             return {
                 success: true,
                 toolName: name,
                 arguments: args as Record<string, unknown>,
-                textResponse: textContent,
-            };
-        } catch (error) {
-            return {
-                success: false,
-                toolName: name,
-                arguments: args as Record<string, unknown>,
-                error: error instanceof Error ? error.message : 'Unknown error',
+                structure,
             };
         }
+
+        // Tool succeeded but no structure (e.g., analysis tool)
+        const textContent = result.content
+            .filter(c => c.type === 'text')
+            .map(c => c.text)
+            .join('\n');
+
+        debug('TOOL_ORCHESTRATOR', '  No structure in result, returning text response');
+        debug('TOOL_ORCHESTRATOR', `  Text length: ${textContent.length}`);
+        debug('TOOL_ORCHESTRATOR', '═'.repeat(50));
+
+        return {
+            success: true,
+            toolName: name,
+            arguments: args as Record<string, unknown>,
+            textResponse: textContent,
+        };
     }
 
     /**
@@ -162,9 +178,29 @@ export class ToolOrchestrator {
         _source?: string
     ): Structure {
         const formula = data.metadata?.formula || 'Unknown';
+        const structureId = uuidv4();
+
+        debug('TOOL_ORCHESTRATOR', `  Creating Structure object:`);
+        debug('TOOL_ORCHESTRATOR', `    ID: ${structureId}`);
+        debug('TOOL_ORCHESTRATOR', `    Formula: ${formula}`);
+        debug('TOOL_ORCHESTRATOR', `    Tool: ${toolName}`);
+
+        // Validate critical data
+        if (!data.lattice) {
+            debugError('TOOL_ORCHESTRATOR', 'Missing lattice data!', 'createStructureFromData');
+        }
+        if (!data.atoms || data.atoms.length === 0) {
+            debugError('TOOL_ORCHESTRATOR', 'Missing or empty atoms array!', 'createStructureFromData');
+        }
+
+        // Log first atom for verification
+        if (data.atoms && data.atoms.length > 0) {
+            const first = data.atoms[0];
+            debug('TOOL_ORCHESTRATOR', `    First atom: ${first.element} coords=${JSON.stringify(first.coords)} cartesian=${JSON.stringify(first.cartesian)}`);
+        }
 
         return {
-            id: uuidv4(),
+            id: structureId,
             name: `${formula} (${toolName})`,
             data,
             source: 'mcp',

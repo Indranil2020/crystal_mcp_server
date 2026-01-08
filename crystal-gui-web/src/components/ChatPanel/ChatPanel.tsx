@@ -1,11 +1,13 @@
 /**
  * ChatPanel - LLM Chat Interface with Tool Visualization
- * 
+ *
  * Features:
  * - Message history display
  * - Tool call visualization (loading, success, error states)
  * - Natural language input
  * - Auto-scroll with manual override
+ *
+ * DEBUG: Full logging for structure flow tracking.
  */
 
 import { useState, useRef, useEffect } from 'react';
@@ -19,6 +21,7 @@ import {
 } from '../../store/chatSlice';
 import { addStructure } from '../../store/structureSlice';
 import { toolOrchestrator } from '../../services';
+import { debug, debugError } from '../../debug';
 import type { ChatMessage } from '../../types';
 import ChatMessageItem from './ChatMessageItem';
 import ToolCallCard from './ToolCallCard';
@@ -42,6 +45,10 @@ export default function ChatPanel() {
         e.preventDefault();
         if (!input.trim() || isProcessing) return;
 
+        debug('CHAT_PANEL', '═'.repeat(50));
+        debug('CHAT_PANEL', '💬 USER MESSAGE SUBMITTED');
+        debug('CHAT_PANEL', `  Content: "${input.trim().slice(0, 100)}${input.length > 100 ? '...' : ''}"`);
+
         const userMessage: ChatMessage = {
             id: uuidv4(),
             role: 'user',
@@ -53,92 +60,110 @@ export default function ChatPanel() {
         setInput('');
         dispatch(setProcessing(true));
 
-        try {
-            // Initialize tools if needed
-            if (tools.length === 0) {
-                await toolOrchestrator.initialize();
-            }
+        // Initialize tools if needed
+        if (tools.length === 0) {
+            debug('CHAT_PANEL', '  Initializing tools...');
+            await toolOrchestrator.initialize();
+        }
 
-            // Build chat history for LLM
-            const history = messages.map(m => ({
-                role: m.role,
-                content: m.content,
+        // Build chat history for LLM
+        const history = messages.map(m => ({
+            role: m.role,
+            content: m.content,
+        }));
+        debug('CHAT_PANEL', `  Chat history: ${history.length} messages`);
+
+        // Process through LLM → MCP pipeline
+        debug('CHAT_PANEL', '  Processing message through LLM → MCP pipeline...');
+        const result = await toolOrchestrator.processMessage(userMessage.content, history);
+
+        debug('CHAT_PANEL', `  Pipeline result: success=${result.success}, toolName=${result.toolName || 'none'}`);
+
+        if (result.toolName) {
+            debug('CHAT_PANEL', `  Tool was called: ${result.toolName}`);
+
+            // Tool was called - track execution
+            const executionId = uuidv4();
+            dispatch(startToolExecution({
+                id: executionId,
+                toolName: result.toolName,
+                arguments: result.arguments || {},
             }));
 
-            // Process through LLM → MCP pipeline
-            const result = await toolOrchestrator.processMessage(userMessage.content, history);
+            if (result.success && result.structure) {
+                debug('CHAT_PANEL', '  ✓ Structure received from tool');
+                debug('CHAT_PANEL', `    Structure ID: ${result.structure.id}`);
+                debug('CHAT_PANEL', `    Structure name: ${result.structure.name}`);
+                debug('CHAT_PANEL', `    Atom count: ${result.structure.data.atoms.length}`);
 
-            if (result.toolName) {
-                // Tool was called - track execution
-                const executionId = uuidv4();
-                dispatch(startToolExecution({
+                // Add structure to state
+                debug('CHAT_PANEL', '  📤 DISPATCHING addStructure TO REDUX');
+                dispatch(addStructure(result.structure));
+                debug('CHAT_PANEL', '  ✅ Structure dispatched to Redux');
+
+                dispatch(updateToolExecution({
                     id: executionId,
-                    toolName: result.toolName,
-                    arguments: result.arguments || {},
+                    status: 'success',
+                    structureId: result.structure.id,
+                    result: `Generated ${result.structure.name}`,
                 }));
 
-                if (result.success && result.structure) {
-                    // Add structure to state
-                    dispatch(addStructure(result.structure));
-                    dispatch(updateToolExecution({
-                        id: executionId,
-                        status: 'success',
+                // Add assistant message
+                dispatch(addMessage({
+                    id: uuidv4(),
+                    role: 'assistant',
+                    content: `Successfully generated structure: ${result.structure.name}`,
+                    timestamp: Date.now(),
+                    toolResult: {
+                        toolName: result.toolName,
+                        success: true,
                         structureId: result.structure.id,
-                        result: `Generated ${result.structure.name}`,
-                    }));
+                    },
+                }));
+            } else if (result.success && result.textResponse) {
+                debug('CHAT_PANEL', '  Tool returned text response (no structure)');
+                dispatch(updateToolExecution({
+                    id: executionId,
+                    status: 'success',
+                    result: result.textResponse.slice(0, 100),
+                }));
 
-                    // Add assistant message
-                    dispatch(addMessage({
-                        id: uuidv4(),
-                        role: 'assistant',
-                        content: `Successfully generated structure: ${result.structure.name}`,
-                        timestamp: Date.now(),
-                        toolResult: {
-                            toolName: result.toolName,
-                            success: true,
-                            structureId: result.structure.id,
-                        },
-                    }));
-                } else if (result.success && result.textResponse) {
-                    dispatch(updateToolExecution({
-                        id: executionId,
-                        status: 'success',
-                        result: result.textResponse.slice(0, 100),
-                    }));
-
-                    dispatch(addMessage({
-                        id: uuidv4(),
-                        role: 'assistant',
-                        content: result.textResponse,
-                        timestamp: Date.now(),
-                    }));
-                } else {
-                    dispatch(updateToolExecution({
-                        id: executionId,
-                        status: 'error',
-                        error: result.error || 'Unknown error',
-                    }));
-                }
-            } else if (result.textResponse) {
-                // Plain text response (no tool call)
                 dispatch(addMessage({
                     id: uuidv4(),
                     role: 'assistant',
                     content: result.textResponse,
                     timestamp: Date.now(),
                 }));
+            } else {
+                debug('CHAT_PANEL', `  ❌ Tool execution failed: ${result.error}`);
+                dispatch(updateToolExecution({
+                    id: executionId,
+                    status: 'error',
+                    error: result.error || 'Unknown error',
+                }));
             }
-        } catch (error) {
-            console.error('[ChatPanel] Error:', error);
+        } else if (result.textResponse) {
+            debug('CHAT_PANEL', '  Plain text response (no tool call)');
+            // Plain text response (no tool call)
             dispatch(addMessage({
                 id: uuidv4(),
                 role: 'assistant',
-                content: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                content: result.textResponse,
                 timestamp: Date.now(),
             }));
-        } finally {
-            dispatch(setProcessing(false));
+        } else if (result.error) {
+            debug('CHAT_PANEL', `  ❌ Pipeline error: ${result.error}`);
+            debugError('CHAT_PANEL', result.error, 'Pipeline error');
+            dispatch(addMessage({
+                id: uuidv4(),
+                role: 'assistant',
+                content: `Error: ${result.error}`,
+                timestamp: Date.now(),
+            }));
         }
+
+        dispatch(setProcessing(false));
+        debug('CHAT_PANEL', '═'.repeat(50));
     }
 
     // Handle Enter key (Shift+Enter for newline)

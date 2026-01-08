@@ -1,10 +1,15 @@
 /**
  * Structure Converters - Convert MCP output to viewer formats
- * 
- * Converts structure data from Python backend JSON to formats 
+ *
+ * Converts structure data from Python backend JSON to formats
  * suitable for MolStar (CIF, PDB) and Kekule.js (Mol2, SMILES)
- * 
+ *
  * DEBUG: Comprehensive validation and logging enabled
+ *
+ * IMPORTANT: Backend always provides:
+ *   - atom.coords = FRACTIONAL coordinates (already in [0,1] range)
+ *   - atom.cartesian = CARTESIAN coordinates (in Angstroms)
+ * No heuristic detection needed - trust the backend data!
  */
 
 import type { StructureData, AtomData, LatticeData } from '../types';
@@ -16,54 +21,128 @@ import { debug, debugError } from '../debug';
 function validateStructureData(structure: StructureData): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
 
+    debug('CONVERTERS', '📋 VALIDATING STRUCTURE DATA');
+
     // Check lattice
     if (!structure.lattice) {
         errors.push('Missing lattice data');
+        debug('CONVERTERS', '  ❌ Missing lattice');
     } else {
+        debug('CONVERTERS', `  Lattice: a=${structure.lattice.a}, b=${structure.lattice.b}, c=${structure.lattice.c}`);
+        debug('CONVERTERS', `  Angles: α=${structure.lattice.alpha}, β=${structure.lattice.beta}, γ=${structure.lattice.gamma}`);
+        debug('CONVERTERS', `  Matrix present: ${!!structure.lattice.matrix}`);
+
         if (structure.lattice.a <= 0 || structure.lattice.b <= 0 || structure.lattice.c <= 0) {
             errors.push(`Invalid lattice parameters: a=${structure.lattice.a}, b=${structure.lattice.b}, c=${structure.lattice.c}`);
+            debug('CONVERTERS', '  ❌ Invalid lattice parameters (<=0)');
         }
         if (structure.lattice.alpha <= 0 || structure.lattice.beta <= 0 || structure.lattice.gamma <= 0) {
             errors.push(`Invalid lattice angles: α=${structure.lattice.alpha}, β=${structure.lattice.beta}, γ=${structure.lattice.gamma}`);
+            debug('CONVERTERS', '  ❌ Invalid lattice angles (<=0)');
         }
     }
 
     // Check atoms
     if (!structure.atoms || structure.atoms.length === 0) {
         errors.push('No atoms in structure');
+        debug('CONVERTERS', '  ❌ No atoms');
     } else {
+        debug('CONVERTERS', `  Atom count: ${structure.atoms.length}`);
         structure.atoms.forEach((atom, i) => {
             if (!atom.element) {
                 errors.push(`Atom ${i}: missing element`);
+                debug('CONVERTERS', `  ❌ Atom ${i}: missing element`);
             }
             if (!atom.coords || atom.coords.length !== 3) {
                 errors.push(`Atom ${i}: invalid coords`);
+                debug('CONVERTERS', `  ❌ Atom ${i}: invalid coords (${JSON.stringify(atom.coords)})`);
+            }
+            // Log first 3 atoms for debugging
+            if (i < 3) {
+                debug('CONVERTERS', `  Atom[${i}]: ${atom.element} coords=${JSON.stringify(atom.coords)} cartesian=${JSON.stringify(atom.cartesian)}`);
             }
         });
+        if (structure.atoms.length > 3) {
+            debug('CONVERTERS', `  ... and ${structure.atoms.length - 3} more atoms`);
+        }
     }
 
     const valid = errors.length === 0;
     if (!valid) {
         debugError('CONVERTERS', errors.join('; '), 'Structure validation failed');
+    } else {
+        debug('CONVERTERS', '  ✅ Validation PASSED');
     }
 
     return { valid, errors };
 }
 
 /**
- * Convert cartesian coordinates to fractional using lattice matrix
+ * Get Cartesian coordinates from atom
+ * Backend ALWAYS provides cartesian coords - use them directly
+ * Falls back to fractional->cartesian conversion only if cartesian missing
  */
-function cartesianToFractional(
+function getCartesianCoords(atom: AtomData, lattice: LatticeData): [number, number, number] {
+    // Backend provides cartesian coordinates directly - use them!
+    if (atom.cartesian && atom.cartesian.length === 3) {
+        return atom.cartesian;
+    }
+
+    // Fallback: convert fractional to cartesian using lattice matrix
+    debug('CONVERTERS', `  ⚠️ Missing cartesian for ${atom.element}, computing from fractional`);
+    return fractionalToCartesian(atom.coords, lattice);
+}
+
+/**
+ * Convert fractional coordinates to Cartesian using lattice matrix
+ * cartesian = matrix * fractional (matrix rows are lattice vectors)
+ */
+function fractionalToCartesian(
+    fractional: [number, number, number],
+    lattice: LatticeData
+): [number, number, number] {
+    const matrix = lattice.matrix;
+
+    // If no matrix, use simple scaling by a,b,c (assumes orthorhombic)
+    if (!matrix || matrix.length !== 3 || matrix[0].length !== 3) {
+        debug('CONVERTERS', '  ⚠️ No lattice matrix, using simple a*x, b*y, c*z');
+        return [
+            fractional[0] * lattice.a,
+            fractional[1] * lattice.b,
+            fractional[2] * lattice.c,
+        ];
+    }
+
+    // Proper transformation: cartesian = matrix^T * fractional
+    // (matrix is stored row-wise, so we need matrix[col][row] for the math)
+    const cartesian: [number, number, number] = [
+        matrix[0][0] * fractional[0] + matrix[1][0] * fractional[1] + matrix[2][0] * fractional[2],
+        matrix[0][1] * fractional[0] + matrix[1][1] * fractional[1] + matrix[2][1] * fractional[2],
+        matrix[0][2] * fractional[0] + matrix[1][2] * fractional[1] + matrix[2][2] * fractional[2],
+    ];
+
+    return cartesian;
+}
+
+/**
+ * Convert cartesian coordinates to fractional using lattice matrix
+ * (Exported for potential future use in structure editing)
+ */
+export function cartesianToFractional(
     cartesian: [number, number, number],
     lattice: LatticeData
 ): [number, number, number] {
-    // lattice.matrix is the cell matrix where columns are lattice vectors
+    // lattice.matrix is the cell matrix where rows are lattice vectors
     // To convert cartesian to fractional: fractional = inverse(matrix) * cartesian
 
     const matrix = lattice.matrix;
     if (!matrix || matrix.length !== 3 || matrix[0].length !== 3) {
-        debug('CONVERTERS', '⚠️ Invalid lattice matrix, using coords as-is');
-        return cartesian;
+        debug('CONVERTERS', '⚠️ Invalid lattice matrix, using simple division');
+        return [
+            cartesian[0] / lattice.a,
+            cartesian[1] / lattice.b,
+            cartesian[2] / lattice.c,
+        ];
     }
 
     // Compute inverse of 3x3 matrix (for small matrices, direct formula is fine)
@@ -73,8 +152,12 @@ function cartesianToFractional(
         matrix[0][2] * (matrix[1][0] * matrix[2][1] - matrix[1][1] * matrix[2][0]);
 
     if (Math.abs(det) < 1e-10) {
-        debug('CONVERTERS', '⚠️ Singular lattice matrix, using coords as-is');
-        return cartesian;
+        debug('CONVERTERS', '⚠️ Singular lattice matrix, using simple division');
+        return [
+            cartesian[0] / lattice.a,
+            cartesian[1] / lattice.b,
+            cartesian[2] / lattice.c,
+        ];
     }
 
     const invDet = 1.0 / det;
@@ -106,113 +189,125 @@ function cartesianToFractional(
 }
 
 /**
- * Ensure atom has fractional coordinates, converting from cartesian if needed
+ * Get fractional coordinates from atom
+ * Backend ALWAYS provides fractional coords - use them directly (no heuristics!)
  */
-function ensureFractionalCoords(atom: AtomData, lattice: LatticeData): [number, number, number] {
-    // If coords are already fractional (typically in [0,1) range), use them
-    // Check if all coords are in reasonable fractional range
-    const coordsAreFractional = atom.coords.every(c => c >= -0.5 && c <= 1.5);
-
-    if (coordsAreFractional) {
-        // Wrap to [0, 1) range
-        const wrapped: [number, number, number] = [
-            ((atom.coords[0] % 1) + 1) % 1,
-            ((atom.coords[1] % 1) + 1) % 1,
-            ((atom.coords[2] % 1) + 1) % 1,
-        ];
-        return wrapped;
-    }
-
-    // If we have explicit cartesian coords, convert them
-    if (atom.cartesian) {
-        debug('CONVERTERS', `  Converting cartesian to fractional for ${atom.element}`);
-        return cartesianToFractional(atom.cartesian, lattice);
-    }
-
-    // Otherwise, assume coords are cartesian and convert
-    debug('CONVERTERS', `  Assuming coords are cartesian for ${atom.element}, converting...`);
-    return cartesianToFractional(atom.coords, lattice);
+function getFractionalCoords(atom: AtomData): [number, number, number] {
+    // Backend provides coords as fractional - use them directly!
+    // No heuristic detection - trust the data source
+    return atom.coords;
 }
 
 /**
  * Convert MCP structure to CIF format for MolStar
+ *
+ * Generates mmCIF-compatible format with BOTH fractional AND Cartesian coordinates
+ * This ensures Mol* can properly render the structure regardless of which it prefers.
  */
 export function structureToCif(structure: StructureData): string {
-    debug('CONVERTERS', '='.repeat(60));
+    debug('CONVERTERS', '═'.repeat(60));
     debug('CONVERTERS', '🔄 CONVERTING STRUCTURE TO CIF FORMAT');
-    debug('CONVERTERS', `Formula: ${structure.metadata?.formula || 'Unknown'}`);
-    debug('CONVERTERS', `Atom count: ${structure.atoms.length}`);
-    debug('CONVERTERS', `Lattice: a=${structure.lattice.a.toFixed(3)}, b=${structure.lattice.b.toFixed(3)}, c=${structure.lattice.c.toFixed(3)}`);
-    debug('CONVERTERS', `Angles: α=${structure.lattice.alpha.toFixed(2)}°, β=${structure.lattice.beta.toFixed(2)}°, γ=${structure.lattice.gamma.toFixed(2)}°`);
+    debug('CONVERTERS', `  Formula: ${structure.metadata?.formula || 'Unknown'}`);
+    debug('CONVERTERS', `  Atom count: ${structure.atoms.length}`);
+    debug('CONVERTERS', `  Lattice: a=${structure.lattice.a.toFixed(3)}, b=${structure.lattice.b.toFixed(3)}, c=${structure.lattice.c.toFixed(3)}`);
+    debug('CONVERTERS', `  Angles: α=${structure.lattice.alpha.toFixed(2)}°, β=${structure.lattice.beta.toFixed(2)}°, γ=${structure.lattice.gamma.toFixed(2)}°`);
 
     // Validate structure data
     const validation = validateStructureData(structure);
     if (!validation.valid) {
         debugError('CONVERTERS', validation.errors, '❌ Structure validation failed');
-        debug('CONVERTERS', 'Attempting conversion anyway...');
-    } else {
-        debug('CONVERTERS', '✅ Structure validation passed');
+        debug('CONVERTERS', '  ⚠️ Attempting conversion anyway...');
     }
-
-    // Log first few atoms for debugging
-    debug('CONVERTERS', 'First 3 atoms:');
-    structure.atoms.slice(0, 3).forEach((atom, i) => {
-        debug('CONVERTERS', `  [${i}] ${atom.element}: coords=${JSON.stringify(atom.coords)}, cartesian=${JSON.stringify(atom.cartesian)}`);
-    });
 
     const lines: string[] = [];
     const formula = structure.metadata?.formula || 'Unknown';
+    // Sanitize formula for CIF data block name (no spaces, special chars)
+    const safeFormula = formula.replace(/[^a-zA-Z0-9_]/g, '_');
 
-    // CIF header
-    lines.push(`data_${formula.replace(/\s/g, '_')}`);
-    lines.push(`_chemical_formula_structural '${formula}'`);
-    lines.push(`_cell_length_a ${structure.lattice.a.toFixed(4)}`);
-    lines.push(`_cell_length_b ${structure.lattice.b.toFixed(4)}`);
-    lines.push(`_cell_length_c ${structure.lattice.c.toFixed(4)}`);
+    // CIF header with data block
+    lines.push(`data_${safeFormula}`);
+    lines.push('#');
+
+    // Chemical formula
+    lines.push(`_chemical_formula_sum '${formula}'`);
+    lines.push('#');
+
+    // Cell parameters
+    lines.push('# Unit cell parameters');
+    lines.push(`_cell_length_a    ${structure.lattice.a.toFixed(4)}`);
+    lines.push(`_cell_length_b    ${structure.lattice.b.toFixed(4)}`);
+    lines.push(`_cell_length_c    ${structure.lattice.c.toFixed(4)}`);
     lines.push(`_cell_angle_alpha ${structure.lattice.alpha.toFixed(2)}`);
-    lines.push(`_cell_angle_beta ${structure.lattice.beta.toFixed(2)}`);
+    lines.push(`_cell_angle_beta  ${structure.lattice.beta.toFixed(2)}`);
     lines.push(`_cell_angle_gamma ${structure.lattice.gamma.toFixed(2)}`);
+    lines.push('#');
 
     // Space group
-    if (structure.space_group) {
-        lines.push(`_symmetry_space_group_name_H-M '${structure.space_group.symbol}'`);
-        lines.push(`_symmetry_Int_Tables_number ${structure.space_group.number}`);
-        debug('CONVERTERS', `Space group: ${structure.space_group.symbol} (#${structure.space_group.number})`);
-    } else {
-        lines.push(`_symmetry_space_group_name_H-M 'P1'`);
-        lines.push(`_symmetry_Int_Tables_number 1`);
-        debug('CONVERTERS', 'Space group: P1 (default)');
-    }
+    const spaceGroupSymbol = structure.space_group?.symbol || 'P 1';
+    const spaceGroupNumber = structure.space_group?.number || 1;
+    lines.push('# Space group');
+    lines.push(`_symmetry_space_group_name_H-M '${spaceGroupSymbol}'`);
+    lines.push(`_symmetry_Int_Tables_number ${spaceGroupNumber}`);
+    debug('CONVERTERS', `  Space group: ${spaceGroupSymbol} (#${spaceGroupNumber})`);
+    lines.push('#');
 
-    // Atom loop - CRITICAL: Use fractional coordinates for CIF
-    lines.push('');
+    // Atom site loop with BOTH fractional AND Cartesian coordinates
+    // This is key for Mol* compatibility - it can use whichever it prefers
+    lines.push('# Atom coordinates');
     lines.push('loop_');
-    lines.push('_atom_site_label');
+    lines.push('_atom_site_id');
     lines.push('_atom_site_type_symbol');
+    lines.push('_atom_site_label');
     lines.push('_atom_site_fract_x');
     lines.push('_atom_site_fract_y');
     lines.push('_atom_site_fract_z');
-    lines.push('_atom_site_id');
+    lines.push('_atom_site_Cartn_x');
+    lines.push('_atom_site_Cartn_y');
+    lines.push('_atom_site_Cartn_z');
+    lines.push('_atom_site_occupancy');
 
-    debug('CONVERTERS', 'Converting atoms to CIF format with fractional coordinates...');
+    debug('CONVERTERS', '  Converting atoms to CIF format...');
     structure.atoms.forEach((atom, i) => {
-        const label = `${atom.element}${i + 1}`;
-        const fractCoords = ensureFractionalCoords(atom, structure.lattice);
-        const [x, y, z] = fractCoords;
+        const id = i + 1;
+        const label = `${atom.element}${id}`;
 
-        lines.push(`${label} ${atom.element} ${x.toFixed(6)} ${y.toFixed(6)} ${z.toFixed(6)} ${i + 1}`);
+        // Get fractional coords (from backend, already fractional)
+        const fractCoords = getFractionalCoords(atom);
+        const [fx, fy, fz] = fractCoords;
 
-        // Log first few conversions
+        // Get Cartesian coords (from backend, already cartesian)
+        const cartCoords = getCartesianCoords(atom, structure.lattice);
+        const [cx, cy, cz] = cartCoords;
+
+        // Format: id type_symbol label fract_x fract_y fract_z Cartn_x Cartn_y Cartn_z occupancy
+        lines.push(
+            `${id} ${atom.element} ${label} ` +
+            `${fx.toFixed(6)} ${fy.toFixed(6)} ${fz.toFixed(6)} ` +
+            `${cx.toFixed(4)} ${cy.toFixed(4)} ${cz.toFixed(4)} ` +
+            `1.0`
+        );
+
+        // Log first few atoms for debugging
         if (i < 3) {
-            debug('CONVERTERS', `  ${label}: fract=(${x.toFixed(4)}, ${y.toFixed(4)}, ${z.toFixed(4)})`);
+            debug('CONVERTERS', `  Atom[${i}]: ${atom.element} fract=(${fx.toFixed(4)}, ${fy.toFixed(4)}, ${fz.toFixed(4)}) cart=(${cx.toFixed(2)}, ${cy.toFixed(2)}, ${cz.toFixed(2)})`);
         }
     });
 
+    if (structure.atoms.length > 3) {
+        debug('CONVERTERS', `  ... and ${structure.atoms.length - 3} more atoms`);
+    }
+
+    lines.push('#');
+    lines.push('# End of CIF');
+
     const cifData = lines.join('\n');
-    debug('CONVERTERS', `✅ CIF generated: ${cifData.length} bytes, ${lines.length} lines`);
-    debug('CONVERTERS', 'CIF preview (first 500 chars):');
-    debug('CONVERTERS', cifData.substring(0, 500));
-    debug('CONVERTERS', '='.repeat(60));
+    debug('CONVERTERS', `  ✅ CIF generated: ${cifData.length} bytes, ${lines.length} lines`);
+    debug('CONVERTERS', '  CIF content:');
+    debug('CONVERTERS', '  ' + cifData.split('\n').slice(0, 25).join('\n  '));
+    if (lines.length > 25) {
+        debug('CONVERTERS', `  ... (${lines.length - 25} more lines)`);
+    }
+    debug('CONVERTERS', '═'.repeat(60));
 
     return cifData;
 }
