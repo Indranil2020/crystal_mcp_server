@@ -140,36 +140,70 @@ export default function KekuleEditor({ className = '', onStructureChange }: Prop
             composer.setDimension('100%', '100%');
             debug('VIEWERS', '  ✓ Dimensions set to 100%');
 
-            // Configure toolbar
+            // Configure Common Toolbar (file ops, edit ops, view ops, settings)
             debug('VIEWERS', '  ⚙️ Configuring Toolbars...');
             if (composer.setCommonToolButtons) {
                 composer.setCommonToolButtons([
-                    'newDoc', 'loadData', 'saveData',
-                    'undo', 'redo',
-                    'copy', 'cut', 'paste',
-                    'zoomIn', 'zoomOut', 'reset',
+                    'newDoc', 'loadData', 'saveData',  // File operations
+                    'undo', 'redo',                      // Edit history
+                    'copy', 'cut', 'paste',              // Clipboard
+                    'zoomIn', 'zoomOut', 'reset',        // View controls
+                    'config',                            // Configuration dialog
+                    'objInspector',                      // Object inspector panel
                 ]);
+                debug('VIEWERS', '    ✓ Common Toolbar configured (12 buttons)');
             } else {
                 debug('VIEWERS', '  ⚠️ setCommonToolButtons missing from composer instance');
             }
 
+            // Configure Chem Toolbar (all chemistry tools)
             if (composer.setChemToolButtons) {
                 composer.setChemToolButtons([
-                    'manipulate', 'erase', 'bond', 'atom',
-                    'ring', 'charge', 'glyph',
+                    'manipulate',        // Selection and move
+                    'erase',             // Delete objects
+                    'bond',              // Draw bonds (single, double, triple, etc.)
+                    'atomAndFormula',    // Input atom symbol or formula
+                    'ring',              // Common ring structures
+                    'charge',            // Add charge (+/-)
+                    'glyph',             // Reaction arrows, symbols
+                    'textImage',         // Text and image annotations
                 ]);
+                debug('VIEWERS', '    ✓ Chem Toolbar configured (8 buttons)');
             } else {
                 debug('VIEWERS', '  ⚠️ setChemToolButtons missing from composer instance');
             }
 
-            // Listen for changes
+            // Configure Style Toolbar (text/color styling)
+            if (composer.setStyleToolComponentNames) {
+                composer.setStyleToolComponentNames([
+                    'fontName',          // Font family selector
+                    'fontSize',          // Font size selector
+                    'color',             // Color picker
+                    'textDirection',     // Text direction (LTR/RTL)
+                    'textAlign',         // Text alignment
+                ]);
+                debug('VIEWERS', '    ✓ Style Toolbar configured (5 components)');
+            } else {
+                debug('VIEWERS', '  ⚠️ setStyleToolComponentNames not available');
+            }
+
+            // Enable the Object Inspector by default for advanced editing
+            if (composer.setEnableObjModifier) {
+                composer.setEnableObjModifier(true);
+                debug('VIEWERS', '    ✓ Object Modifier enabled');
+            }
+
+            // Listen for changes and sync SMILES
             composer.addEventListener('editObjsUpdated', () => {
                 const mol = composer.getChemObj();
                 if (mol && Kekule.IO && Kekule.IO.saveFormatData) {
-                    const smiles = Kekule.IO.saveFormatData(mol, 'smi');
-                    // debug('VIEWERS', `  Molecule updated: SMILES=${smiles}`); // Commented to reduce noise on every edit
-                    setCurrentSmiles(smiles);
-                    onStructureChange?.(smiles);
+                    try {
+                        const smiles = Kekule.IO.saveFormatData(mol, 'smi');
+                        setCurrentSmiles(smiles || '');
+                        onStructureChange?.(smiles || '');
+                    } catch {
+                        // SMILES export may fail for complex objects, ignore
+                    }
                 }
             });
 
@@ -306,9 +340,9 @@ export default function KekuleEditor({ className = '', onStructureChange }: Prop
         }
     }, []);
 
-    // Template molecules (using MDL Molfile V2000 format for reliability without OpenBabel)
+    // Template molecules (using MDL Molfile V2000 format for reliability)
     const loadTemplate = useCallback((template: string) => {
-        // Simple Benzene MolBlock
+        // Benzene (C6H6) - aromatic ring
         const BENZENE_MOL = `
   Kekule.js   
 
@@ -327,7 +361,7 @@ export default function KekuleEditor({ className = '', onStructureChange }: Prop
   6  1  1  0  0  0  0
 M  END`;
 
-        // Cyclohexane (Chair confirmation approximation)
+        // Cyclohexane (C6H12) - saturated ring
         const CYCLOHEXANE_MOL = `
   Kekule.js
 
@@ -346,13 +380,102 @@ M  END`;
   6  1  1  0  0  0  0
 M  END`;
 
+        // Pyridine (C5H5N) - 6-membered ring with N
+        const PYRIDINE_MOL = `
+  Kekule.js
+
+  6  6  0  0  0  0  0  0  0  0999 V2000
+    0.0000    1.0000    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0
+    0.8660    0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.8660   -0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.0000   -1.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.8660   -0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.8660    0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  2  0  0  0  0
+  2  3  1  0  0  0  0
+  3  4  2  0  0  0  0
+  4  5  1  0  0  0  0
+  5  6  2  0  0  0  0
+  6  1  1  0  0  0  0
+M  END`;
+
+        // Naphthalene (C10H8) - fused benzene rings
+        const NAPHTHALENE_MOL = `
+  Kekule.js
+
+ 10 11  0  0  0  0  0  0  0  0999 V2000
+    0.0000    1.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.8660    0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.8660   -0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.0000   -1.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.8660   -0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.8660    0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -1.7320    1.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -2.5980    0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -2.5980   -0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -1.7320   -1.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  2  0  0  0  0
+  2  3  1  0  0  0  0
+  3  4  2  0  0  0  0
+  4  5  1  0  0  0  0
+  5  6  2  0  0  0  0
+  6  1  1  0  0  0  0
+  6  7  1  0  0  0  0
+  7  8  2  0  0  0  0
+  8  9  1  0  0  0  0
+  9 10  2  0  0  0  0
+ 10  5  1  0  0  0  0
+M  END`;
+
+        // Phenol (C6H5OH) - benzene with OH group
+        const PHENOL_MOL = `
+  Kekule.js
+
+  7  7  0  0  0  0  0  0  0  0999 V2000
+    0.0000    1.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.8660    0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.8660   -0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.0000   -1.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.8660   -0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.8660    0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.0000    2.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  2  0  0  0  0
+  2  3  1  0  0  0  0
+  3  4  2  0  0  0  0
+  4  5  1  0  0  0  0
+  5  6  2  0  0  0  0
+  6  1  1  0  0  0  0
+  1  7  1  0  0  0  0
+M  END`;
+
+        // Aniline (C6H5NH2) - benzene with NH2 group
+        const ANILINE_MOL = `
+  Kekule.js
+
+  7  7  0  0  0  0  0  0  0  0999 V2000
+    0.0000    1.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.8660    0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.8660   -0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.0000   -1.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.8660   -0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.8660    0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.0000    2.0000    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  2  0  0  0  0
+  2  3  1  0  0  0  0
+  3  4  2  0  0  0  0
+  4  5  1  0  0  0  0
+  5  6  2  0  0  0  0
+  6  1  1  0  0  0  0
+  1  7  1  0  0  0  0
+M  END`;
+
         const templates: Record<string, string> = {
             benzene: BENZENE_MOL,
             cyclohexane: CYCLOHEXANE_MOL,
-            pyridine: '', // TODO: Add others
-            naphthalene: '',
-            phenol: '',
-            aniline: '',
+            pyridine: PYRIDINE_MOL,
+            naphthalene: NAPHTHALENE_MOL,
+            phenol: PHENOL_MOL,
+            aniline: ANILINE_MOL,
         };
 
         if (templates[template] && composerRef.current && window.Kekule) {
@@ -419,6 +542,65 @@ M  END`;
                     >
                         Clear
                     </button>
+
+                    <div className="w-px h-4 bg-slate-600 mx-1" />
+
+                    {/* Export MOL */}
+                    <button
+                        onClick={() => {
+                            if (!composerRef.current || !window.Kekule) return;
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            const Kekule = window.Kekule as any;
+                            const mol = composerRef.current.getChemObj();
+                            if (mol && Kekule.IO?.saveFormatData) {
+                                const molData = Kekule.IO.saveFormatData(mol, 'mol');
+                                const blob = new Blob([molData], { type: 'chemical/x-mdl-molfile' });
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = 'molecule.mol';
+                                a.click();
+                                URL.revokeObjectURL(url);
+                                console.log('[KekuleEditor] Exported MOL file');
+                            }
+                        }}
+                        disabled={!isLoaded}
+                        className="text-xs px-2 py-1 rounded bg-slate-700 text-slate-300 hover:bg-slate-600 disabled:opacity-50"
+                        title="Export as MDL MOL file"
+                    >
+                        Export
+                    </button>
+
+                    {/* Import MOL */}
+                    <label className="text-xs px-2 py-1 rounded bg-slate-700 text-slate-300 hover:bg-slate-600 cursor-pointer">
+                        Import
+                        <input
+                            type="file"
+                            accept=".mol,.sdf"
+                            className="hidden"
+                            onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (!file || !composerRef.current || !window.Kekule) return;
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                const Kekule = window.Kekule as any;
+                                const reader = new FileReader();
+                                reader.onload = (ev) => {
+                                    const data = ev.target?.result as string;
+                                    if (data && Kekule.IO?.loadFormatData) {
+                                        const mol = Kekule.IO.loadFormatData(data, 'mol');
+                                        if (mol) {
+                                            composerRef.current?.setChemObj(mol);
+                                            console.log('[KekuleEditor] Imported MOL file');
+                                        }
+                                    }
+                                };
+                                reader.readAsText(file);
+                                e.target.value = ''; // Reset for re-import
+                            }}
+                        />
+                    </label>
+
+                    <div className="w-px h-4 bg-slate-600 mx-1" />
 
                     {/* Push to 3D */}
                     <button
