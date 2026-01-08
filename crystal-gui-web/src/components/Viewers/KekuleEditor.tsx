@@ -307,7 +307,13 @@ export default function KekuleEditor({ className = '', onStructureChange }: Prop
         // Extract formula for naming
         let formula = 'Molecule';
         if (mol.calcFormula) {
-            formula = mol.calcFormula() || formula;
+            const formulaResult = mol.calcFormula();
+            // calcFormula may return a MolecularFormula object, string, or null
+            if (formulaResult) {
+                formula = typeof formulaResult === 'string'
+                    ? formulaResult
+                    : (formulaResult.getText?.() || formulaResult.toString?.() || 'Molecule');
+            }
         }
         console.log(`[KekuleEditor] Formula: ${formula}`);
 
