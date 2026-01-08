@@ -72,63 +72,74 @@ export default function KekuleEditor({ className = '', onStructureChange }: Prop
     const initEditor = useCallback(() => {
         if (!editorRef.current || !window.Kekule) return;
 
-        try {
+        const checkReadiness = (attempts = 0) => {
             const Kekule = window.Kekule;
 
-            // Create composer (full-featured editor)
+            // Check specific dependencies required for Composer
+            const isKekuleReady = !!Kekule;
+            const isWidgetReady = !!(Kekule && Kekule.Widget);
+            const isClassReady = !!(Kekule && Kekule.Widget && Kekule.Widget.getPreferredWidgetClass);
+
+            // If any dependency is missing, retry or determine unsupported
+            if (!isKekuleReady || !isWidgetReady || !isClassReady) {
+                if (attempts > 20) {
+                    console.warn('[KekuleEditor] Kekule Widget subsystem unavailable (Headless environment detected)');
+                    setError('Kekule Widget system not available in this environment');
+                    return;
+                }
+                setTimeout(() => checkReadiness(attempts + 1), 100);
+                return;
+            }
+
+            // All systems go - initialize directly
             const composer = new Kekule.Editor.Composer(editorRef.current);
             composer.setDimension('100%', '100%');
 
-            // Configure toolbar with error handling (may fail in some environments)
-            try {
+            // Configure toolbar - strict feature checks instead of try/catch
+            if (typeof composer.setCommonToolButtons === 'function') {
                 composer.setCommonToolButtons([
                     'newDoc', 'loadData', 'saveData',
                     'undo', 'redo',
                     'copy', 'cut', 'paste',
                     'zoomIn', 'zoomOut', 'reset',
                 ]);
+            }
 
+            if (typeof composer.setChemToolButtons === 'function') {
                 composer.setChemToolButtons([
                     'manipulate', 'erase', 'bond', 'atom',
                     'ring', 'charge', 'glyph',
                 ]);
-            } catch (toolbarErr) {
-                console.warn('[KekuleEditor] Toolbar config failed, using defaults:', toolbarErr);
             }
 
             // Listen for changes
             composer.addEventListener('editObjsUpdated', () => {
                 const mol = composer.getChemObj();
-                if (mol) {
-                    try {
-                        const smiles = Kekule.IO.saveFormatData(mol, 'smi');
-                        setCurrentSmiles(smiles);
-                        onStructureChange?.(smiles);
-                    } catch (e) {
-                        console.debug('[KekuleEditor] SMILES conversion skipped');
-                    }
+                if (mol && Kekule.IO && Kekule.IO.saveFormatData) {
+                    const smiles = Kekule.IO.saveFormatData(mol, 'smi');
+                    setCurrentSmiles(smiles);
+                    onStructureChange?.(smiles);
                 }
             });
 
             composerRef.current = composer;
             setIsLoaded(true);
-            console.log('[KekuleEditor] Composer initialized');
-        } catch (err) {
-            console.error('[KekuleEditor] Init error:', err);
-            setError('Failed to initialize editor');
-        }
+            console.log('[KekuleEditor] Composer initialized successfully');
+        };
+
+        checkReadiness();
     }, [onStructureChange]);
 
     // Load molecule from SMILES
     const loadFromSmiles = useCallback((smiles: string) => {
         if (!composerRef.current || !window.Kekule) return;
+        const Kekule = window.Kekule;
 
-        try {
-            const Kekule = window.Kekule;
+        if (Kekule.IO && Kekule.IO.loadFormatData) {
             const mol = Kekule.IO.loadFormatData(smiles, 'smi');
-            composerRef.current.setChemObj(mol);
-        } catch (err) {
-            console.error('[KekuleEditor] Load SMILES error:', err);
+            if (mol) {
+                composerRef.current.setChemObj(mol);
+            }
         }
     }, []);
 
@@ -136,56 +147,52 @@ export default function KekuleEditor({ className = '', onStructureChange }: Prop
     const pushTo3D = useCallback(() => {
         if (!composerRef.current || !window.Kekule) return;
 
-        try {
-            const mol = composerRef.current.getChemObj();
+        const mol = composerRef.current.getChemObj();
 
-            if (!mol) {
-                console.warn('[KekuleEditor] No molecule to push');
-                return;
-            }
-
-            // Get coordinates from Kekule molecule
-            const atoms: StructureData['atoms'] = [];
-            const nodeCount = mol.getNodeCount?.() || 0;
-
-            for (let i = 0; i < nodeCount; i++) {
-                const node = mol.getNodeAt(i);
-                const coord = node.getCoord2D?.() || { x: 0, y: 0 };
-                const element = node.getSymbol?.() || 'C';
-
-                atoms.push({
-                    element,
-                    coords: [coord.x, coord.y, 0],
-                    cartesian: [coord.x, coord.y, 0],
-                });
-            }
-
-            if (atoms.length === 0) {
-                console.warn('[KekuleEditor] No atoms in molecule');
-                return;
-            }
-
-            // Create structure for Redux
-            const smiles = currentSmiles || 'drawn-molecule';
-            const structure = {
-                id: uuidv4(),
-                name: `Drawn: ${smiles.slice(0, 20)}`,
-                data: {
-                    lattice: { a: 20, b: 20, c: 20, alpha: 90, beta: 90, gamma: 90, matrix: [[20, 0, 0], [0, 20, 0], [0, 0, 20]] },
-                    atoms,
-                    metadata: { formula: smiles, natoms: atoms.length },
-                },
-                source: 'kekule' as const,
-                createdAt: Date.now(),
-                modifiedAt: Date.now(),
-                visible: true,
-            };
-
-            dispatch(addStructure(structure));
-            console.log('[KekuleEditor] Pushed to 3D:', structure.name);
-        } catch (err) {
-            console.error('[KekuleEditor] Push to 3D error:', err);
+        if (!mol) {
+            console.warn('[KekuleEditor] No molecule to push');
+            return;
         }
+
+        // Get coordinates from Kekule molecule
+        const atoms: StructureData['atoms'] = [];
+        const nodeCount = mol.getNodeCount?.() || 0;
+
+        for (let i = 0; i < nodeCount; i++) {
+            const node = mol.getNodeAt(i);
+            const coord = node.getCoord2D?.() || { x: 0, y: 0 };
+            const element = node.getSymbol?.() || 'C';
+
+            atoms.push({
+                element,
+                coords: [coord.x, coord.y, 0],
+                cartesian: [coord.x, coord.y, 0],
+            });
+        }
+
+        if (atoms.length === 0) {
+            console.warn('[KekuleEditor] No atoms in molecule');
+            return;
+        }
+
+        // Create structure for Redux
+        const smiles = currentSmiles || 'drawn-molecule';
+        const structure = {
+            id: uuidv4(),
+            name: `Drawn: ${smiles.slice(0, 20)}`,
+            data: {
+                lattice: { a: 20, b: 20, c: 20, alpha: 90, beta: 90, gamma: 90, matrix: [[20, 0, 0], [0, 20, 0], [0, 0, 20]] },
+                atoms,
+                metadata: { formula: smiles, natoms: atoms.length },
+            },
+            source: 'kekule' as const,
+            createdAt: Date.now(),
+            modifiedAt: Date.now(),
+            visible: true,
+        };
+
+        dispatch(addStructure(structure));
+        console.log('[KekuleEditor] Pushed to 3D:', structure.name);
     }, [dispatch, currentSmiles]);
 
     // Clear editor
@@ -215,9 +222,10 @@ export default function KekuleEditor({ className = '', onStructureChange }: Prop
     if (error) {
         return (
             <div className={`flex items-center justify-center h-full bg-slate-900 ${className}`}>
-                <div className="text-center text-red-400">
-                    <p className="text-lg">⚠️ Editor Error</p>
-                    <p className="text-sm mt-2">{error}</p>
+                <div className="text-center text-amber-400">
+                    <p className="text-lg">⚠️ 2D Editor Unavailable</p>
+                    <p className="text-sm mt-2 text-slate-400">Kekule.js requires a graphical environment.</p>
+                    <p className="text-xs mt-1 text-slate-500">(Headless browser detected)</p>
                 </div>
             </div>
         );

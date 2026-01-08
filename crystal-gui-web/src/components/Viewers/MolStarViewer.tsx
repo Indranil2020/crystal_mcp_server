@@ -7,8 +7,9 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useAppSelector, useAppDispatch } from '../../store/hooks';
-import { updateViewerSettings } from '../../store/structureSlice';
+import { updateViewerSettings, setSelection, deleteAtoms } from '../../store/structureSlice';
 import { structureToCif } from '../../converters';
+import { debug, debugError } from '../../debug';
 import type { Structure, RepresentationMode } from '../../types';
 
 // MolStar imports
@@ -16,6 +17,14 @@ import { createPluginUI } from 'molstar/lib/mol-plugin-ui';
 import { renderReact18 } from 'molstar/lib/mol-plugin-ui/react18';
 import { DefaultPluginUISpec } from 'molstar/lib/mol-plugin-ui/spec';
 import { PluginContext } from 'molstar/lib/mol-plugin/context';
+import {
+    StructureElement,
+    StructureProperties,
+    StructureSelection,
+    QueryContext
+} from 'molstar/lib/mol-model/structure';
+import { MolScriptBuilder as MS } from 'molstar/lib/mol-script/language/builder';
+import { compile } from 'molstar/lib/mol-script/runtime/query/compiler';
 
 // MolStar CSS
 import 'molstar/lib/mol-plugin-ui/skin/light.scss';
@@ -36,13 +45,9 @@ export default function MolStarViewer({ className = '' }: Props) {
 
     // Check WebGL support
     const checkWebGLSupport = (): boolean => {
-        try {
-            const canvas = document.createElement('canvas');
-            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-            return !!gl;
-        } catch {
-            return false;
-        }
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        return !!gl;
     };
 
     // Initialize MolStar plugin
@@ -56,10 +61,18 @@ export default function MolStarViewer({ className = '' }: Props) {
             return;
         }
 
+        let isMounted = true;
+        let plugin: PluginContext | null = null;
+
         async function initPlugin() {
+            const container = containerRef.current;
+            if (!container || !isMounted) return;
+
+            console.log('[MolStarViewer] Initializing plugin...');
+
             try {
-                const plugin = await createPluginUI({
-                    target: containerRef.current!,
+                plugin = await createPluginUI({
+                    target: container,
                     render: renderReact18,
                     spec: {
                         ...DefaultPluginUISpec(),
@@ -73,18 +86,27 @@ export default function MolStarViewer({ className = '' }: Props) {
                     },
                 });
 
+                if (!isMounted || !plugin) {
+                    plugin?.dispose();
+                    return;
+                }
+
                 pluginRef.current = plugin;
                 setIsInitialized(true);
-                console.log('[MolStarViewer] Plugin initialized');
+                setError(null);
+                console.log('[MolStarViewer] Plugin initialized successfully');
             } catch (err) {
                 console.error('[MolStarViewer] Failed to initialize:', err);
-                setError('Failed to initialize 3D viewer (WebGL error)');
+                if (isMounted) {
+                    setError('Failed to initialize 3D viewer');
+                }
             }
         }
 
         initPlugin();
 
         return () => {
+            isMounted = false;
             if (pluginRef.current) {
                 pluginRef.current.dispose();
                 pluginRef.current = null;
@@ -96,6 +118,7 @@ export default function MolStarViewer({ className = '' }: Props) {
     useEffect(() => {
         if (!isInitialized || !pluginRef.current || !activeStructure) return;
 
+        debug('VIEWERS', '🎯 Active structure changed, loading...');
         loadStructure(activeStructure);
     }, [isInitialized, activeStructure]);
 
@@ -111,29 +134,61 @@ export default function MolStarViewer({ className = '' }: Props) {
         const plugin = pluginRef.current;
         if (!plugin) return;
 
+        debug('VIEWERS', '='.repeat(60));
+        debug('VIEWERS', '🔬 LOADING STRUCTURE INTO MOL*');
+        debug('VIEWERS', `Structure ID: ${structure.id}`);
+        debug('VIEWERS', `Structure name: ${structure.name}`);
+        debug('VIEWERS', `Atom count: ${structure.data.atoms.length}`);
+        debug('VIEWERS', `Source: ${structure.source}`);
+
+        // Log full structure data for debugging
+        debug('VIEWERS', 'Full structure data:');
+        debug('VIEWERS', `  Lattice: a=${structure.data.lattice.a}, b=${structure.data.lattice.b}, c=${structure.data.lattice.c}`);
+        debug('VIEWERS', `  Formula: ${structure.data.metadata?.formula}`);
+        debug('VIEWERS', `  First atom: ${JSON.stringify(structure.data.atoms[0])}`);
+
+        // Clear existing structures
+        debug('VIEWERS', 'Clearing existing structures...');
+        await plugin.clear();
+
+        // Convert to CIF format
+        debug('VIEWERS', '📝 Converting structure to CIF format...');
         try {
-            // Clear existing structures
-            await plugin.clear();
-
-            // Convert to CIF format
             const cifData = structureToCif(structure.data);
+            debug('VIEWERS', `✅ CIF conversion complete: ${cifData.length} bytes`);
+            debug('VIEWERS', `CIF preview (first 300 chars): ${cifData.substring(0, 300)}`);
 
-            // Load CIF data
-            const data = await plugin.builders.data.rawData({
+            // Load CIF data into Mol*
+            debug('VIEWERS', '⏳ Loading CIF into Mol* plugin...');
+            await plugin.builders.data.rawData({
                 data: cifData,
                 label: structure.name,
-            });
-
-            const trajectory = await plugin.builders.structure.parseTrajectory(data, 'mmcif');
-            await plugin.builders.structure.hierarchy.applyPreset(trajectory, 'default');
-
-            // Structure loaded
-
-            console.log('[MolStarViewer] Loaded structure:', structure.name);
+            })
+                .then(data => {
+                    debug('VIEWERS', '✅ Raw data loaded, parsing trajectory...');
+                    return plugin.builders.structure.parseTrajectory(data, 'mmcif');
+                })
+                .then(trajectory => {
+                    debug('VIEWERS', '✅ Trajectory parsed, applying preset...');
+                    return plugin.builders.structure.hierarchy.applyPreset(trajectory, 'default');
+                })
+                .then(() => {
+                    debug('VIEWERS', '✅✅✅ STRUCTURE LOADED SUCCESSFULLY INTO MOL*');
+                    debug('VIEWERS', `Structure "${structure.name}" is now visible in viewer`);
+                    setError(null); // Clear any previous errors
+                })
+                .catch(err => {
+                    debugError('VIEWERS', err, '❌ Failed to load structure into Mol*');
+                    debug('VIEWERS', 'Error details:', err);
+                    debug('VIEWERS', 'Error stack:', err.stack);
+                    setError(`Failed to load: ${structure.name}`);
+                });
         } catch (err) {
-            console.error('[MolStarViewer] Failed to load structure:', err);
-            setError(`Failed to load: ${structure.name}`);
+            debugError('VIEWERS', err, '❌ CIF conversion failed');
+            setError(`Failed to convert structure: ${structure.name}`);
         }
+
+        debug('VIEWERS', '='.repeat(60));
     }, []);
 
     // Update visual representation
@@ -151,36 +206,119 @@ export default function MolStarViewer({ className = '' }: Props) {
             'wireframe': 'ball-and-stick',
         };
 
-        try {
-            // Apply representation preset
-            const structures = plugin.managers.structure.hierarchy.current.structures;
-            for (const s of structures) {
-                await plugin.builders.structure.representation.applyPreset(
-                    s.cell.transform.ref,
-                    presetMap[mode] || 'ball-and-stick'
-                );
-            }
-        } catch (err) {
-            console.error('[MolStarViewer] Failed to update representation:', err);
+        const structures = plugin.managers.structure.hierarchy.current.structures;
+        for (const s of structures) {
+            await plugin.builders.structure.representation.applyPreset(
+                s.cell.transform.ref,
+                presetMap[mode] || 'ball-and-stick'
+            );
         }
     }, []);
+
+    // Handle selection changes (Redux -> MolStar)
+    const { selection } = useAppSelector(state => state.structure);
+
+    useEffect(() => {
+        if (!pluginRef.current || !activeStructure) return;
+
+        const plugin = pluginRef.current;
+        const manager = plugin.managers.structure.selection;
+
+        if (!selection || selection.structureId !== activeStructure.id || selection.atomIndices.length === 0) {
+            manager.clear();
+            return;
+        }
+
+        // Apply selection from Redux
+        const structureRef = plugin.managers.structure.hierarchy.current.structures[0];
+
+        // Explicitly check for structure reference
+        if (!structureRef) return;
+
+        // Select by atom indices (using the IDs we put in the CIF: 1-based index)
+        const ids = selection.atomIndices.map(i => i + 1); // 0-based to 1-based
+
+        // Explicitly check for structure data
+        const data = structureRef.cell.obj?.data;
+        if (!data) return;
+
+        // Construct query using MolScript Builder
+        const expression = MS.struct.generator.atomGroups({
+            'atom-test': MS.core.set.has([
+                MS.set(...ids),
+                MS.ammp('id') // Matches _atom_site.id property
+            ])
+        });
+
+        // Compile and run query
+        // We assume compilation is safe given valid expression construction
+        const query = compile(expression);
+        const result = query(new QueryContext(data));
+
+        // Convert to Loci and apply
+        const loci = StructureSelection.toLociWithSourceUnits(result);
+
+        manager.fromLoci('set', loci);
+
+    }, [selection, activeStructure]);
+
+    // Initialize selection behavior (MolStar -> Redux)
+    useEffect(() => {
+        if (!isInitialized || !pluginRef.current) return;
+        const plugin = pluginRef.current;
+
+        const sub = plugin.behaviors.interaction.click.subscribe(({ current }) => {
+            if (activeStructureId && current.loci.kind === 'element-loci') {
+                const loci = current.loci;
+
+                // Extract atom ID from Loci
+                const loc = StructureElement.Location.create(loci.structure);
+                let atomIndex = -1;
+
+                // Get the first selected atom
+                if (StructureElement.Loci.getFirstLocation(loci, loc)) {
+                    // Try to get the ID we embedded in CIF (_atom_site_id)
+                    // Usually mapped to StructureProperties.atom.id OR .auth_seq_id
+                    // Default mmCIF parser might map _atom_site_id to atom.id
+
+                    // Direct access (no try/catch)
+                    const id = StructureProperties.atom.id(loc);
+                    atomIndex = id - 1; // Convert back to 0-based
+                }
+
+                if (atomIndex >= 0) {
+                    dispatch(setSelection({
+                        structureId: activeStructureId,
+                        atomIndices: [atomIndex],
+                        selectionMode: 'single'
+                    }));
+                }
+            } else {
+                // Clicked empty space
+                dispatch(setSelection(null));
+            }
+        });
+
+        return () => sub.unsubscribe();
+    }, [isInitialized, activeStructureId, dispatch]);
 
     // Export screenshot
     const exportScreenshot = useCallback(async () => {
         const plugin = pluginRef.current;
         if (!plugin?.canvas3d) return;
 
-        try {
-            const imageData = await plugin.helpers.viewportScreenshot?.getImageDataUri();
-            if (imageData) {
-                const link = document.createElement('a');
-                link.download = `${activeStructure?.name || 'structure'}.png`;
-                link.href = imageData;
-                link.click();
-            }
-        } catch (err) {
-            console.error('[MolStarViewer] Screenshot failed:', err);
-        }
+        await plugin.helpers.viewportScreenshot?.getImageDataUri()
+            .then(imageData => {
+                if (imageData) {
+                    const link = document.createElement('a');
+                    link.download = `${activeStructure?.name || 'structure'}.png`;
+                    link.href = imageData;
+                    link.click();
+                }
+            })
+            .catch(err => {
+                console.error('[MolStarViewer] Screenshot failed:', err);
+            });
     }, [activeStructure]);
 
     // Representation selector
@@ -213,6 +351,21 @@ export default function MolStarViewer({ className = '' }: Props) {
                 </div>
 
                 <div className="flex items-center gap-2">
+                    {/* Delete selection */}
+                    <button
+                        onClick={() => selection && activeStructureId && dispatch(deleteAtoms({
+                            structureId: activeStructureId,
+                            atomIndices: selection.atomIndices
+                        }))}
+                        disabled={!selection || selection.atomIndices.length === 0}
+                        className="text-xs px-2 py-1 rounded bg-red-900/50 text-red-200 hover:bg-red-800 disabled:opacity-50 disabled:bg-slate-700 disabled:text-slate-500"
+                        title="Delete selected atoms (Del)"
+                    >
+                        🗑️
+                    </button>
+
+                    <div className="w-px h-4 bg-slate-600 mx-1" />
+
                     {/* Representation dropdown */}
                     <select
                         value={viewerSettings.representation}
@@ -253,6 +406,7 @@ export default function MolStarViewer({ className = '' }: Props) {
                 ref={containerRef}
                 className="flex-1 relative"
                 style={{ minHeight: '300px' }}
+                suppressHydrationWarning
             >
                 {!isInitialized && !error && (
                     <div className="absolute inset-0 flex items-center justify-center bg-slate-900">

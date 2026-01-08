@@ -116,6 +116,13 @@ export class ToolOrchestrator {
                     structureResponse.source
                 );
 
+                console.log('[ToolOrchestrator] Created structure from tool result:', {
+                    id: structure.id,
+                    name: structure.name,
+                    atoms: structure.data.atoms.length,
+                    lattice: structure.data.lattice
+                });
+
                 return {
                     success: true,
                     toolName: name,

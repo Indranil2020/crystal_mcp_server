@@ -58,6 +58,8 @@ export const structureSlice = createSlice({
         },
         setSelection: (state, action: PayloadAction<SelectionState | null>) => {
             state.selection = action.payload;
+            // Also store logic for updating visualization if needed?
+            // Pure state update here.
         },
         addMeasurement: (state, action: PayloadAction<Measurement>) => {
             state.measurements.push(action.payload);
@@ -77,6 +79,20 @@ export const structureSlice = createSlice({
             state.selection = null;
             state.measurements = [];
         },
+        deleteAtoms: (state, action: PayloadAction<{ structureId: string, atomIndices: number[] }>) => {
+            const { structureId, atomIndices } = action.payload;
+            const structure = state.structures.find(s => s.id === structureId);
+
+            if (structure) {
+                const indicesSet = new Set(atomIndices);
+                structure.data.atoms = structure.data.atoms.filter((_atom, index) => !indicesSet.has(index));
+                structure.modifiedAt = Date.now();
+
+                if (state.selection?.structureId === structureId) {
+                    state.selection = null;
+                }
+            }
+        },
     },
 });
 
@@ -92,6 +108,7 @@ export const {
     clearMeasurements,
     setLoading,
     clearAllStructures,
+    deleteAtoms,
 } = structureSlice.actions;
 
 export default structureSlice.reducer;

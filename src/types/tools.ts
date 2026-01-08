@@ -714,6 +714,8 @@ export const BuildMolecularClusterSchema = z.object({
     "circular",          // Ring arrangement
     "ring",              // Alias for circular
     "spherical",         // 3D spherical distribution
+    "helical",           // Helical/spiral arrangement
+    "spiral",            // Alias for helical
     "swastika",          // 4-molecule cross pattern
     "swastic",           // Alias for swastika (typo tolerance)
     "custom"             // User-defined positions/rotations

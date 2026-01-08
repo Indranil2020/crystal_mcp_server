@@ -53,6 +53,7 @@ class StackingType(Enum):
     LINEAR = "linear"                          # In a line
     CIRCULAR = "circular"                      # Ring arrangement
     SPHERICAL = "spherical"                    # 3D sphere distribution
+    HELICAL = "helical"                        # Helical/spiral arrangement
     CUSTOM = "custom"                          # User-defined positions/rotations
     SWASTIKA = "swastika"                      # 4-molecule cross pattern
 
@@ -113,6 +114,11 @@ STACKING_DEFAULTS = {
     StackingType.SPHERICAL: StackingParameters(
         distance=5.0,
         description="Spherical distribution"
+    ),
+    StackingType.HELICAL: StackingParameters(
+        distance=3.4,
+        rotation_z=30.0,  # Default 30° per step
+        description="Helical/spiral arrangement with rotation per step"
     ),
     StackingType.SWASTIKA: StackingParameters(
         distance=3.4,  # Center-to-center
@@ -306,6 +312,18 @@ def arrange_stacked(
     oy = offset_y if offset_y else params.offset_y
     rot_z = rotation_per_molecule if rotation_per_molecule else params.rotation_z
     
+    # For tilted arrangements (herringbone, T-shaped), enforce minimum distance
+    # based on molecule extent to prevent atomic clashes
+    if stacking_type == StackingType.HERRINGBONE and molecules:
+        first_coords = np.array(molecules[0]["coords"])
+        mol_extent = np.max(np.abs(first_coords)) * 2  # Approximate molecule span
+        tilt_rad = np.radians(params.tilt)
+        # When tilted, molecule projects further in z direction
+        min_distance = mol_extent * np.abs(np.sin(tilt_rad)) + 1.0  # +1Å buffer
+        if d < min_distance:
+            logger.info(f"Herringbone: adjusting distance from {d:.2f} to {min_distance:.2f} Å to prevent clashes")
+            d = max(d, min_distance)
+    
     arranged = []
     z_position = 0.0
     
@@ -330,6 +348,9 @@ def arrange_stacked(
         elif stacking_type == StackingType.HERRINGBONE:
             tilt = params.tilt if i % 2 == 0 else -params.tilt
             coords = rotate_molecule(coords, rotation_y=tilt)
+            # Add x-offset for alternating herringbone pattern
+            x_offset = (mol_extent * 0.3) if i % 2 == 1 else 0.0
+            coords = translate_molecule(coords, np.array([x_offset, 0, 0]))
         
         # Stack along z
         coords = translate_molecule(coords, np.array([0, 0, z_position]))
@@ -415,6 +436,54 @@ def arrange_circular(
         
         coords = rotate_molecule(coords, rotation_z=rot_angle)
         coords = translate_molecule(coords, np.array([x_pos, y_pos, 0]))
+        
+        arranged.append({
+            "atoms": mol["atoms"],
+            "coords": coords.tolist(),
+            "identifier": mol.get("identifier", f"molecule_{i}"),
+            "formula": mol.get("formula", ""),
+        })
+    
+    return arranged
+
+
+def arrange_helical(
+    molecules: List[Dict[str, Any]],
+    distance: float = 3.4,
+    radius: float = 0.0,
+    rotation_per_step: float = 30.0,
+    pitch: float = 3.4
+) -> List[Dict[str, Any]]:
+    """
+    Arrange molecules in a helical (spiral) pattern.
+    
+    Args:
+        molecules: List of molecules to arrange
+        distance: Not used directly if pitch is set
+        radius: Helix radius in xy-plane (0 = linear helix along z)
+        rotation_per_step: Rotation in degrees per molecule
+        pitch: Z-distance per molecule
+    
+    Returns:
+        List of arranged molecules with transformed coordinates
+    """
+    arranged = []
+    
+    for i, mol in enumerate(molecules):
+        coords = np.array(mol["coords"])
+        coords, _ = center_molecule(coords)
+        
+        # Rotation around z-axis
+        rot_angle = rotation_per_step * i
+        coords = rotate_molecule(coords, rotation_z=rot_angle)
+        
+        # Calculate position on helix
+        angle_rad = np.radians(rot_angle)
+        x_pos = radius * np.cos(angle_rad) if radius > 0 else 0.0
+        y_pos = radius * np.sin(angle_rad) if radius > 0 else 0.0
+        z_pos = pitch * i
+        
+        coords = translate_molecule(coords, np.array([x_pos, y_pos, z_pos]))
         
         arranged.append({
             "atoms": mol["atoms"],
@@ -811,6 +880,13 @@ def generate_molecular_cluster(
         arranged = arrange_t_shaped(mol_structures, distance=intermolecular_distance)
     elif stacking_type == StackingType.CIRCULAR:
         arranged = arrange_circular(mol_structures, radius=intermolecular_distance)
+    elif stacking_type == StackingType.HELICAL:
+        arranged = arrange_helical(
+            mol_structures, 
+            distance=intermolecular_distance,
+            rotation_per_step=rotation_per_molecule if rotation_per_molecule else 30.0,
+            pitch=intermolecular_distance
+        )
     elif stacking_type == StackingType.LINEAR:
         arranged = arrange_linear(mol_structures, distance=intermolecular_distance, axis=axis)
     else:

@@ -24,9 +24,9 @@ import numpy as np
 import logging
 import importlib.util
 
-# Check availability of new engines
-_ENGINE_AVAILABLE = importlib.util.find_spec("generators.molecule.molecular_arrangement_engine") is not None
-_UNIFIED_AVAILABLE = importlib.util.find_spec("generators.molecule.unified_molecular_arrangement") is not None
+# New engines are in the same package - assume available, lazy import handles errors
+_ENGINE_AVAILABLE = True
+_UNIFIED_AVAILABLE = True
 
 logger = logging.getLogger(__name__)
 

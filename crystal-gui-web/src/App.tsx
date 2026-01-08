@@ -16,6 +16,7 @@ import { mcpClient, llmClient, toolOrchestrator } from './services';
 import ChatPanel from './components/ChatPanel/ChatPanel';
 import Toolbar from './components/Toolbar/Toolbar';
 import StatusBar from './components/StatusBar/StatusBar';
+import { ViewerErrorBoundary } from './components/ViewerErrorBoundary';
 
 // Lazy load heavy viewer components (only if needed)
 const MolStarViewer = lazy(() => import('./components/Viewers/MolStarViewer'));
@@ -130,9 +131,11 @@ function App() {
         {/* Right Panel: 2D Editor (Kekule.js) */}
         {show2DEditor && (
           <div className="w-96 flex-shrink-0 border-l border-slate-700 flex flex-col">
-            <Suspense fallback={<ViewerLoading label="2D Editor" />}>
-              <KekuleEditor />
-            </Suspense>
+            <ViewerErrorBoundary>
+              <Suspense fallback={<ViewerLoading label="2D Editor" />}>
+                <KekuleEditor />
+              </Suspense>
+            </ViewerErrorBoundary>
           </div>
         )}
       </div>

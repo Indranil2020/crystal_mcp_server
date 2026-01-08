@@ -886,7 +886,7 @@ export declare const BuildMolecularClusterSchema: z.ZodObject<{
         input_type?: "name" | "auto" | "smiles" | "iupac" | "cid" | undefined;
         count?: number | undefined;
     }>, "many">;
-    stacking: z.ZodOptional<z.ZodDefault<z.ZodEnum<["auto", "pi_pi_parallel", "parallel", "stacked", "pi_pi_antiparallel", "antiparallel", "pi_pi_offset", "offset", "slip_stacked", "t_shaped", "edge_to_face", "herringbone", "h_bonded", "hydrogen_bonded", "van_der_waals", "vdw", "linear", "circular", "ring", "spherical", "swastika", "swastic", "custom"]>>>;
+    stacking: z.ZodOptional<z.ZodDefault<z.ZodEnum<["auto", "pi_pi_parallel", "parallel", "stacked", "pi_pi_antiparallel", "antiparallel", "pi_pi_offset", "offset", "slip_stacked", "t_shaped", "edge_to_face", "herringbone", "h_bonded", "hydrogen_bonded", "van_der_waals", "vdw", "linear", "circular", "ring", "spherical", "helical", "spiral", "swastika", "swastic", "custom"]>>>;
     intermolecular_distance: z.ZodOptional<z.ZodNumber>;
     offset_x: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
     offset_y: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
@@ -931,7 +931,7 @@ export declare const BuildMolecularClusterSchema: z.ZodObject<{
     }[];
     vacuum?: number | undefined;
     optimize?: boolean | undefined;
-    stacking?: "custom" | "parallel" | "auto" | "pi_pi_parallel" | "stacked" | "pi_pi_antiparallel" | "antiparallel" | "pi_pi_offset" | "offset" | "slip_stacked" | "t_shaped" | "edge_to_face" | "herringbone" | "h_bonded" | "hydrogen_bonded" | "van_der_waals" | "vdw" | "linear" | "circular" | "ring" | "spherical" | "swastika" | "swastic" | undefined;
+    stacking?: "custom" | "parallel" | "auto" | "pi_pi_parallel" | "stacked" | "pi_pi_antiparallel" | "antiparallel" | "pi_pi_offset" | "offset" | "slip_stacked" | "t_shaped" | "edge_to_face" | "herringbone" | "h_bonded" | "hydrogen_bonded" | "van_der_waals" | "vdw" | "linear" | "circular" | "ring" | "spherical" | "helical" | "spiral" | "swastika" | "swastic" | undefined;
     intermolecular_distance?: number | undefined;
     offset_x?: number | undefined;
     offset_y?: number | undefined;
@@ -958,7 +958,7 @@ export declare const BuildMolecularClusterSchema: z.ZodObject<{
     }[];
     vacuum?: number | undefined;
     optimize?: boolean | undefined;
-    stacking?: "custom" | "parallel" | "auto" | "pi_pi_parallel" | "stacked" | "pi_pi_antiparallel" | "antiparallel" | "pi_pi_offset" | "offset" | "slip_stacked" | "t_shaped" | "edge_to_face" | "herringbone" | "h_bonded" | "hydrogen_bonded" | "van_der_waals" | "vdw" | "linear" | "circular" | "ring" | "spherical" | "swastika" | "swastic" | undefined;
+    stacking?: "custom" | "parallel" | "auto" | "pi_pi_parallel" | "stacked" | "pi_pi_antiparallel" | "antiparallel" | "pi_pi_offset" | "offset" | "slip_stacked" | "t_shaped" | "edge_to_face" | "herringbone" | "h_bonded" | "hydrogen_bonded" | "van_der_waals" | "vdw" | "linear" | "circular" | "ring" | "spherical" | "helical" | "spiral" | "swastika" | "swastic" | undefined;
     intermolecular_distance?: number | undefined;
     offset_x?: number | undefined;
     offset_y?: number | undefined;
