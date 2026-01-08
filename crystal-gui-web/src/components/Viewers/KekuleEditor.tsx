@@ -12,7 +12,6 @@ import { useAppDispatch } from '../../store/hooks';
 import { addStructure } from '../../store/structureSlice';
 import { v4 as uuidv4 } from 'uuid';
 import { debug, debugError } from '../../debug';
-import type { StructureData } from '../../types';
 
 // Kekule.js imports - using global loaded from CDN for better compatibility
 declare global {
@@ -201,12 +200,19 @@ export default function KekuleEditor({ className = '', onStructureChange }: Prop
     //     }
     // }, []);
 
-    // Push structure to 3D viewer
+    // Push structure to 3D viewer via MDL MOL export (robust, preserves bonds)
     const pushTo3D = useCallback(() => {
-        if (!composerRef.current || !window.Kekule) return;
+        console.log('[KekuleEditor] pushTo3D() called');
+
+        if (!composerRef.current || !window.Kekule) {
+            console.warn('[KekuleEditor] Editor not ready');
+            return;
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const Kekule = window.Kekule as any;
 
         let mol = composerRef.current.getChemObj();
-
         if (!mol) {
             console.warn('[KekuleEditor] No molecule to push');
             return;
@@ -214,57 +220,74 @@ export default function KekuleEditor({ className = '', onStructureChange }: Prop
 
         // Debug object type
         const className = mol.getClassName ? mol.getClassName() : 'Unknown';
-        console.log(`[KekuleEditor] Push requested. Object Type: ${className}`);
+        console.log(`[KekuleEditor] Object type: ${className}`);
 
-        // Handle ChemDocument/ChemSpace wrapper
+        // Unwrap ChemDocument/ChemSpace wrapper to get the actual Molecule
         if (className === 'Kekule.ChemDocument' || className === 'Kekule.ChemSpace') {
             const childCount = mol.getChildCount ? mol.getChildCount() : 0;
             console.log(`[KekuleEditor] Wrapper has ${childCount} children`);
 
-            // Try to find a Molecule in children
+            let foundMol = null;
             for (let i = 0; i < childCount; i++) {
                 const child = mol.getChildAt(i);
-                if (child && child.getClassName && child.getClassName() === 'Kekule.Molecule') {
-                    mol = child;
-                    console.log('[KekuleEditor] Found Molecule in wrapper');
+                const childClass = child?.getClassName?.() || '';
+                console.log(`[KekuleEditor]   Child ${i}: ${childClass}`);
+                if (childClass === 'Kekule.Molecule') {
+                    foundMol = child;
                     break;
                 }
             }
+
+            if (!foundMol) {
+                console.warn('[KekuleEditor] No Molecule found in wrapper');
+                return;
+            }
+            mol = foundMol;
+            console.log('[KekuleEditor] Extracted Molecule from wrapper');
         }
 
-        // Get coordinates from Kekule molecule
-        const atoms: StructureData['atoms'] = [];
+        // Validate molecule has atoms
         const nodeCount = mol.getNodeCount?.() || 0;
-        console.log(`[KekuleEditor] Processing molecule with ${nodeCount} nodes`);
-
-        for (let i = 0; i < nodeCount; i++) {
-            const node = mol.getNodeAt(i);
-            const coord = node.getCoord2D?.() || { x: 0, y: 0 };
-            const element = node.getSymbol?.() || 'C';
-
-            // Kekule 2D coords are usually smaller, scale them up for 3D visibility if needed
-            // But for now, direct mapping. 3D viewer expects Angstroms roughly.
-            atoms.push({
-                element,
-                coords: [coord.x * 3, coord.y * 3, 0], // Scale up 3x for better default view
-                cartesian: [coord.x * 3, coord.y * 3, 0],
-            });
-        }
-
-        if (atoms.length === 0) {
-            console.warn('[KekuleEditor] No atoms in molecule');
+        console.log(`[KekuleEditor] Molecule has ${nodeCount} atoms`);
+        if (nodeCount === 0) {
+            console.warn('[KekuleEditor] Molecule has no atoms');
             return;
         }
 
-        // Create structure for Redux
+        // Export as MDL MOL V2000 format (preserves bonds, stereochemistry)
+        let molData: string | null = null;
+        if (Kekule.IO?.saveFormatData) {
+            molData = Kekule.IO.saveFormatData(mol, 'mol');
+            console.log('[KekuleEditor] Exported MOL data:', molData?.substring(0, 100) + '...');
+        } else {
+            console.error('[KekuleEditor] Kekule.IO.saveFormatData not available');
+            return;
+        }
+
+        // Validate MOL export
+        if (!molData || !molData.includes('V2000')) {
+            console.error('[KekuleEditor] MOL export failed or invalid format');
+            return;
+        }
+
+        // Extract formula for naming
+        let formula = 'Molecule';
+        if (mol.calcFormula) {
+            formula = mol.calcFormula() || formula;
+        }
+        console.log(`[KekuleEditor] Formula: ${formula}`);
+
+        // Create structure for Redux with raw MOL data
         const structure = {
             id: uuidv4(),
-            name: `Drawn: ${currentSmiles ? currentSmiles.slice(0, 10) : 'Molecule'}`,
+            name: `Drawn: ${formula}`,
             data: {
                 lattice: { a: 20, b: 20, c: 20, alpha: 90, beta: 90, gamma: 90, matrix: [[20, 0, 0], [0, 20, 0], [0, 0, 20]] },
-                atoms,
-                metadata: { formula: currentSmiles || 'C', natoms: atoms.length },
+                atoms: [],  // Empty - viewer will use molData instead
+                metadata: { formula, natoms: nodeCount },
             },
+            molData,         // Raw MDL MOL string
+            format: 'mol' as const,  // Format identifier for viewer
             source: 'kekule' as const,
             createdAt: Date.now(),
             modifiedAt: Date.now(),
@@ -272,8 +295,8 @@ export default function KekuleEditor({ className = '', onStructureChange }: Prop
         };
 
         dispatch(addStructure(structure));
-        console.log('[KekuleEditor] Pushed to 3D:', structure.name);
-    }, [dispatch, currentSmiles]);
+        console.log('[KekuleEditor] ✅ Pushed to 3D:', structure.name);
+    }, [dispatch]);
 
     // Clear editor
     const clearEditor = useCallback(() => {

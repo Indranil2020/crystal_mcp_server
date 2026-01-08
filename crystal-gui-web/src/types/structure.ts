@@ -7,15 +7,23 @@ import type { StructureData, LatticeData, AtomData, SpaceGroupData, StructureMet
 // Re-export from mcp.ts
 export type { StructureData, LatticeData, AtomData, SpaceGroupData, StructureMetadata };
 
+/** Supported chemical data formats (aligned with Mol*'s parseTrajectory) */
+export type ChemicalFormat = 'mol' | 'sdf' | 'pdb' | 'xyz' | 'mmcif' | 'cifCore' | 'mol2' | 'gro';
+
 /** Structure with unique ID for state management */
 export interface Structure {
     id: string;
     name: string;
+    /** Structured atom/lattice data (for backend-generated structures) */
     data: StructureData;
     source: 'mcp' | 'kekule' | 'file' | 'manual';
     createdAt: number;
     modifiedAt: number;
     visible: boolean;
+    /** Raw chemical data string (MDL MOL, SDF, PDB, etc.) for Kekule/file sources */
+    molData?: string;
+    /** Format of molData, used by viewer to parse correctly */
+    format?: ChemicalFormat;
 }
 
 /** Structure representation mode for MolStar */
