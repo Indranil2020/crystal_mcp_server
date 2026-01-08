@@ -187,44 +187,70 @@ export default function KekuleEditor({ className = '', onStructureChange }: Prop
         }
     }, [onStructureChange]);
 
-    // Load molecule from SMILES
-    const loadFromSmiles = useCallback((smiles: string) => {
-        if (!composerRef.current || !window.Kekule) return;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const Kekule = window.Kekule as any;
-
-        if (Kekule.IO && Kekule.IO.loadFormatData) {
-            const mol = Kekule.IO.loadFormatData(smiles, 'smi');
-            if (mol) {
-                composerRef.current.setChemObj(mol);
-            }
-        }
-    }, []);
+    // Load molecule from SMILES (reserved for future use)
+    // const _loadFromSmiles = useCallback((smiles: string) => {
+    //     if (!composerRef.current || !window.Kekule) return;
+    //     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    //     const Kekule = window.Kekule as any;
+    //
+    //     if (Kekule.IO && Kekule.IO.loadFormatData) {
+    //         const mol = Kekule.IO.loadFormatData(smiles, 'smi');
+    //         if (mol) {
+    //             composerRef.current.setChemObj(mol);
+    //         }
+    //     }
+    // }, []);
 
     // Push structure to 3D viewer
     const pushTo3D = useCallback(() => {
         if (!composerRef.current || !window.Kekule) return;
 
-        const mol = composerRef.current.getChemObj();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const Kekule = window.Kekule as any;
+
+        let mol = composerRef.current.getChemObj();
 
         if (!mol) {
             console.warn('[KekuleEditor] No molecule to push');
             return;
         }
 
+        // Debug object type
+        const className = mol.getClassName ? mol.getClassName() : 'Unknown';
+        console.log(`[KekuleEditor] Push requested. Object Type: ${className}`);
+
+        // Handle ChemDocument/ChemSpace wrapper
+        if (className === 'Kekule.ChemDocument' || className === 'Kekule.ChemSpace') {
+            const childCount = mol.getChildCount ? mol.getChildCount() : 0;
+            console.log(`[KekuleEditor] Wrapper has ${childCount} children`);
+
+            // Try to find a Molecule in children
+            for (let i = 0; i < childCount; i++) {
+                const child = mol.getChildAt(i);
+                if (child && child.getClassName && child.getClassName() === 'Kekule.Molecule') {
+                    mol = child;
+                    console.log('[KekuleEditor] Found Molecule in wrapper');
+                    break;
+                }
+            }
+        }
+
         // Get coordinates from Kekule molecule
         const atoms: StructureData['atoms'] = [];
         const nodeCount = mol.getNodeCount?.() || 0;
+        console.log(`[KekuleEditor] Processing molecule with ${nodeCount} nodes`);
 
         for (let i = 0; i < nodeCount; i++) {
             const node = mol.getNodeAt(i);
             const coord = node.getCoord2D?.() || { x: 0, y: 0 };
             const element = node.getSymbol?.() || 'C';
 
+            // Kekule 2D coords are usually smaller, scale them up for 3D visibility if needed
+            // But for now, direct mapping. 3D viewer expects Angstroms roughly.
             atoms.push({
                 element,
-                coords: [coord.x, coord.y, 0],
-                cartesian: [coord.x, coord.y, 0],
+                coords: [coord.x * 3, coord.y * 3, 0], // Scale up 3x for better default view
+                cartesian: [coord.x * 3, coord.y * 3, 0],
             });
         }
 
@@ -234,14 +260,13 @@ export default function KekuleEditor({ className = '', onStructureChange }: Prop
         }
 
         // Create structure for Redux
-        const smiles = currentSmiles || 'drawn-molecule';
         const structure = {
             id: uuidv4(),
-            name: `Drawn: ${smiles.slice(0, 20)}`,
+            name: `Drawn: ${currentSmiles ? currentSmiles.slice(0, 10) : 'Molecule'}`,
             data: {
                 lattice: { a: 20, b: 20, c: 20, alpha: 90, beta: 90, gamma: 90, matrix: [[20, 0, 0], [0, 20, 0], [0, 0, 20]] },
                 atoms,
-                metadata: { formula: smiles, natoms: atoms.length },
+                metadata: { formula: currentSmiles || 'C', natoms: atoms.length },
             },
             source: 'kekule' as const,
             createdAt: Date.now(),
@@ -261,21 +286,70 @@ export default function KekuleEditor({ className = '', onStructureChange }: Prop
         }
     }, []);
 
-    // Template molecules
+    // Template molecules (using MDL Molfile V2000 format for reliability without OpenBabel)
     const loadTemplate = useCallback((template: string) => {
+        // Simple Benzene MolBlock
+        const BENZENE_MOL = `
+  Kekule.js   
+
+  6  6  0  0  0  0  0  0  0  0999 V2000
+    0.0000    1.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.8660    0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.8660   -0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.0000   -1.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.8660   -0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.8660    0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  2  0  0  0  0
+  2  3  1  0  0  0  0
+  3  4  2  0  0  0  0
+  4  5  1  0  0  0  0
+  5  6  2  0  0  0  0
+  6  1  1  0  0  0  0
+M  END`;
+
+        // Cyclohexane (Chair confirmation approximation)
+        const CYCLOHEXANE_MOL = `
+  Kekule.js
+
+  6  6  0  0  0  0  0  0  0  0999 V2000
+   -0.8660    0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.0000    1.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.8660    0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.8660   -0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.0000   -1.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.8660   -0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  1  0  0  0  0
+  2  3  1  0  0  0  0
+  3  4  1  0  0  0  0
+  4  5  1  0  0  0  0
+  5  6  1  0  0  0  0
+  6  1  1  0  0  0  0
+M  END`;
+
         const templates: Record<string, string> = {
-            benzene: 'c1ccccc1',
-            cyclohexane: 'C1CCCCC1',
-            pyridine: 'c1ccncc1',
-            naphthalene: 'c1ccc2ccccc2c1',
-            phenol: 'c1ccc(O)cc1',
-            aniline: 'c1ccc(N)cc1',
+            benzene: BENZENE_MOL,
+            cyclohexane: CYCLOHEXANE_MOL,
+            pyridine: '', // TODO: Add others
+            naphthalene: '',
+            phenol: '',
+            aniline: '',
         };
 
-        if (templates[template]) {
-            loadFromSmiles(templates[template]);
+        if (templates[template] && composerRef.current && window.Kekule) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const Kekule = window.Kekule as any;
+            if (Kekule.IO && Kekule.IO.loadFormatData) {
+                try {
+                    const mol = Kekule.IO.loadFormatData(templates[template], 'mol');
+                    if (mol) {
+                        composerRef.current.setChemObj(mol);
+                    }
+                } catch (e) {
+                    debugError('VIEWERS', `Failed to load template: ${e}`, 'KekuleEditor');
+                }
+            }
         }
-    }, [loadFromSmiles]);
+    }, []);
 
     if (error) {
         return (
