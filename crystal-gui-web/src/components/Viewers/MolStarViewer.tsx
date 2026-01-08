@@ -200,11 +200,23 @@ export default function MolStarViewer({ className = '' }: Props) {
     }, [isInitialized, activeStructure]);
 
     // Update representation when settings change
+    // Update representation when settings change
     useEffect(() => {
         if (!isInitialized || !pluginRef.current) return;
-
         updateRepresentation(viewerSettings.representation);
     }, [isInitialized, viewerSettings.representation]);
+
+    // Update color scheme
+    useEffect(() => {
+        if (!isInitialized || !pluginRef.current) return;
+        updateColorScheme(viewerSettings.colorScheme);
+    }, [isInitialized, viewerSettings.colorScheme]);
+
+    // Update unit cell
+    useEffect(() => {
+        if (!isInitialized || !pluginRef.current) return;
+        toggleUnitCell(viewerSettings.showUnitCell);
+    }, [isInitialized, viewerSettings.showUnitCell]);
 
     // Load structure into MolStar
     const loadStructure = useCallback(async (structure: Structure) => {
@@ -341,6 +353,48 @@ export default function MolStarViewer({ className = '' }: Props) {
                 s.cell.transform.ref,
                 presetMap[mode] || 'ball-and-stick'
             );
+        }
+    }, []);
+
+    // Update color scheme
+    const updateColorScheme = useCallback(async (scheme: string) => {
+        const plugin = pluginRef.current;
+        if (!plugin) return;
+
+        debug('VIEWERS', `[COLOR] Updating color scheme to: ${scheme}`);
+
+        const structures = plugin.managers.structure.hierarchy.current.structures;
+        if (structures.length > 0) {
+            await updateRepresentation(viewerSettings.representation);
+        }
+    }, [updateRepresentation, viewerSettings.representation]);
+
+    // Toggle unit cell visualization
+    const toggleUnitCell = useCallback(async (show: boolean) => {
+        const plugin = pluginRef.current;
+        if (!plugin) return;
+
+        const structures = plugin.managers.structure.hierarchy.current.structures;
+        if (structures.length === 0) return;
+
+        debug('VIEWERS', `[UNITCELL] Toggling unit cell: ${show}`);
+
+        for (const s of structures) {
+            try {
+                // Unit cell comes from the Model, not the Structure
+                // We need to find the parent Model cell
+                const parentRef = s.cell.transform.parent;
+                const parentCell = plugin.state.data.cells.get(parentRef);
+
+                if (parentCell && parentCell.obj && parentCell.obj.type.name === 'Model') {
+                    // Pass the Model cell reference
+                    await plugin.builders.structure.tryCreateUnitcell(parentCell, undefined, { isHidden: !show });
+                } else {
+                    console.warn('[MolStarViewer] [UNITCELL] Could not find parent Model for structure');
+                }
+            } catch (e) {
+                console.warn('[MolStarViewer] Unit cell update failed:', e);
+            }
         }
     }, []);
 
@@ -526,6 +580,47 @@ export default function MolStarViewer({ className = '' }: Props) {
                         className="text-xs px-2 py-1 rounded bg-slate-700 text-slate-300 hover:bg-slate-600 disabled:opacity-50"
                     >
                         IMG
+                    </button>
+
+                    <div className="w-px h-4 bg-slate-600 mx-1" />
+
+                    {/* Session Save */}
+                    <button
+                        onClick={async () => {
+                            const plugin = pluginRef.current;
+                            if (!plugin) return;
+                            debug('VIEWERS', '[SESSION] Saving session...');
+                            const state = plugin.state.data.getSnapshot();
+                            localStorage.setItem('molstar-session', JSON.stringify(state));
+                            debug('VIEWERS', '[SESSION] Session saved to localStorage');
+                        }}
+                        disabled={!isInitialized}
+                        className="text-xs px-2 py-1 rounded bg-slate-700 text-slate-300 hover:bg-slate-600 disabled:opacity-50"
+                        title="Save viewer session"
+                    >
+                        Save
+                    </button>
+
+                    {/* Session Load */}
+                    <button
+                        onClick={async () => {
+                            const plugin = pluginRef.current;
+                            if (!plugin) return;
+                            debug('VIEWERS', '[SESSION] Loading session...');
+                            const saved = localStorage.getItem('molstar-session');
+                            if (saved) {
+                                const state = JSON.parse(saved);
+                                await plugin.state.data.setSnapshot(state);
+                                debug('VIEWERS', '[SESSION] Session restored from localStorage');
+                            } else {
+                                debug('VIEWERS', '[SESSION] No saved session found');
+                            }
+                        }}
+                        disabled={!isInitialized}
+                        className="text-xs px-2 py-1 rounded bg-slate-700 text-slate-300 hover:bg-slate-600 disabled:opacity-50"
+                        title="Load saved session"
+                    >
+                        Load
                     </button>
                 </div>
             </div>

@@ -205,9 +205,6 @@ export default function KekuleEditor({ className = '', onStructureChange }: Prop
     const pushTo3D = useCallback(() => {
         if (!composerRef.current || !window.Kekule) return;
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const Kekule = window.Kekule as any;
-
         let mol = composerRef.current.getChemObj();
 
         if (!mol) {
