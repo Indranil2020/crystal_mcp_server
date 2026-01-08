@@ -230,8 +230,71 @@ export default function MolStarViewer({ className = '' }: Props) {
         debug('VIEWERS', '[MOLSTAR] LOADING STRUCTURE INTO MOL*');
         debug('VIEWERS', `  Structure ID: ${structure.id}`);
         debug('VIEWERS', `  Name: ${structure.name}`);
-        debug('VIEWERS', `  Atom count: ${structure.data.atoms.length}`);
         debug('VIEWERS', `  Source: ${structure.source}`);
+        debug('VIEWERS', `  Has molData: ${!!structure.molData}`);
+        debug('VIEWERS', `  Format: ${structure.format || 'N/A'}`);
+        debug('VIEWERS', `  Atom count (from data): ${structure.data?.atoms?.length || 0}`);
+
+        logPluginState(plugin, 'Before clear');
+
+        // Clear existing structures
+        debug('VIEWERS', '  Clearing existing structures...');
+        await plugin.clear();
+        logPluginState(plugin, 'After clear');
+
+        // === PATH 1: Raw chemical data (from Kekule, file imports, etc.) ===
+        if (structure.molData && structure.format) {
+            debug('VIEWERS', `  [MOLDATA] Loading raw ${structure.format.toUpperCase()} data...`);
+            debug('VIEWERS', `  [MOLDATA] Data preview: ${structure.molData.substring(0, 80)}...`);
+
+            const dataResult = await plugin.builders.data.rawData({
+                data: structure.molData,
+                label: structure.name,
+            });
+
+            if (!dataResult.ref) {
+                debug('VIEWERS', '  [ERROR] rawData returned no ref');
+                setError('Failed to load molecule data');
+                return;
+            }
+            debug('VIEWERS', `  [OK] Raw data loaded, ref=${dataResult.ref}`);
+
+            // Parse based on format
+            // Mol* supports: mol, sdf, pdb, xyz, mol2, cml, gro, etc.
+            debug('VIEWERS', `  [PARSE] Parsing as format: ${structure.format}`);
+            const trajectoryResult = await plugin.builders.structure.parseTrajectory(dataResult, structure.format);
+
+            if (!trajectoryResult.ref) {
+                debug('VIEWERS', `  [ERROR] Failed to parse ${structure.format} format`);
+                setError(`Failed to parse ${structure.format.toUpperCase()} data`);
+                return;
+            }
+            debug('VIEWERS', `  [OK] Trajectory parsed, ref=${trajectoryResult.ref}`);
+
+            // Apply visualization preset
+            debug('VIEWERS', '  [PRESET] Applying default visualization...');
+            await plugin.builders.structure.hierarchy.applyPreset(trajectoryResult, 'default');
+
+            logPluginState(plugin, 'After molData load');
+
+            // Check final state
+            const finalStructures = plugin.managers.structure.hierarchy.current.structures;
+            if (finalStructures.length > 0) {
+                debug('VIEWERS', '  [SUCCESS] STRUCTURE LOADED FROM MOLDATA');
+                setError(null);
+                plugin.managers.camera.reset();
+            } else {
+                debug('VIEWERS', '  [ERROR] No structures after molData loading');
+                setError(`Failed to render: ${structure.name}`);
+            }
+
+            debug('VIEWERS', '═'.repeat(60));
+            return;
+        }
+
+        // === PATH 2: Structured atom data (from backend/MCP) - use CIF conversion ===
+        debug('VIEWERS', '  [CIF] No molData, using CIF conversion path...');
+        debug('VIEWERS', `  Atom count: ${structure.data.atoms.length}`);
         debug('VIEWERS', `  Lattice: a=${structure.data.lattice.a.toFixed(2)}, b=${structure.data.lattice.b.toFixed(2)}, c=${structure.data.lattice.c.toFixed(2)}`);
         debug('VIEWERS', `  Formula: ${structure.data.metadata?.formula || 'unknown'}`);
 
@@ -243,22 +306,12 @@ export default function MolStarViewer({ className = '' }: Props) {
             debug('VIEWERS', `  ... and ${structure.data.atoms.length - 3} more atoms`);
         }
 
-        logPluginState(plugin, 'Before clear');
-
-        // Clear existing structures
-        debug('VIEWERS', '  Clearing existing structures...');
-        await plugin.clear();
-        logPluginState(plugin, 'After clear');
-
         // Convert to CIF format
         debug('VIEWERS', '  [CIF] Converting to CIF format...');
         const cifData = structureToCif(structure.data);
         debug('VIEWERS', `  [CIF] Generated: ${cifData.length} bytes`);
 
-        // Try loading with CIF parser (not mmcif - our format is standard CIF)
         debug('VIEWERS', '  [LOAD] Loading CIF into Mol*...');
-        debug('VIEWERS', '  [LOAD] Step 1: Loading raw data...');
-
         const dataResult = await plugin.builders.data.rawData({
             data: cifData,
             label: structure.name,
@@ -272,17 +325,12 @@ export default function MolStarViewer({ className = '' }: Props) {
         debug('VIEWERS', `  [OK] Raw data loaded, ref=${dataResult.ref}`);
         logPluginState(plugin, 'After rawData');
 
-        // Parse as CIF trajectory
-        // Mol* supports: mmcif, cifCore, pdb, xyz, mol, sdf, mol2, etc.
-        // Use 'cifCore' for standard crystallographic CIF files
-        debug('VIEWERS', '  [LOAD] Step 2: Parsing trajectory (format: cifCore)...');
-
+        // Parse as CIF trajectory (try cifCore first, then mmcif)
+        debug('VIEWERS', '  [LOAD] Parsing trajectory (format: cifCore)...');
         let trajectoryResult = await plugin.builders.structure.parseTrajectory(dataResult, 'cifCore');
 
         if (!trajectoryResult.ref) {
             debug('VIEWERS', '  [WARN] cifCore format failed, trying mmcif...');
-
-            // Fallback: try mmcif format (for macromolecular-style CIF)
             trajectoryResult = await plugin.builders.structure.parseTrajectory(dataResult, 'mmcif');
             if (!trajectoryResult.ref) {
                 debug('VIEWERS', '  [ERROR] mmcif format also failed');
@@ -296,20 +344,15 @@ export default function MolStarViewer({ className = '' }: Props) {
 
         logPluginState(plugin, 'After parseTrajectory');
 
-        // Apply default preset for visualization
-        debug('VIEWERS', '  [LOAD] Step 3: Applying visualization preset...');
+        // Apply default preset
+        debug('VIEWERS', '  [LOAD] Applying visualization preset...');
         const structures = plugin.managers.structure.hierarchy.current.structures;
         debug('VIEWERS', `  Structures in hierarchy: ${structures.length}`);
 
-        if (structures.length === 0) {
-            debug('VIEWERS', '  [WARN] No structures in hierarchy after parsing');
-            debug('VIEWERS', '  [LOAD] Attempting to apply preset to trajectory...');
-
-            // Apply preset to the trajectory we already parsed
-            if (trajectoryResult.ref) {
-                await plugin.builders.structure.hierarchy.applyPreset(trajectoryResult, 'default');
-                logPluginState(plugin, 'After applyPreset');
-            }
+        if (structures.length === 0 && trajectoryResult.ref) {
+            debug('VIEWERS', '  [WARN] No structures in hierarchy after parsing, applying preset to trajectory...');
+            await plugin.builders.structure.hierarchy.applyPreset(trajectoryResult, 'default');
+            logPluginState(plugin, 'After applyPreset');
         }
 
         // Check final state
@@ -320,9 +363,6 @@ export default function MolStarViewer({ className = '' }: Props) {
             debug('VIEWERS', '  [SUCCESS] STRUCTURE LOADED SUCCESSFULLY');
             debug('VIEWERS', `  [SUCCESS] Structure "${structure.name}" is now visible`);
             setError(null);
-
-            // Reset camera to show the structure
-            debug('VIEWERS', '  Resetting camera view...');
             plugin.managers.camera.reset();
         } else {
             debug('VIEWERS', '  [ERROR] Structure loading failed - no structures in viewer');
@@ -545,6 +585,23 @@ export default function MolStarViewer({ className = '' }: Props) {
                         title="Delete selected atoms (Del)"
                     >
                         DEL
+                    </button>
+
+                    {/* Toggle Mol* Controls Panel (includes Measurements) */}
+                    <button
+                        onClick={() => {
+                            const plugin = pluginRef.current;
+                            if (!plugin) return;
+                            // Toggle the controls panel visibility
+                            const isExpanded = plugin.layout.state.isExpanded;
+                            plugin.layout.setProps({ isExpanded: !isExpanded, showControls: true });
+                            debug('VIEWERS', `[CONTROLS] Toggled controls: ${!isExpanded}`);
+                        }}
+                        disabled={!isInitialized}
+                        className="text-xs px-2 py-1 rounded bg-purple-700 text-white hover:bg-purple-600 disabled:opacity-50"
+                        title="Toggle Mol* controls panel (Measurements, selections, etc.)"
+                    >
+                        Measure
                     </button>
 
                     <div className="w-px h-4 bg-slate-600 mx-1" />
