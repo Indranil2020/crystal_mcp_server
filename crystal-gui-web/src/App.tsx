@@ -10,6 +10,11 @@
  */
 
 import { useEffect, useState, Suspense, lazy, useMemo } from 'react';
+import {
+  Panel,
+  Group as PanelGroup,
+  Separator as PanelResizeHandle
+} from 'react-resizable-panels';
 import { useAppDispatch } from './store/hooks';
 import { setConnectionStatus, setTools, setError } from './store/mcpSlice';
 import { mcpClient, llmClient, toolOrchestrator } from './services';
@@ -127,15 +132,29 @@ function App() {
       {/* Toolbar */}
       <Toolbar />
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex min-h-0">
+      {/* Main Content Area - Resizable Panels */}
+      <PanelGroup orientation="horizontal" className="flex-1">
         {/* Left Panel: Chat */}
-        <div className="w-96 flex-shrink-0 border-r border-slate-700 flex flex-col">
+        <Panel
+          defaultSize="25%"
+          minSize="15%"
+          maxSize="40%"
+          className="flex flex-col overflow-hidden"
+        >
           <ChatPanel />
-        </div>
+        </Panel>
+
+        {/* Resize Handle */}
+        <PanelResizeHandle className="w-2 bg-slate-700 hover:bg-blue-500 transition-colors cursor-col-resize flex items-center justify-center">
+          <div className="w-0.5 h-8 bg-slate-500 rounded-full" />
+        </PanelResizeHandle>
 
         {/* Center: 3D Viewer (MolStar) - only load if WebGL available */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <Panel
+          defaultSize="50%"
+          minSize="30%"
+          className="flex flex-col overflow-hidden"
+        >
           {hasWebGL ? (
             <ViewerErrorBoundary>
               <Suspense fallback={<ViewerLoading label="3D Viewer" />}>
@@ -145,19 +164,31 @@ function App() {
           ) : (
             <NoWebGLFallback />
           )}
-        </div>
+        </Panel>
+
+        {/* Resize Handle */}
+        {show2DEditor && (
+          <PanelResizeHandle className="w-2 bg-slate-700 hover:bg-blue-500 transition-colors cursor-col-resize flex items-center justify-center">
+            <div className="w-0.5 h-8 bg-slate-500 rounded-full" />
+          </PanelResizeHandle>
+        )}
 
         {/* Right Panel: 2D Editor (Kekule.js) */}
         {show2DEditor && (
-          <div className="w-96 flex-shrink-0 border-l border-slate-700 flex flex-col">
+          <Panel
+            defaultSize="25%"
+            minSize="15%"
+            maxSize="40%"
+            className="flex flex-col overflow-hidden"
+          >
             <ViewerErrorBoundary>
               <Suspense fallback={<ViewerLoading label="2D Editor" />}>
                 <KekuleEditor />
               </Suspense>
             </ViewerErrorBoundary>
-          </div>
+          </Panel>
         )}
-      </div>
+      </PanelGroup>
 
       {/* Status Bar */}
       <StatusBar />
