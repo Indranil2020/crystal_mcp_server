@@ -45,3 +45,35 @@ debug_*.json
 
 # Generated Artifacts
 docs/molecule/testing_results.md
+
+# Agent/AI artifacts (should not be in repo)
+.agent/
+.gemini/
+.cursor/
+.aider*
+.continue/
+.copilot/
+
+# Test results and artifacts
+test-results/
+playwright-report/
+coverage/
+*.webp
+*.recording
+
+# Browser testing
+*.pw.ts.snapshot/
+
+# Build cache
+.cache/
+.parcel-cache/
+.turbo/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local env files
+.env.local
+.env.*.local
+*.local.json
