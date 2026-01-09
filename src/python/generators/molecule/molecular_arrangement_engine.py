@@ -50,7 +50,16 @@ from abc import ABC, abstractmethod
 import numpy as np
 import math
 import re
+import sys
 from collections import defaultdict
+
+
+# Debug print helper - writes to stderr so stdout stays clean for JSON
+def debug(msg: str) -> None:
+    sys.stderr.write(f"[DEBUG molecular_arrangement_engine] {msg}\n")
+    sys.stderr.flush()
+
+
 
 
 # =============================================================================
@@ -347,24 +356,33 @@ class AtomSelector:
     
     def evaluate(self) -> np.ndarray:
         """Evaluate selector and return 3D coordinates."""
+        debug(f"AtomSelector.evaluate: '{self.selector}'")
         match = self.PATTERN.match(self.selector)
         if not match:
+            debug(f"AtomSelector ERROR: Invalid selector syntax: {self.selector}")
             raise ValueError(f"Invalid selector syntax: {self.selector}")
         
         mol_idx = int(match.group(1))
         target = match.group(2)
         args_str = match.group(3) or ""
         
+        debug(f"AtomSelector: mol_idx={mol_idx}, target={target}, args={args_str}")
+        
         if mol_idx >= len(self.molecules):
+            debug(f"AtomSelector ERROR: Molecule index {mol_idx} out of range (max={len(self.molecules)-1})")
             raise ValueError(f"Molecule index {mol_idx} out of range")
         
         mol = self.molecules[mol_idx]
         coords = np.array(mol.get("coords", [[0, 0, 0]]))
         atoms = mol.get("atoms", ["C"] * len(coords))
         
+        debug(f"AtomSelector: molecule has {len(atoms)} atoms")
+        
         args = self._parse_args(args_str)
         
-        return self._resolve(coords, atoms, mol, target, args)
+        result = self._resolve(coords, atoms, mol, target, args)
+        debug(f"AtomSelector: result = {result}")
+        return result
     
     def _parse_args(self, args_str: str) -> Dict[str, Any]:
         """Parse argument string into dict."""
@@ -458,9 +476,17 @@ class AtomSelector:
     
     def _find_functional_group(self, coords: np.ndarray,
                                 atoms: List[str], group_name: str) -> np.ndarray:
-        """Find functional group center."""
+        """Find functional group center with chemistry-aware logic."""
+        debug(f"AtomSelector: searching for group '{group_name}'")
+        
+        if group_name.lower() == "carbonyl":
+            return self._find_carbonyl_oxygen(coords, atoms)
+        elif group_name.lower() == "amide":
+            # Return amide nitrogen by default
+            return self._find_amide_nitrogen(coords, atoms)
+        
+        # Fallback to simple element matching for other groups
         group_elements = {
-            "carbonyl": ["C", "O"],
             "carboxyl": ["C", "O", "O"],
             "hydroxyl": ["O"],
             "amine": ["N"],
@@ -478,6 +504,49 @@ class AtomSelector:
                 matching.append(coords[indices[0]])
         
         return np.mean(matching, axis=0) if matching else np.mean(coords, axis=0)
+
+    def _find_carbonyl_oxygen(self, coords: np.ndarray, atoms: List[str]) -> np.ndarray:
+        """Find C=O carbonyl oxygen using bond length analysis."""
+        o_indices = [i for i, a in enumerate(atoms) if a == "O"]
+        c_indices = [i for i, a in enumerate(atoms) if a == "C"]
+        
+        debug(f"AtomSelector: Checking {len(o_indices)} oxygens for carbonyl...")
+        
+        for o_idx in o_indices:
+            for c_idx in c_indices:
+                dist = np.linalg.norm(coords[o_idx] - coords[c_idx])
+                # C=O double bond is typically 1.20-1.25 Å
+                # C-O single bond is typically 1.43 Å
+                if 1.15 < dist < 1.30:
+                    debug(f"AtomSelector: Found carbonyl C=O (dist={dist:.2f} Å) at O-index {o_idx}")
+                    return coords[o_idx]
+        
+        debug("AtomSelector: No carbonyl bond found, falling back to first Oxygen")
+        if o_indices:
+            return coords[o_indices[0]]
+        return np.mean(coords, axis=0)
+
+    def _find_amide_nitrogen(self, coords: np.ndarray, atoms: List[str]) -> np.ndarray:
+        """Find amide nitrogen (adjacent to C=O)."""
+        n_indices = [i for i, a in enumerate(atoms) if a == "N"]
+        c_indices = [i for i, a in enumerate(atoms) if a == "C"]
+        o_indices = [i for i, a in enumerate(atoms) if a == "O"]
+        
+        for n_idx in n_indices:
+            # Check for C neighbor
+            for c_idx in c_indices:
+                c_n_dist = np.linalg.norm(coords[n_idx] - coords[c_idx])
+                if 1.30 < c_n_dist < 1.47: # C-N bond
+                    # Check if this C is double bonded to O
+                    for o_idx in o_indices:
+                        c_o_dist = np.linalg.norm(coords[c_idx] - coords[o_idx])
+                        if 1.15 < c_o_dist < 1.30:
+                            debug(f"AtomSelector: Found amide Nitrogen (linked to C=O) at index {n_idx}")
+                            return coords[n_idx]
+        
+        if n_indices:
+            return coords[n_indices[0]]
+        return np.mean(coords, axis=0)
     
     def _find_donor_hydrogens(self, coords: np.ndarray,
                                atoms: List[str]) -> List[np.ndarray]:
@@ -1460,27 +1529,42 @@ def generate_molecular_cluster(
             'metadata': Additional info
         }
     """
+    debug(f"generate_molecular_cluster called")
+    debug(f"  n_molecules: {len(molecules)}")
+    debug(f"  arrangement: {arrangement}")
+    debug(f"  distance: {distance}")
+    debug(f"  constraints: {constraints}")
+    debug(f"  optimize: {optimize}")
+    debug(f"  validate: {validate}")
+    debug(f"  kwargs: {kwargs}")
+    
     n = len(molecules)
     
     # Parse arrangement specification
     if isinstance(arrangement, str):
         if arrangement == "auto":
             arrangement = _auto_detect_arrangement(molecules)
+            debug(f"Auto-detected arrangement: {arrangement}")
         
         # Try NL parsing first for complex strings
         if " " in arrangement:
+            debug(f"Parsing complex arrangement string via NL parser")
             parsed = parse_arrangement_request(arrangement)
             arrangement = parsed['pattern']
             if parsed['distance'] and distance is None:
                 distance = parsed['distance']
             kwargs.update(parsed.get('parameters', {}))
+            debug(f"NL parsed: pattern={arrangement}, distance={distance}")
     
     # Set default distance
     if distance is None:
         distance = INTERACTION_DISTANCES.get(arrangement, (3.4, 4.0))[0]
+        debug(f"Using default distance for {arrangement}: {distance}Å")
     
     # Generate positions and orientations
+    debug(f"Generating positions/orientations for pattern: {arrangement}")
     positions, orientations = _generate_pattern(arrangement, n, distance, **kwargs)
+    debug(f"Generated {len(positions)} positions")
     
     # Create poses
     poses = []
@@ -1492,23 +1576,34 @@ def generate_molecular_cluster(
             metadata={'pattern': arrangement}
         ))
     
+    debug(f"Created {len(poses)} poses")
+    
     # Build constraints
     constraint_objs = _build_constraints(n, constraints or [], arrangement)
+    debug(f"Built {len(constraint_objs)} constraint objects")
     
     # Optimize if requested
     if optimize and constraint_objs:
+        debug(f"Running constraint solver with {len(constraint_objs)} constraints")
         solver = ConstraintSolver(molecules, poses, constraint_objs)
         poses = solver.solve()
+        debug(f"Constraint solver completed")
     
     # Apply poses to molecules
+    debug(f"Applying poses to molecules")
     arranged_molecules = apply_poses_to_molecules(molecules, poses)
     
     # Validate
     validation = {}
     if validate:
+        debug(f"Validating arrangement")
         validation = validate_arrangement(molecules, poses)
+        debug(f"Validation: valid={validation.get('valid')}, warnings={len(validation.get('warnings', []))}, errors={len(validation.get('errors', []))}")
+    
+    debug(f"generate_molecular_cluster completed successfully")
     
     return {
+        'success': True,  # Add success flag for compatibility
         'molecules': arranged_molecules,
         'poses': [
             {
@@ -1526,6 +1621,7 @@ def generate_molecular_cluster(
             'optimized': optimize
         }
     }
+
 
 
 def _auto_detect_arrangement(molecules: List[Dict]) -> str:

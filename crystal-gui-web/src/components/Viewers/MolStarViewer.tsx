@@ -664,10 +664,71 @@ export default function MolStarViewer({ className = '' }: Props) {
             });
     }, [activeStructure]);
 
+    // Export measurements to CSV
+    const exportMeasurements = useCallback(async (toClipboard: boolean = false) => {
+        const plugin = pluginRef.current;
+        if (!plugin) {
+            debug('VIEWERS', '[EXPORT] No plugin available');
+            return;
+        }
+
+        debug('VIEWERS', '[EXPORT] Exporting measurements...');
+
+        // Get measurements from Mol* plugin state
+        // Mol* stores measurements in plugin.managers.structure.measurement
+        const measurementManager = plugin.managers.structure.measurement;
+        const entries = measurementManager.state.labels;
+
+        if (entries.length === 0) {
+            debug('VIEWERS', '[EXPORT] No measurements to export');
+            alert('No measurements to export. Create measurements using the Measure button first.');
+            return;
+        }
+
+        debug('VIEWERS', `[EXPORT] Found ${entries.length} measurement entries`);
+
+        // Build CSV content
+        const csvLines: string[] = ['Type,Label,Value,Unit'];
+
+        for (const entry of entries) {
+            // Access Mol* measurement cell properties via generic object access
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const entryAny = entry as any;
+            const type = entryAny.cell?.obj?.type?.name || 'measurement';
+            const label = entryAny.cell?.obj?.label || String(entries.indexOf(entry) + 1);
+            // Try to extract value from the label (Mol* formats like "3.45 Å")
+            const value = label;
+            const unit = label.includes('Å') ? 'Å' : label.includes('°') ? '°' : '';
+
+            csvLines.push(`"${type}","${label}","${value}","${unit}"`);
+            debug('VIEWERS', `[EXPORT] Added: ${type} - ${label}`);
+        }
+
+        const csvContent = csvLines.join('\n');
+
+        if (toClipboard) {
+            // Copy to clipboard
+            await navigator.clipboard.writeText(csvContent);
+            debug('VIEWERS', '[EXPORT] Measurements copied to clipboard');
+            alert('Measurements copied to clipboard!');
+        } else {
+            // Download as file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${activeStructure?.name || 'structure'}_measurements.csv`;
+            link.click();
+            URL.revokeObjectURL(url);
+            debug('VIEWERS', '[EXPORT] Measurements downloaded as CSV');
+        }
+    }, [activeStructure]);
+
     // Representation selector
     const handleRepresentationChange = (mode: RepresentationMode) => {
         dispatch(updateViewerSettings({ representation: mode }));
     };
+
 
     if (error) {
         return (
@@ -751,7 +812,22 @@ export default function MolStarViewer({ className = '' }: Props) {
                         Measure
                     </button>
 
+                    {/* Export Measurements to CSV */}
+                    <button
+                        onClick={() => exportMeasurements(false)}
+                        disabled={!isInitialized}
+                        className="text-xs px-2 py-1 rounded bg-slate-700 text-slate-300 hover:bg-slate-600 disabled:opacity-50"
+                        title="Export measurements to CSV file (or Shift+Click to copy to clipboard)"
+                        onContextMenu={(e) => {
+                            e.preventDefault();
+                            exportMeasurements(true);
+                        }}
+                    >
+                        CSV
+                    </button>
+
                     <div className="w-px h-4 bg-slate-600 mx-1" />
+
 
                     {/* Representation dropdown */}
                     <select

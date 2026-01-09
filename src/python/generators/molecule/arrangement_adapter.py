@@ -24,11 +24,18 @@ import numpy as np
 import logging
 import importlib.util
 
+import sys
+
 # New engines are in the same package - assume available, lazy import handles errors
 _ENGINE_AVAILABLE = True
 _UNIFIED_AVAILABLE = True
 
 logger = logging.getLogger(__name__)
+
+# Debug print helper - writes to stderr so stdout stays clean for JSON
+def debug(msg: str) -> None:
+    sys.stderr.write(f"[DEBUG arrangement_adapter] {msg}\n")
+    sys.stderr.flush()
 
 # Import legacy molecular cluster
 from .molecular_cluster import (
@@ -53,11 +60,10 @@ def _get_arrangement_engine():
     """Lazy load the molecular_arrangement_engine module."""
     global _arrangement_engine
     if _arrangement_engine is None and _ENGINE_AVAILABLE:
-        try:
-            from . import molecular_arrangement_engine as mae
-            _arrangement_engine = mae
-        except ImportError as e:
-            logger.warning(f"Could not import molecular_arrangement_engine: {e}")
+        debug("Lazy loading molecular_arrangement_engine...")
+        from . import molecular_arrangement_engine as mae
+        _arrangement_engine = mae
+        debug("molecular_arrangement_engine loaded successfully")
     return _arrangement_engine
 
 
@@ -65,11 +71,10 @@ def _get_unified_arrangement():
     """Lazy load the unified_molecular_arrangement module."""
     global _unified_arrangement
     if _unified_arrangement is None and _UNIFIED_AVAILABLE:
-        try:
-            from . import unified_molecular_arrangement as uma
-            _unified_arrangement = uma
-        except ImportError as e:
-            logger.warning(f"Could not import unified_molecular_arrangement: {e}")
+        debug("Lazy loading unified_molecular_arrangement...")
+        from . import unified_molecular_arrangement as uma
+        _unified_arrangement = uma
+        debug("unified_molecular_arrangement loaded successfully")
     return _unified_arrangement
 
 
@@ -397,6 +402,15 @@ def generate_molecular_cluster(
     Returns:
         Dict with structure, atoms, coords, metadata
     """
+    debug(f"generate_molecular_cluster called")
+    debug(f"  molecules: {molecules}")
+    debug(f"  stacking: {stacking}")
+    debug(f"  use_new_engine: {use_new_engine}")
+    debug(f"  formulas: {formulas}")
+    debug(f"  constraints: {constraints}")
+    debug(f"  use_solver: {use_solver}")
+    debug(f"  natural_language: {natural_language}")
+    
     # Check if we need the new engine
     needs_new = use_new_engine or _needs_new_engine(
         formulas=formulas,
@@ -405,61 +419,83 @@ def generate_molecular_cluster(
         natural_language=natural_language
     )
     
+    debug(f"needs_new_engine: {needs_new}")
+    
     if needs_new:
         # Use new engine
         engine = _get_arrangement_engine()
         if engine is None:
-            logger.warning("New engine requested but not available, falling back to legacy")
-            needs_new = False
-        else:
-            try:
-                # First, generate molecules from specs
-                mol_list = _generate_molecules(molecules)
+            debug("ERROR: New engine requested but not available")
+            return {
+                "success": False,
+                "error": {
+                    "code": "ENGINE_UNAVAILABLE",
+                    "message": "Advanced arrangement engine not available",
+                    "details": "molecular_arrangement_engine could not be loaded"
+                }
+            }
+        
+        debug("Using new arrangement engine")
+        
+        # First, generate molecules from specs
+        debug(f"Generating molecules from {len(molecules)} specifications...")
+        mol_list = _generate_molecules(molecules)
+        
+        if not mol_list:
+            debug("ERROR: No molecules could be generated")
+            return {
+                "success": False,
+                "error": {"code": "NO_MOLECULES", "message": "No molecules could be generated"}
+            }
+        
+        debug(f"Generated {len(mol_list)} molecules")
+        
+        # Arrange using new engine
+        debug(f"Arranging molecules with pattern: {stacking}")
+        result = _arrange_with_new_engine(
+            molecules=mol_list,
+            arrangement=stacking,
+            distance=intermolecular_distance,
+            formulas=formulas,
+            constraints=constraints,
+            use_solver=use_solver,
+            natural_language=natural_language,
+            validate=validate,
+            **kwargs
+        )
+        
+        debug(f"New engine result: success={result.get('success')}")
+        
+        # Convert to legacy output format for compatibility
+        if result.get("success"):
+            arranged = result.get("molecules", [])
+            debug(f"Arranged molecules count: {len(arranged)}")
+            
+            # Combine molecules
+            if arranged:
+                combined = combine_molecules(arranged)
+                combined = add_vacuum_box(combined, vacuum)
                 
-                if not mol_list:
-                    return {
-                        "success": False,
-                        "error": {"code": "NO_MOLECULES", "message": "No molecules could be generated"}
-                    }
+                debug(f"Combined structure: n_atoms={len(combined.get('atoms', []))}")
                 
-                # Arrange using new engine
-                result = _arrange_with_new_engine(
-                    molecules=mol_list,
-                    arrangement=stacking,
-                    distance=intermolecular_distance,
-                    formulas=formulas,
-                    constraints=constraints,
-                    use_solver=use_solver,
-                    natural_language=natural_language,
-                    validate=validate,
-                    **kwargs
+                # Build response in legacy format
+                response = _build_legacy_response(
+                    combined, 
+                    result, 
+                    vacuum,
+                    intermolecular_distance or 3.4
                 )
-                
-                # Convert to legacy output format for compatibility
-                if result.get("success"):
-                    arranged = result.get("molecules", [])
-                    
-                    # Combine molecules
-                    if arranged:
-                        combined = combine_molecules(arranged)
-                        combined = add_vacuum_box(combined, vacuum)
-                        
-                        # Build response in legacy format
-                        return _build_legacy_response(
-                            combined, 
-                            result, 
-                            vacuum,
-                            intermolecular_distance or 3.4
-                        )
-                
-                return result
-                
-            except Exception as e:
-                logger.error(f"New engine failed: {e}, falling back to legacy")
-                needs_new = False
+                debug(f"Built legacy response: success={response.get('success')}")
+                return response
+        
+        # If new engine failed, propagate error (no silent fallback)
+        if not result.get("success"):
+            debug(f"ERROR from new engine: {result.get('error')}")
+        return result
     
     # Use legacy molecular_cluster.py
-    return _legacy_generate_cluster(
+    debug("Using legacy molecular_cluster.py")
+    result = _legacy_generate_cluster(
         molecules=molecules,
         stacking=stacking,
         intermolecular_distance=intermolecular_distance,
@@ -475,6 +511,8 @@ def generate_molecular_cluster(
         optimize=optimize,
         vacuum=vacuum,
     )
+    debug(f"Legacy result: success={result.get('success')}")
+    return result
 
 
 def _build_legacy_response(

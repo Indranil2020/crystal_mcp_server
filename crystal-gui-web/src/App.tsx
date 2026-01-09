@@ -9,7 +9,7 @@
  * - Bottom: Status Bar
  */
 
-import { useEffect, useState, Suspense, lazy, useMemo } from 'react';
+import { useEffect, useState, Suspense, lazy, useMemo, useCallback } from 'react';
 import {
   Panel,
   Group as PanelGroup,
@@ -17,11 +17,15 @@ import {
 } from 'react-resizable-panels';
 import { useAppDispatch } from './store/hooks';
 import { setConnectionStatus, setTools, setError } from './store/mcpSlice';
+import { setLoading } from './store/structureSlice';
 import { mcpClient, llmClient, toolOrchestrator } from './services';
 import ChatPanel from './components/ChatPanel/ChatPanel';
 import Toolbar from './components/Toolbar/Toolbar';
 import StatusBar from './components/StatusBar/StatusBar';
 import { ViewerErrorBoundary } from './components/ViewerErrorBoundary';
+import { LoadingOverlay } from './components/LoadingOverlay';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+
 
 // Startup banner - runs immediately when module loads
 console.log('%c==============================================================', 'color: #4CAF50; font-weight: bold');
@@ -78,6 +82,19 @@ function App() {
 
   // Check WebGL support once at mount
   const hasWebGL = useMemo(() => checkWebGLSupport(), []);
+
+  // Cancel loading handler
+  const handleCancelLoading = useCallback(() => {
+    console.log('%c[App] [LOADING] User cancelled loading operation', 'color: #FF9800');
+    dispatch(setLoading(false));
+  }, [dispatch]);
+
+  // Global keyboard shortcuts
+  useKeyboardShortcuts({
+    enabled: true,
+    // Note: onExportScreenshot, onResetCamera, onToggleMeasurementMode 
+    // are handled by MolStarViewer which exposes these via refs or callbacks
+  });
 
   // Initialize connections on mount
   useEffect(() => {
@@ -192,6 +209,9 @@ function App() {
 
       {/* Status Bar */}
       <StatusBar />
+
+      {/* Global Loading Overlay */}
+      <LoadingOverlay onCancel={handleCancelLoading} />
     </div>
   );
 }
