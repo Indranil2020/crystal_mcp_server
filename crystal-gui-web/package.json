@@ -18,6 +18,7 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-redux": "^9.2.0",
+    "react-resizable-panels": "^4.3.1",
     "sass": "^1.97.2",
     "tailwindcss": "^4.1.18",
     "uuid": "^13.0.0"
