@@ -56,6 +56,7 @@ docs/molecule/testing_results.md
 
 # Test results and artifacts
 test-results/
+test-results.xml
 playwright-report/
 coverage/
 *.webp
