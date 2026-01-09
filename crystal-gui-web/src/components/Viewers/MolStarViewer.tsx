@@ -38,59 +38,66 @@ function logPluginState(plugin: PluginContext, label: string): void {
     debug('VIEWERS', `  - Structures loaded: ${plugin.managers.structure.hierarchy.current.structures.length}`);
     debug('VIEWERS', `  - Canvas3D initialized: ${!!plugin.canvas3d}`);
 }
-
 /**
- * Apply VMD/Jmol-style ball-and-stick representation with larger atom spheres
+ * Apply VMD/Jmol-style ball-and-stick representation
  * 
- * Key parameters:
- * - sizeFactor: 0.4 (larger balls, default is ~0.15)
- * - sizeAspectRatio: 0.88 (balls much larger than sticks, default is ~0.55)
- * 
- * This makes atoms appear as prominent spheres with thin bonds, like VMD/Jmol
+ * Chemistry-standard visualization:
+ * - CPK element coloring (O=red, H=white, C=grey, N=blue, S=yellow, etc.)
+ * - Large atom spheres (sizeFactor: 0.35)
+ * - Thin bond cylinders (sizeAspectRatio: 0.4)
+ * - Bonds colored by connected atom elements (bicolor effect)
  */
 async function applyVmdStyleBallStick(plugin: PluginContext): Promise<void> {
     const structures = plugin.managers.structure.hierarchy.current.structures;
     if (structures.length === 0) return;
 
+    debug('VIEWERS', '[CPK-STYLE] Applying chemistry-standard ball-and-stick...');
+
     for (const s of structures) {
-        const structRef = s.cell.transform.ref;
-
         try {
-            // Apply ball-and-stick preset first
-            await plugin.builders.structure.representation.applyPreset(structRef, 'ball-and-stick');
-
-            // Then update with VMD-style parameters
+            // Clear existing representations first
             const components = s.components;
             for (const component of components) {
                 if (component.representations) {
-                    for (const repr of component.representations) {
-                        const reprCell = repr.cell;
-                        if (reprCell && reprCell.obj) {
-                            try {
-                                // Update representation with VMD-style sizing
-                                await plugin.state.data.build().to(reprCell.transform.ref)
-                                    .update({
-                                        type: {
-                                            name: 'ball-and-stick',
-                                            params: {
-                                                sizeFactor: 0.4,        // Large atom spheres
-                                                sizeAspectRatio: 0.88,  // Atoms >> bonds
-                                            },
-                                        },
-                                    }).commit();
-                                debug('VIEWERS', '[VMD-STYLE] Applied sizeFactor=0.4, sizeAspectRatio=0.88');
-                            } catch {
-                                debug('VIEWERS', '[VMD-STYLE] Could not update repr params (may be different type)');
-                            }
+                    // Remove all existing representations
+                    const reprsToRemove = [...component.representations];
+                    for (const repr of reprsToRemove) {
+                        try {
+                            await plugin.state.data.build().delete(repr.cell.transform.ref).commit();
+                            debug('VIEWERS', '[CPK-STYLE] Removed existing representation');
+                        } catch {
+                            // Ignore removal errors
                         }
                     }
                 }
             }
+
+            // Now add fresh ball-and-stick with proper coloring
+            // Use the structure cell reference
+            const structCell = s.cell;
+            if (structCell && structCell.obj) {
+                await plugin.builders.structure.representation.addRepresentation(structCell.transform.ref, {
+                    type: 'ball-and-stick',
+                    typeParams: {
+                        sizeFactor: 0.35,       // Large atom spheres
+                        sizeAspectRatio: 0.4,   // Thin bonds relative to atoms
+                    },
+                    color: 'element-symbol',  // CPK coloring: O=red, H=white, C=grey, N=blue
+                });
+                debug('VIEWERS', '[CPK-STYLE] Added ball-and-stick with element-symbol coloring');
+            }
         } catch (err) {
-            debug('VIEWERS', `[VMD-STYLE] Error applying VMD style: ${err}`);
+            debug('VIEWERS', `[CPK-STYLE] Error: ${err}`);
+            // Fallback to preset
+            try {
+                await plugin.builders.structure.representation.applyPreset(s.cell.transform.ref, 'ball-and-stick');
+            } catch { /* ignore */ }
         }
     }
+
+    debug('VIEWERS', '[CPK-STYLE] Chemistry-standard visualization complete');
 }
+
 
 interface Props {
     className?: string;
@@ -481,39 +488,8 @@ export default function MolStarViewer({ className = '' }: Props) {
 
             try {
                 if (mode === 'ball-and-stick') {
-                    // VMD/Jmol-style ball-and-stick with larger atom spheres
-                    // First apply preset, then modify the representation parameters
-                    await plugin.builders.structure.representation.applyPreset(structRef, 'ball-and-stick');
-
-                    // Now update the representation with custom parameters
-                    // sizeFactor: 0.4 = larger balls (default ~0.15)
-                    // sizeAspectRatio: 0.9 = balls much larger than sticks (default ~0.55)
-                    const components = s.components;
-                    for (const component of components) {
-                        if (component.representations) {
-                            for (const repr of component.representations) {
-                                const reprCell = repr.cell;
-                                if (reprCell && reprCell.obj) {
-                                    try {
-                                        // Update ball-and-stick parameters for VMD-style
-                                        await plugin.state.data.build().to(reprCell.transform.ref)
-                                            .update({
-                                                type: {
-                                                    name: 'ball-and-stick',
-                                                    params: {
-                                                        sizeFactor: 0.4,       // Large spheres
-                                                        sizeAspectRatio: 0.88, // Balls >> sticks
-                                                    },
-                                                },
-                                            }).commit();
-                                        debug('VIEWERS', '[REPR] Applied VMD-style ball-and-stick (sizeFactor=0.4, sizeAspectRatio=0.88)');
-                                    } catch (updateErr) {
-                                        debug('VIEWERS', `[REPR] Could not update repr params: ${updateErr}`);
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    // Use VMD/Jmol-style with CPK coloring
+                    await applyVmdStyleBallStick(plugin);
                 } else if (mode === 'spacefill') {
                     await plugin.builders.structure.representation.applyPreset(structRef, 'spacefill');
                     debug('VIEWERS', '[REPR] Applied spacefill preset');
