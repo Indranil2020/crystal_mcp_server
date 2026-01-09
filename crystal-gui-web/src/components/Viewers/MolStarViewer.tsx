@@ -378,22 +378,32 @@ export default function MolStarViewer({ className = '' }: Props) {
         const plugin = pluginRef.current;
         if (!plugin) return;
 
-        // Map our representation modes to MolStar presets
-        const presetMap: Record<RepresentationMode, string> = {
-            'ball-and-stick': 'ball-and-stick',
-            'spacefill': 'spacefill',
-            'cartoon': 'cartoon',
-            'licorice': 'ball-and-stick', // Similar
-            'surface': 'molecular-surface',
-            'wireframe': 'ball-and-stick',
-        };
+        debug('VIEWERS', `[REPR] Updating representation to: ${mode}`);
 
         const structures = plugin.managers.structure.hierarchy.current.structures;
         for (const s of structures) {
-            await plugin.builders.structure.representation.applyPreset(
-                s.cell.transform.ref,
-                presetMap[mode] || 'ball-and-stick'
-            );
+            const structRef = s.cell.transform.ref;
+
+            // Map representation modes to MolStar presets
+            // Note: Users can customize appearance via the Mol* controls panel
+            const presetMap: Record<RepresentationMode, string> = {
+                'ball-and-stick': 'ball-and-stick',
+                'spacefill': 'spacefill',
+                'cartoon': 'cartoon',
+                'licorice': 'ball-and-stick',  // Mol* ball-and-stick with adjusted settings
+                'surface': 'molecular-surface',
+                'wireframe': 'ball-and-stick',
+            };
+
+            try {
+                await plugin.builders.structure.representation.applyPreset(
+                    structRef,
+                    presetMap[mode] || 'ball-and-stick'
+                );
+                debug('VIEWERS', `[REPR] Applied ${mode} representation preset`);
+            } catch (err) {
+                debug('VIEWERS', `[REPR] Failed to apply ${mode}: ${err}`);
+            }
         }
     }, []);
 
