@@ -234,8 +234,8 @@ export default function KekuleEditor({ className = '', onStructureChange }: Prop
     //     }
     // }, []);
 
-    // Push structure to 3D viewer via MDL MOL export (robust, preserves bonds)
-    const pushTo3D = useCallback(() => {
+    // Push structure to 3D viewer via backend RDKit (ensures chemically valid structures with H atoms)
+    const pushTo3D = useCallback(async () => {
         console.log('[KekuleEditor] pushTo3D() called');
 
         if (!composerRef.current || !window.Kekule) {
@@ -256,9 +256,7 @@ export default function KekuleEditor({ className = '', onStructureChange }: Prop
         const className = mol.getClassName ? mol.getClassName() : 'Unknown';
         console.log(`[KekuleEditor] Object type: ${className}`);
 
-        // Variables to track across all molecules
-        let totalAtomCount = 0;
-        const formulas: string[] = [];
+        // Collect all molecules for SMILES export
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const molecules: any[] = [];
 
@@ -267,109 +265,154 @@ export default function KekuleEditor({ className = '', onStructureChange }: Prop
             const childCount = mol.getChildCount ? mol.getChildCount() : 0;
             console.log(`[KekuleEditor] Wrapper has ${childCount} children`);
 
-            // Collect all molecules, count atoms, extract formulas
             for (let i = 0; i < childCount; i++) {
                 const child = mol.getChildAt(i);
                 const childClass = child?.getClassName?.() || '';
                 console.log(`[KekuleEditor]   Child ${i}: ${childClass}`);
-
                 if (childClass === 'Kekule.Molecule') {
                     molecules.push(child);
-
-                    // Count atoms in this molecule
-                    const atomCount = child.getNodeCount?.() || 0;
-                    totalAtomCount += atomCount;
-                    console.log(`[KekuleEditor]     Atoms: ${atomCount}`);
-
-                    // Extract formula
-                    if (child.calcFormula) {
-                        const formulaResult = child.calcFormula();
-                        if (formulaResult) {
-                            const formulaStr = typeof formulaResult === 'string'
-                                ? formulaResult
-                                : (formulaResult.getText?.() || formulaResult.toString?.() || '');
-                            if (formulaStr) {
-                                formulas.push(formulaStr);
-                                console.log(`[KekuleEditor]     Formula: ${formulaStr}`);
-                            }
-                        }
-                    }
                 }
             }
-
-            console.log(`[KekuleEditor] Total: ${molecules.length} molecule(s), ${totalAtomCount} atoms`);
 
             if (molecules.length === 0) {
                 console.warn('[KekuleEditor] No Molecule found in wrapper');
                 return;
             }
 
-            // For single molecule, use it directly (better Kekule export)
+            // For single molecule, use it directly
             if (molecules.length === 1) {
                 mol = molecules[0];
                 console.log('[KekuleEditor] Single molecule - using directly');
-            } else {
-                console.log('[KekuleEditor] Multiple molecules - keeping ChemDocument for export');
-                // Keep mol as ChemDocument - Kekule should export all children
             }
         } else {
-            // Direct molecule (not wrapped)
-            totalAtomCount = mol.getNodeCount?.() || 0;
-            console.log(`[KekuleEditor] Direct molecule - ${totalAtomCount} atoms`);
+            molecules.push(mol);
+        }
 
-            if (mol.calcFormula) {
-                const formulaResult = mol.calcFormula();
-                if (formulaResult) {
-                    const formulaStr = typeof formulaResult === 'string'
-                        ? formulaResult
-                        : (formulaResult.getText?.() || formulaResult.toString?.() || '');
-                    if (formulaStr) formulas.push(formulaStr);
+        // Export as SMILES for each molecule
+        console.log(`[KekuleEditor] Exporting ${molecules.length} molecule(s) to SMILES...`);
+        const smilesStrings: string[] = [];
+
+        for (let i = 0; i < molecules.length; i++) {
+            const m = molecules[i];
+            if (Kekule.IO?.saveFormatData) {
+                const smiles = Kekule.IO.saveFormatData(m, 'smi');
+                if (smiles && smiles.trim()) {
+                    smilesStrings.push(smiles.trim());
+                    console.log(`[KekuleEditor]   Molecule ${i}: ${smiles.trim()}`);
                 }
             }
         }
 
-        // Validate we have atoms
-        if (totalAtomCount === 0) {
-            console.warn('[KekuleEditor] No atoms found');
+        if (smilesStrings.length === 0) {
+            console.error('[KekuleEditor] Failed to export SMILES');
+            // Fallback to direct MOL export (without hydrogens)
+            console.warn('[KekuleEditor] Falling back to direct MOL export (no hydrogen saturation)');
+            await pushTo3DFallback(mol, Kekule);
             return;
         }
 
-        // Build combined formula
-        const combinedFormula = formulas.length > 0 ? formulas.join(' + ') : 'Molecule';
-        console.log(`[KekuleEditor] Combined formula: ${combinedFormula}`);
+        // Combine SMILES using dot notation for disconnected fragments
+        const combinedSmiles = smilesStrings.join('.');
+        console.log(`[KekuleEditor] Combined SMILES: ${combinedSmiles}`);
 
-        // Export as MDL MOL V2000 format
-        console.log('[KekuleEditor] Exporting to MDL MOL V2000...');
-        let molData: string | null = null;
-        if (Kekule.IO?.saveFormatData) {
-            molData = Kekule.IO.saveFormatData(mol, 'mol');
-            console.log(`[KekuleEditor] MOL export: ${molData?.length || 0} chars`);
-        } else {
-            console.error('[KekuleEditor] Kekule.IO.saveFormatData not available');
+        // Call backend to generate 3D structure with hydrogens
+        console.log('[KekuleEditor] Calling backend /chemistry/smiles-to-3d...');
+
+        const response = await fetch('http://localhost:8080/chemistry/smiles-to-3d', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                smiles: combinedSmiles,
+                optimize: true,
+                name: 'Drawn Molecule',
+            }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('[KekuleEditor] Backend error:', response.status, errorText);
+            // Fallback to direct MOL export
+            console.warn('[KekuleEditor] Falling back to direct MOL export (backend unavailable)');
+            await pushTo3DFallback(mol, Kekule);
             return;
         }
 
-        // Validate MOL export
-        if (!molData) {
-            console.error('[KekuleEditor] MOL export returned null');
-            return;
-        }
-        if (!molData.includes('V2000')) {
-            console.error('[KekuleEditor] MOL export invalid - no V2000 marker');
-            console.log('[KekuleEditor] MOL data:', molData.substring(0, 200));
-            return;
-        }
-        console.log('[KekuleEditor] MOL validation passed');
-        console.log('[KekuleEditor] MOL preview:', molData.substring(0, 150) + '...');
+        const result = await response.json();
+        console.log('[KekuleEditor] Backend response:', result);
+        console.log(`[KekuleEditor] Formula: ${result.formula}, Atoms: ${result.n_atoms} (${result.n_heavy_atoms} heavy)`);
 
-        // Create structure for Redux
+        // Log validation results
+        if (result.validation) {
+            console.log(`[KekuleEditor] Validation: valid=${result.validation.valid}`);
+            if (result.validation.warnings?.length > 0) {
+                console.warn('[KekuleEditor] Warnings:', result.validation.warnings);
+            }
+            if (result.validation.errors?.length > 0) {
+                console.error('[KekuleEditor] Errors:', result.validation.errors);
+            }
+        }
+
+        // Create structure for Redux with SDF data from backend
         const structure = {
             id: uuidv4(),
-            name: `Drawn: ${combinedFormula}`,
+            name: `Drawn: ${result.formula}`,
             data: {
                 lattice: { a: 20, b: 20, c: 20, alpha: 90, beta: 90, gamma: 90, matrix: [[20, 0, 0], [0, 20, 0], [0, 0, 20]] },
                 atoms: [],
-                metadata: { formula: combinedFormula, natoms: totalAtomCount },
+                metadata: {
+                    formula: result.formula,
+                    natoms: result.n_atoms,
+                    molecular_weight: result.molecular_weight,
+                    smiles: result.canonical_smiles,
+                    validation: result.validation,
+                },
+            },
+            molData: result.sdf,  // SDF with 3D coords and explicit H
+            format: 'mol' as const,
+            source: 'kekule' as const,
+            createdAt: Date.now(),
+            modifiedAt: Date.now(),
+            visible: true,
+        };
+
+        console.log(`[KekuleEditor] Structure: ${structure.name} (${result.n_atoms} atoms, ${result.sdf.length} bytes)`);
+        dispatch(addStructure(structure));
+        console.log('[KekuleEditor] ✅ Pushed to 3D with hydrogens:', structure.name);
+    }, [dispatch]);
+
+    // Fallback: Direct MOL export without backend (no hydrogen saturation)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pushTo3DFallback = async (mol: any, Kekule: any) => {
+        console.log('[KekuleEditor] pushTo3DFallback() - exporting without hydrogen saturation');
+
+        let molData: string | null = null;
+        if (Kekule.IO?.saveFormatData) {
+            molData = Kekule.IO.saveFormatData(mol, 'mol');
+        }
+
+        if (!molData || !molData.includes('V2000')) {
+            console.error('[KekuleEditor] Fallback MOL export failed');
+            return;
+        }
+
+        // Extract formula
+        let formula = 'Molecule';
+        if (mol.calcFormula) {
+            const formulaResult = mol.calcFormula();
+            if (formulaResult) {
+                formula = typeof formulaResult === 'string'
+                    ? formulaResult
+                    : (formulaResult.getText?.() || formulaResult.toString?.() || 'Molecule');
+            }
+        }
+
+        const structure = {
+            id: uuidv4(),
+            name: `Drawn: ${formula} (no H)`,
+            data: {
+                lattice: { a: 20, b: 20, c: 20, alpha: 90, beta: 90, gamma: 90, matrix: [[20, 0, 0], [0, 20, 0], [0, 0, 20]] },
+                atoms: [],
+                metadata: { formula, natoms: mol.getNodeCount?.() || 0 },
             },
             molData,
             format: 'mol' as const,
@@ -379,10 +422,9 @@ export default function KekuleEditor({ className = '', onStructureChange }: Prop
             visible: true,
         };
 
-        console.log(`[KekuleEditor] Structure: ${structure.name} (${totalAtomCount} atoms, ${molData.length} bytes)`);
         dispatch(addStructure(structure));
-        console.log('[KekuleEditor] ✅ Pushed to 3D:', structure.name);
-    }, [dispatch]);
+        console.log('[KekuleEditor] ✅ Pushed to 3D (fallback, no H):', structure.name);
+    };
 
     // Clear editor
     const clearEditor = useCallback(() => {
