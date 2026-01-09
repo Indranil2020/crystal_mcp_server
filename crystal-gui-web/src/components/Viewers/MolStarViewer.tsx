@@ -53,6 +53,7 @@ export default function MolStarViewer({ className = '' }: Props) {
     const isInitializingRef = useRef(false); // Track async initialization in progress
     const [isInitialized, setIsInitialized] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [isSelectionMode, setIsSelectionMode] = useState(false);  // Selection vs Focus mode
 
     // Check WebGL support
     const checkWebGLSupport = (): boolean => {
@@ -585,6 +586,33 @@ export default function MolStarViewer({ className = '' }: Props) {
                         title="Delete selected atoms (Del)"
                     >
                         DEL
+                    </button>
+
+                    {/* Selection Mode Toggle - CRITICAL for measurements */}
+                    <button
+                        onClick={() => {
+                            const plugin = pluginRef.current;
+                            if (!plugin) return;
+                            const newMode = !isSelectionMode;
+                            setIsSelectionMode(newMode);
+                            // Toggle between Selection Mode and Default Mode
+                            // In Selection Mode: click = select (for measurements)
+                            // In Default Mode: click = focus/zoom
+                            if (plugin.behaviors?.interaction?.selectionMode) {
+                                plugin.behaviors.interaction.selectionMode.next(newMode);
+                            }
+                            debug('VIEWERS', `[MODE] Selection Mode: ${newMode ? 'ON' : 'OFF'}`);
+                        }}
+                        disabled={!isInitialized}
+                        className={`text-xs px-2 py-1 rounded ${isSelectionMode
+                            ? 'bg-green-600 text-white'
+                            : 'bg-slate-700 text-slate-300'}
+                            hover:opacity-80 disabled:opacity-50`}
+                        title={isSelectionMode
+                            ? 'Selection Mode ON: Click atoms to SELECT (for measurements)'
+                            : 'Selection Mode OFF: Click atoms to FOCUS/ZOOM'}
+                    >
+                        {isSelectionMode ? 'Select ON' : 'Select'}
                     </button>
 
                     {/* Toggle Mol* Controls Panel (includes Measurements) */}
