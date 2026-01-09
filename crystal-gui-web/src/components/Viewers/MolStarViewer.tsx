@@ -39,6 +39,59 @@ function logPluginState(plugin: PluginContext, label: string): void {
     debug('VIEWERS', `  - Canvas3D initialized: ${!!plugin.canvas3d}`);
 }
 
+/**
+ * Apply VMD/Jmol-style ball-and-stick representation with larger atom spheres
+ * 
+ * Key parameters:
+ * - sizeFactor: 0.4 (larger balls, default is ~0.15)
+ * - sizeAspectRatio: 0.88 (balls much larger than sticks, default is ~0.55)
+ * 
+ * This makes atoms appear as prominent spheres with thin bonds, like VMD/Jmol
+ */
+async function applyVmdStyleBallStick(plugin: PluginContext): Promise<void> {
+    const structures = plugin.managers.structure.hierarchy.current.structures;
+    if (structures.length === 0) return;
+
+    for (const s of structures) {
+        const structRef = s.cell.transform.ref;
+
+        try {
+            // Apply ball-and-stick preset first
+            await plugin.builders.structure.representation.applyPreset(structRef, 'ball-and-stick');
+
+            // Then update with VMD-style parameters
+            const components = s.components;
+            for (const component of components) {
+                if (component.representations) {
+                    for (const repr of component.representations) {
+                        const reprCell = repr.cell;
+                        if (reprCell && reprCell.obj) {
+                            try {
+                                // Update representation with VMD-style sizing
+                                await plugin.state.data.build().to(reprCell.transform.ref)
+                                    .update({
+                                        type: {
+                                            name: 'ball-and-stick',
+                                            params: {
+                                                sizeFactor: 0.4,        // Large atom spheres
+                                                sizeAspectRatio: 0.88,  // Atoms >> bonds
+                                            },
+                                        },
+                                    }).commit();
+                                debug('VIEWERS', '[VMD-STYLE] Applied sizeFactor=0.4, sizeAspectRatio=0.88');
+                            } catch {
+                                debug('VIEWERS', '[VMD-STYLE] Could not update repr params (may be different type)');
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (err) {
+            debug('VIEWERS', `[VMD-STYLE] Error applying VMD style: ${err}`);
+        }
+    }
+}
+
 interface Props {
     className?: string;
 }
@@ -53,7 +106,7 @@ export default function MolStarViewer({ className = '' }: Props) {
     const isInitializingRef = useRef(false); // Track async initialization in progress
     const [isInitialized, setIsInitialized] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [isSelectionMode, setIsSelectionMode] = useState(false);  // Selection vs Focus mode
+    const [isSelectionMode, setIsSelectionMode] = useState(true);  // Selection mode ON by default for measurements
 
     // Check WebGL support
     const checkWebGLSupport = (): boolean => {
@@ -136,6 +189,24 @@ export default function MolStarViewer({ className = '' }: Props) {
                 pluginRef.current = plugin;
                 setIsInitialized(true);
                 setError(null);
+
+                // FUNDAMENTAL CONFIGURATION: Set picking granularity to 'element' (atom level)
+                // Default is 'residue' which prevents individual atom selection
+                try {
+                    plugin.managers.interactivity.setProps({ granularity: 'element' });
+                    console.log('[MolStarViewer] Set picking granularity to ELEMENT (atom level)');
+                } catch (e) {
+                    console.warn('[MolStarViewer] Could not set interactivity granularity:', e);
+                }
+
+                // Enable selection mode by default for measurements workflow
+                try {
+                    plugin.behaviors.interaction.selectionMode.next(true);
+                    console.log('[MolStarViewer] Enabled selection mode by default');
+                } catch (e) {
+                    console.warn('[MolStarViewer] Could not enable selection mode:', e);
+                }
+
                 console.log('[MolStarViewer] ========================================');
                 console.log('[MolStarViewer] Plugin initialized SUCCESSFULLY');
                 console.log('[MolStarViewer] Container children count after init:', container.childElementCount);
@@ -284,6 +355,15 @@ export default function MolStarViewer({ className = '' }: Props) {
                 debug('VIEWERS', '  [SUCCESS] STRUCTURE LOADED FROM MOLDATA');
                 setError(null);
                 plugin.managers.camera.reset();
+
+                // Apply VMD-style ball-stick representation
+                debug('VIEWERS', '  [STYLE] Applying VMD-style ball-and-stick...');
+                await applyVmdStyleBallStick(plugin);
+
+                // Ensure picking granularity is element-level
+                try {
+                    plugin.managers.interactivity.setProps({ granularity: 'element' });
+                } catch { /* ignore */ }
             } else {
                 debug('VIEWERS', '  [ERROR] No structures after molData loading');
                 setError(`Failed to render: ${structure.name}`);
@@ -365,6 +445,15 @@ export default function MolStarViewer({ className = '' }: Props) {
             debug('VIEWERS', `  [SUCCESS] Structure "${structure.name}" is now visible`);
             setError(null);
             plugin.managers.camera.reset();
+
+            // Apply VMD-style ball-stick representation
+            debug('VIEWERS', '  [STYLE] Applying VMD-style ball-and-stick...');
+            await applyVmdStyleBallStick(plugin);
+
+            // Ensure picking granularity is element-level for atom selection
+            try {
+                plugin.managers.interactivity.setProps({ granularity: 'element' });
+            } catch { /* ignore */ }
         } else {
             debug('VIEWERS', '  [ERROR] Structure loading failed - no structures in viewer');
             setError(`Failed to render: ${structure.name}`);
@@ -373,36 +462,80 @@ export default function MolStarViewer({ className = '' }: Props) {
         debug('VIEWERS', '═'.repeat(60));
     }, []);
 
-    // Update visual representation
+    // Update visual representation - VMD/Jmol-style ball-and-stick
+    // Uses custom sizeFactor and sizeAspectRatio for prominent atom spheres
     const updateRepresentation = useCallback(async (mode: RepresentationMode) => {
         const plugin = pluginRef.current;
         if (!plugin) return;
 
-        debug('VIEWERS', `[REPR] Updating representation to: ${mode}`);
+        debug('VIEWERS', `[REPR] Updating representation to: ${mode} (VMD-style)`);
 
         const structures = plugin.managers.structure.hierarchy.current.structures;
+        if (structures.length === 0) {
+            debug('VIEWERS', '[REPR] No structures loaded');
+            return;
+        }
+
         for (const s of structures) {
             const structRef = s.cell.transform.ref;
 
-            // Map representation modes to MolStar presets
-            // Note: Users can customize appearance via the Mol* controls panel
-            const presetMap: Record<RepresentationMode, string> = {
-                'ball-and-stick': 'ball-and-stick',
-                'spacefill': 'spacefill',
-                'cartoon': 'cartoon',
-                'licorice': 'ball-and-stick',  // Mol* ball-and-stick with adjusted settings
-                'surface': 'molecular-surface',
-                'wireframe': 'ball-and-stick',
-            };
-
             try {
-                await plugin.builders.structure.representation.applyPreset(
-                    structRef,
-                    presetMap[mode] || 'ball-and-stick'
-                );
-                debug('VIEWERS', `[REPR] Applied ${mode} representation preset`);
+                if (mode === 'ball-and-stick') {
+                    // VMD/Jmol-style ball-and-stick with larger atom spheres
+                    // First apply preset, then modify the representation parameters
+                    await plugin.builders.structure.representation.applyPreset(structRef, 'ball-and-stick');
+
+                    // Now update the representation with custom parameters
+                    // sizeFactor: 0.4 = larger balls (default ~0.15)
+                    // sizeAspectRatio: 0.9 = balls much larger than sticks (default ~0.55)
+                    const components = s.components;
+                    for (const component of components) {
+                        if (component.representations) {
+                            for (const repr of component.representations) {
+                                const reprCell = repr.cell;
+                                if (reprCell && reprCell.obj) {
+                                    try {
+                                        // Update ball-and-stick parameters for VMD-style
+                                        await plugin.state.data.build().to(reprCell.transform.ref)
+                                            .update({
+                                                type: {
+                                                    name: 'ball-and-stick',
+                                                    params: {
+                                                        sizeFactor: 0.4,       // Large spheres
+                                                        sizeAspectRatio: 0.88, // Balls >> sticks
+                                                    },
+                                                },
+                                            }).commit();
+                                        debug('VIEWERS', '[REPR] Applied VMD-style ball-and-stick (sizeFactor=0.4, sizeAspectRatio=0.88)');
+                                    } catch (updateErr) {
+                                        debug('VIEWERS', `[REPR] Could not update repr params: ${updateErr}`);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else if (mode === 'spacefill') {
+                    await plugin.builders.structure.representation.applyPreset(structRef, 'spacefill');
+                    debug('VIEWERS', '[REPR] Applied spacefill preset');
+                } else if (mode === 'cartoon') {
+                    await plugin.builders.structure.representation.applyPreset(structRef, 'cartoon');
+                    debug('VIEWERS', '[REPR] Applied cartoon preset');
+                } else if (mode === 'surface') {
+                    await plugin.builders.structure.representation.applyPreset(structRef, 'molecular-surface');
+                    debug('VIEWERS', '[REPR] Applied molecular-surface preset');
+                } else {
+                    // Fallback to ball-and-stick
+                    await plugin.builders.structure.representation.applyPreset(structRef, 'ball-and-stick');
+                    debug('VIEWERS', '[REPR] Applied ball-and-stick preset (fallback)');
+                }
             } catch (err) {
                 debug('VIEWERS', `[REPR] Failed to apply ${mode}: ${err}`);
+                // Fallback to simple preset
+                try {
+                    await plugin.builders.structure.representation.applyPreset(structRef, 'ball-and-stick');
+                } catch {
+                    debug('VIEWERS', '[REPR] Fallback also failed');
+                }
             }
         }
     }, []);
