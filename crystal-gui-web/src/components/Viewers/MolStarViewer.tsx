@@ -116,8 +116,8 @@ export default function MolStarViewer({ className = '' }: Props) {
                         layout: {
                             initial: {
                                 isExpanded: false,
-                                showControls: false,
-                                controlsDisplay: 'reactive',
+                                showControls: true,  // Enable full Mol* UI with Measurements, Components, etc.
+                                controlsDisplay: 'landscape',  // Better layout for controls
                             },
                         },
                     },
