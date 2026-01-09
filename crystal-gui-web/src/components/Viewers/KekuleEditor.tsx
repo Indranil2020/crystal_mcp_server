@@ -256,84 +256,130 @@ export default function KekuleEditor({ className = '', onStructureChange }: Prop
         const className = mol.getClassName ? mol.getClassName() : 'Unknown';
         console.log(`[KekuleEditor] Object type: ${className}`);
 
-        // Unwrap ChemDocument/ChemSpace wrapper to get the actual Molecule
+        // Variables to track across all molecules
+        let totalAtomCount = 0;
+        const formulas: string[] = [];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const molecules: any[] = [];
+
+        // Handle ChemDocument/ChemSpace wrapper
         if (className === 'Kekule.ChemDocument' || className === 'Kekule.ChemSpace') {
             const childCount = mol.getChildCount ? mol.getChildCount() : 0;
             console.log(`[KekuleEditor] Wrapper has ${childCount} children`);
 
-            let foundMol = null;
+            // Collect all molecules, count atoms, extract formulas
             for (let i = 0; i < childCount; i++) {
                 const child = mol.getChildAt(i);
                 const childClass = child?.getClassName?.() || '';
                 console.log(`[KekuleEditor]   Child ${i}: ${childClass}`);
+
                 if (childClass === 'Kekule.Molecule') {
-                    foundMol = child;
-                    break;
+                    molecules.push(child);
+
+                    // Count atoms in this molecule
+                    const atomCount = child.getNodeCount?.() || 0;
+                    totalAtomCount += atomCount;
+                    console.log(`[KekuleEditor]     Atoms: ${atomCount}`);
+
+                    // Extract formula
+                    if (child.calcFormula) {
+                        const formulaResult = child.calcFormula();
+                        if (formulaResult) {
+                            const formulaStr = typeof formulaResult === 'string'
+                                ? formulaResult
+                                : (formulaResult.getText?.() || formulaResult.toString?.() || '');
+                            if (formulaStr) {
+                                formulas.push(formulaStr);
+                                console.log(`[KekuleEditor]     Formula: ${formulaStr}`);
+                            }
+                        }
+                    }
                 }
             }
 
-            if (!foundMol) {
+            console.log(`[KekuleEditor] Total: ${molecules.length} molecule(s), ${totalAtomCount} atoms`);
+
+            if (molecules.length === 0) {
                 console.warn('[KekuleEditor] No Molecule found in wrapper');
                 return;
             }
-            mol = foundMol;
-            console.log('[KekuleEditor] Extracted Molecule from wrapper');
+
+            // For single molecule, use it directly (better Kekule export)
+            if (molecules.length === 1) {
+                mol = molecules[0];
+                console.log('[KekuleEditor] Single molecule - using directly');
+            } else {
+                console.log('[KekuleEditor] Multiple molecules - keeping ChemDocument for export');
+                // Keep mol as ChemDocument - Kekule should export all children
+            }
+        } else {
+            // Direct molecule (not wrapped)
+            totalAtomCount = mol.getNodeCount?.() || 0;
+            console.log(`[KekuleEditor] Direct molecule - ${totalAtomCount} atoms`);
+
+            if (mol.calcFormula) {
+                const formulaResult = mol.calcFormula();
+                if (formulaResult) {
+                    const formulaStr = typeof formulaResult === 'string'
+                        ? formulaResult
+                        : (formulaResult.getText?.() || formulaResult.toString?.() || '');
+                    if (formulaStr) formulas.push(formulaStr);
+                }
+            }
         }
 
-        // Validate molecule has atoms
-        const nodeCount = mol.getNodeCount?.() || 0;
-        console.log(`[KekuleEditor] Molecule has ${nodeCount} atoms`);
-        if (nodeCount === 0) {
-            console.warn('[KekuleEditor] Molecule has no atoms');
+        // Validate we have atoms
+        if (totalAtomCount === 0) {
+            console.warn('[KekuleEditor] No atoms found');
             return;
         }
 
-        // Export as MDL MOL V2000 format (preserves bonds, stereochemistry)
+        // Build combined formula
+        const combinedFormula = formulas.length > 0 ? formulas.join(' + ') : 'Molecule';
+        console.log(`[KekuleEditor] Combined formula: ${combinedFormula}`);
+
+        // Export as MDL MOL V2000 format
+        console.log('[KekuleEditor] Exporting to MDL MOL V2000...');
         let molData: string | null = null;
         if (Kekule.IO?.saveFormatData) {
             molData = Kekule.IO.saveFormatData(mol, 'mol');
-            console.log('[KekuleEditor] Exported MOL data:', molData?.substring(0, 100) + '...');
+            console.log(`[KekuleEditor] MOL export: ${molData?.length || 0} chars`);
         } else {
             console.error('[KekuleEditor] Kekule.IO.saveFormatData not available');
             return;
         }
 
         // Validate MOL export
-        if (!molData || !molData.includes('V2000')) {
-            console.error('[KekuleEditor] MOL export failed or invalid format');
+        if (!molData) {
+            console.error('[KekuleEditor] MOL export returned null');
             return;
         }
-
-        // Extract formula for naming
-        let formula = 'Molecule';
-        if (mol.calcFormula) {
-            const formulaResult = mol.calcFormula();
-            // calcFormula may return a MolecularFormula object, string, or null
-            if (formulaResult) {
-                formula = typeof formulaResult === 'string'
-                    ? formulaResult
-                    : (formulaResult.getText?.() || formulaResult.toString?.() || 'Molecule');
-            }
+        if (!molData.includes('V2000')) {
+            console.error('[KekuleEditor] MOL export invalid - no V2000 marker');
+            console.log('[KekuleEditor] MOL data:', molData.substring(0, 200));
+            return;
         }
-        console.log(`[KekuleEditor] Formula: ${formula}`);
+        console.log('[KekuleEditor] MOL validation passed');
+        console.log('[KekuleEditor] MOL preview:', molData.substring(0, 150) + '...');
 
-        // Create structure for Redux with raw MOL data
+        // Create structure for Redux
         const structure = {
             id: uuidv4(),
-            name: `Drawn: ${formula}`,
+            name: `Drawn: ${combinedFormula}`,
             data: {
                 lattice: { a: 20, b: 20, c: 20, alpha: 90, beta: 90, gamma: 90, matrix: [[20, 0, 0], [0, 20, 0], [0, 0, 20]] },
-                atoms: [],  // Empty - viewer will use molData instead
-                metadata: { formula, natoms: nodeCount },
+                atoms: [],
+                metadata: { formula: combinedFormula, natoms: totalAtomCount },
             },
-            molData,         // Raw MDL MOL string
-            format: 'mol' as const,  // Format identifier for viewer
+            molData,
+            format: 'mol' as const,
             source: 'kekule' as const,
             createdAt: Date.now(),
             modifiedAt: Date.now(),
             visible: true,
         };
 
+        console.log(`[KekuleEditor] Structure: ${structure.name} (${totalAtomCount} atoms, ${molData.length} bytes)`);
         dispatch(addStructure(structure));
         console.log('[KekuleEditor] ✅ Pushed to 3D:', structure.name);
     }, [dispatch]);
