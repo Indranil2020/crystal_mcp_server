@@ -13,6 +13,7 @@ import { updateViewerSettings, setSelection, deleteAtoms } from '../../store/str
 import { structureToCif } from '../../converters';
 import { debug } from '../../debug';
 import type { Structure, RepresentationMode } from '../../types';
+import { Tooltip } from '../common/Tooltip';
 
 // MolStar imports
 import { createPluginUI } from 'molstar/lib/mol-plugin-ui';
@@ -756,157 +757,162 @@ export default function MolStarViewer({ className = '' }: Props) {
 
                 <div className="flex items-center gap-2">
                     {/* Delete selection */}
-                    <button
-                        onClick={() => selection && activeStructureId && dispatch(deleteAtoms({
-                            structureId: activeStructureId,
-                            atomIndices: selection.atomIndices
-                        }))}
-                        disabled={!selection || selection.atomIndices.length === 0}
-                        className="text-xs px-2 py-1 rounded bg-red-900/50 text-red-200 hover:bg-red-800 disabled:opacity-50 disabled:bg-slate-700 disabled:text-slate-500"
-                        title="Delete selected atoms (Del)"
-                    >
-                        DEL
-                    </button>
+                    <Tooltip content="Delete selected atoms (Del)" position="top">
+                        <button
+                            onClick={() => selection && activeStructureId && dispatch(deleteAtoms({
+                                structureId: activeStructureId,
+                                atomIndices: selection.atomIndices
+                            }))}
+                            disabled={!selection || selection.atomIndices.length === 0}
+                            className="text-xs px-2 py-1 rounded bg-red-900/50 text-red-200 hover:bg-red-800 disabled:opacity-50 disabled:bg-slate-700 disabled:text-slate-500"
+                        >
+                            DEL
+                        </button>
+                    </Tooltip>
 
-                    {/* Selection Mode Toggle - CRITICAL for measurements */}
-                    <button
-                        onClick={() => {
-                            const plugin = pluginRef.current;
-                            if (!plugin) return;
-                            const newMode = !isSelectionMode;
-                            setIsSelectionMode(newMode);
-                            // Toggle between Selection Mode and Default Mode
-                            // In Selection Mode: click = select (for measurements)
-                            // In Default Mode: click = focus/zoom
-                            if (plugin.behaviors?.interaction?.selectionMode) {
-                                plugin.behaviors.interaction.selectionMode.next(newMode);
-                            }
-                            debug('VIEWERS', `[MODE] Selection Mode: ${newMode ? 'ON' : 'OFF'}`);
-                        }}
-                        disabled={!isInitialized}
-                        className={`text-xs px-2 py-1 rounded ${isSelectionMode
-                            ? 'bg-green-600 text-white'
-                            : 'bg-slate-700 text-slate-300'}
-                            hover:opacity-80 disabled:opacity-50`}
-                        title={isSelectionMode
-                            ? 'Selection Mode ON: Click atoms to SELECT (for measurements)'
-                            : 'Selection Mode OFF: Click atoms to FOCUS/ZOOM'}
-                    >
-                        {isSelectionMode ? 'Select ON' : 'Select'}
-                    </button>
+                    {/* Selection Mode Toggle */}
+                    <Tooltip content="Toggle selection mode (Click atoms to select)" position="top">
+                        <button
+                            onClick={() => {
+                                const plugin = pluginRef.current;
+                                if (!plugin) return;
+                                const newMode = !isSelectionMode;
+                                setIsSelectionMode(newMode);
+                                if (plugin.behaviors?.interaction?.selectionMode) {
+                                    plugin.behaviors.interaction.selectionMode.next(newMode);
+                                }
+                                debug('VIEWERS', `[MODE] Selection Mode: ${newMode ? 'ON' : 'OFF'}`);
+                            }}
+                            disabled={!isInitialized}
+                            className={`text-xs px-2 py-1 rounded ${isSelectionMode
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-slate-700 text-slate-300'
+                                } disabled:opacity-50`}
+                        >
+                            {isSelectionMode ? 'Select ON' : 'Select'}
+                        </button>
+                    </Tooltip>
 
-                    {/* Toggle Mol* Controls Panel (includes Measurements) */}
-                    <button
-                        onClick={() => {
-                            const plugin = pluginRef.current;
-                            if (!plugin) return;
-                            // Toggle the controls panel visibility
-                            const isExpanded = plugin.layout.state.isExpanded;
-                            plugin.layout.setProps({ isExpanded: !isExpanded, showControls: true });
-                            debug('VIEWERS', `[CONTROLS] Toggled controls: ${!isExpanded}`);
-                        }}
-                        disabled={!isInitialized}
-                        className="text-xs px-2 py-1 rounded bg-purple-700 text-white hover:bg-purple-600 disabled:opacity-50"
-                        title="Toggle Mol* controls panel (Measurements, selections, etc.)"
-                    >
-                        Measure
-                    </button>
+                    {/* Measure / Controls Toggle */}
+                    <Tooltip content="Toggle detailed Mol* controls (Measurements, Components)" position="top">
+                        <button
+                            onClick={() => {
+                                const plugin = pluginRef.current;
+                                if (!plugin) return;
+                                const isExpanded = plugin.layout.state.isExpanded;
+                                plugin.layout.setProps({ isExpanded: !isExpanded, showControls: true });
+                                debug('VIEWERS', `[CONTROLS] Toggled controls: ${!isExpanded}`);
+                            }}
+                            disabled={!isInitialized}
+                            className="text-xs px-2 py-1 rounded bg-purple-700 text-white hover:bg-purple-600 disabled:opacity-50"
+                        >
+                            Measure
+                        </button>
+                    </Tooltip>
 
-                    {/* Export Measurements to CSV */}
-                    <button
-                        onClick={() => exportMeasurements(false)}
-                        disabled={!isInitialized}
-                        className="text-xs px-2 py-1 rounded bg-slate-700 text-slate-300 hover:bg-slate-600 disabled:opacity-50"
-                        title="Export measurements to CSV file (or Shift+Click to copy to clipboard)"
-                        onContextMenu={(e) => {
-                            e.preventDefault();
-                            exportMeasurements(true);
-                        }}
-                    >
-                        CSV
-                    </button>
+                    {/* Export Measurements */}
+                    <Tooltip content="Export measurements to CSV (Shift+Click to copy)" position="top">
+                        <button
+                            onClick={() => exportMeasurements(false)}
+                            disabled={!isInitialized}
+                            className="text-xs px-2 py-1 rounded bg-slate-700 text-slate-300 hover:bg-slate-600 disabled:opacity-50"
+                            onContextMenu={(e) => {
+                                e.preventDefault();
+                                exportMeasurements(true);
+                            }}
+                        >
+                            CSV
+                        </button>
+                    </Tooltip>
 
                     <div className="w-px h-4 bg-slate-600 mx-1" />
 
+                    {/* Representation */}
+                    <Tooltip content="Change molecular representation style" position="top">
+                        <select
+                            value={viewerSettings.representation}
+                            onChange={e => handleRepresentationChange(e.target.value as RepresentationMode)}
+                            className="text-xs bg-slate-700 text-slate-200 rounded px-2 py-1 border border-slate-600"
+                        >
+                            <option value="ball-and-stick">Ball & Stick</option>
+                            <option value="spacefill">Spacefill</option>
+                            <option value="licorice">Licorice</option>
+                            <option value="wireframe">Wireframe</option>
+                            <option value="surface">Surface</option>
+                        </select>
+                    </Tooltip>
 
-                    {/* Representation dropdown */}
-                    <select
-                        value={viewerSettings.representation}
-                        onChange={e => handleRepresentationChange(e.target.value as RepresentationMode)}
-                        className="text-xs bg-slate-700 text-slate-200 rounded px-2 py-1 border border-slate-600"
-                    >
-                        <option value="ball-and-stick">Ball & Stick</option>
-                        <option value="spacefill">Spacefill</option>
-                        <option value="licorice">Licorice</option>
-                        <option value="wireframe">Wireframe</option>
-                        <option value="surface">Surface</option>
-                    </select>
-
-                    {/* Unit cell toggle */}
-                    <button
-                        onClick={() => dispatch(updateViewerSettings({ showUnitCell: !viewerSettings.showUnitCell }))}
-                        className={`text-xs px-2 py-1 rounded ${viewerSettings.showUnitCell
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-slate-700 text-slate-300'
-                            }`}
-                    >
-                        Cell
-                    </button>
+                    {/* Unit Cell */}
+                    <Tooltip content="Toggle crystal unit cell box (Shortcut: C)" position="top">
+                        <button
+                            onClick={() => dispatch(updateViewerSettings({ showUnitCell: !viewerSettings.showUnitCell }))}
+                            className={`text-xs px-2 py-1 rounded ${viewerSettings.showUnitCell
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-slate-700 text-slate-300'
+                                }`}
+                        >
+                            Cell
+                        </button>
+                    </Tooltip>
 
                     {/* Screenshot */}
-                    <button
-                        onClick={exportScreenshot}
-                        disabled={!activeStructure}
-                        className="text-xs px-2 py-1 rounded bg-slate-700 text-slate-300 hover:bg-slate-600 disabled:opacity-50"
-                    >
-                        IMG
-                    </button>
+                    <Tooltip content="Save screenshot as PNG (Shortcut: Ctrl+S)" position="top">
+                        <button
+                            onClick={exportScreenshot}
+                            disabled={!activeStructure}
+                            className="text-xs px-2 py-1 rounded bg-slate-700 text-slate-300 hover:bg-slate-600 disabled:opacity-50"
+                        >
+                            IMG
+                        </button>
+                    </Tooltip>
 
                     <div className="w-px h-4 bg-slate-600 mx-1" />
 
                     {/* Session Save */}
-                    <button
-                        onClick={async () => {
-                            const plugin = pluginRef.current;
-                            if (!plugin) return;
-                            debug('VIEWERS', '[SESSION] Saving session...');
-                            const state = plugin.state.data.getSnapshot();
-                            localStorage.setItem('molstar-session', JSON.stringify(state));
-                            debug('VIEWERS', '[SESSION] Session saved to localStorage');
-                        }}
-                        disabled={!isInitialized}
-                        className="text-xs px-2 py-1 rounded bg-slate-700 text-slate-300 hover:bg-slate-600 disabled:opacity-50"
-                        title="Save viewer session"
-                    >
-                        Save
-                    </button>
+                    <Tooltip content="Save current view state to browser storage" position="top">
+                        <button
+                            onClick={async () => {
+                                const plugin = pluginRef.current;
+                                if (!plugin) return;
+                                debug('VIEWERS', '[SESSION] Saving session...');
+                                const state = plugin.state.data.getSnapshot();
+                                localStorage.setItem('molstar-session', JSON.stringify(state));
+                                debug('VIEWERS', '[SESSION] Session saved to localStorage');
+                            }}
+                            disabled={!isInitialized}
+                            className="text-xs px-2 py-1 rounded bg-slate-700 text-slate-300 hover:bg-slate-600 disabled:opacity-50"
+                        >
+                            Save
+                        </button>
+                    </Tooltip>
 
                     {/* Session Load */}
-                    <button
-                        onClick={async () => {
-                            const plugin = pluginRef.current;
-                            if (!plugin) return;
-                            debug('VIEWERS', '[SESSION] Loading session...');
-                            const saved = localStorage.getItem('molstar-session');
-                            if (saved) {
-                                const state = JSON.parse(saved);
-                                await plugin.state.data.setSnapshot(state);
-                                debug('VIEWERS', '[SESSION] Session restored from localStorage');
-                            } else {
-                                debug('VIEWERS', '[SESSION] No saved session found');
-                            }
-                        }}
-                        disabled={!isInitialized}
-                        className="text-xs px-2 py-1 rounded bg-slate-700 text-slate-300 hover:bg-slate-600 disabled:opacity-50"
-                        title="Load saved session"
-                    >
-                        Load
-                    </button>
-                </div>
-            </div>
+                    <Tooltip content="Load saved state from browser storage" position="top">
+                        <button
+                            onClick={async () => {
+                                const plugin = pluginRef.current;
+                                if (!plugin) return;
+                                debug('VIEWERS', '[SESSION] Loading session...');
+                                const saved = localStorage.getItem('molstar-session');
+                                if (saved) {
+                                    const state = JSON.parse(saved);
+                                    await plugin.state.data.setSnapshot(state);
+                                    debug('VIEWERS', '[SESSION] Session restored from localStorage');
+                                } else {
+                                    debug('VIEWERS', '[SESSION] No saved session found');
+                                }
+                            }}
+                            disabled={!isInitialized}
+                            className="text-xs px-2 py-1 rounded bg-slate-700 text-slate-300 hover:bg-slate-600 disabled:opacity-50"
+                        >
+                            Load
+                        </button>
+                    </Tooltip>
+                </div >
+            </div >
 
             {/* MolStar Container - completely managed by Mol*, React must not touch its children */}
-            <div className="flex-1 relative">
+            < div className="flex-1 relative" >
                 <div
                     ref={containerRef}
                     className="absolute inset-0"
@@ -914,24 +920,28 @@ export default function MolStarViewer({ className = '' }: Props) {
                 />
 
                 {/* Overlay messages - separate from Mol* container */}
-                {!isInitialized && !error && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-slate-900 pointer-events-none">
-                        <div className="text-center text-slate-400">
-                            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                            <p className="text-sm">Initializing MolStar...</p>
+                {
+                    !isInitialized && !error && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-slate-900 pointer-events-none">
+                            <div className="text-center text-slate-400">
+                                <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                                <p className="text-sm">Initializing MolStar...</p>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )
+                }
 
-                {isInitialized && !activeStructure && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <div className="text-center text-slate-500">
-                            <p className="text-lg">No structure loaded</p>
-                            <p className="text-sm mt-2">Generate a molecule using the chat</p>
+                {
+                    isInitialized && !activeStructure && (
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <div className="text-center text-slate-500">
+                                <p className="text-lg">No structure loaded</p>
+                                <p className="text-sm mt-2">Generate a molecule using the chat</p>
+                            </div>
                         </div>
-                    </div>
-                )}
-            </div>
-        </div>
+                    )
+                }
+            </div >
+        </div >
     );
 }

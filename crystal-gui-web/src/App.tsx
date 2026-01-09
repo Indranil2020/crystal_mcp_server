@@ -24,7 +24,9 @@ import Toolbar from './components/Toolbar/Toolbar';
 import StatusBar from './components/StatusBar/StatusBar';
 import { ViewerErrorBoundary } from './components/ViewerErrorBoundary';
 import { LoadingOverlay } from './components/LoadingOverlay';
+import { WelcomeTutorial } from './components/WelcomeTutorial';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+
 
 
 // Startup banner - runs immediately when module loads
@@ -206,6 +208,9 @@ function App() {
           </Panel>
         )}
       </PanelGroup>
+
+      {/* Welcome Tutorial */}
+      <WelcomeTutorial />
 
       {/* Status Bar */}
       <StatusBar />
