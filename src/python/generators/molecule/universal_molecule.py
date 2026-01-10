@@ -44,9 +44,11 @@ from .small_molecules import MOLECULE_DATABASE
 
 # Import unified molecule database (SQLite-based)
 from .molecule_database import (
-    MoleculeDatabase, 
-    get_molecule_database, 
-    lookup_molecule as db_lookup_molecule
+    MoleculeDatabase,
+    get_molecule_database,
+    lookup_molecule as db_lookup_molecule,
+    ChemicalNameNormalizer,
+    IUPACFragmentParser,
 )
 
 logger = logging.getLogger(__name__)
@@ -743,30 +745,235 @@ def generate_molecule_universal(
                     
                     return result
     
-    # All methods failed
-    return {
+    # All methods failed - provide smart suggestions
+    return _build_error_response(identifier, input_type)
+
+
+def _build_error_response(identifier: str, input_type: str) -> Dict[str, Any]:
+    """
+    Build a detailed error response with smart suggestions.
+
+    Uses multiple strategies to provide helpful suggestions:
+    1. Normalize the query (fix misspellings, expand abbreviations)
+    2. Parse IUPAC fragments to understand the intended structure
+    3. Query database for similar names
+    4. Suggest related molecules based on structural hints
+    """
+    error_response: Dict[str, Any] = {
         "success": False,
         "error": {
             "code": "MOLECULE_NOT_FOUND",
             "message": f"Could not resolve molecule: {identifier}",
             "detected_type": input_type,
-            "suggestions": [
-                "Check spelling of the molecule name",
-                "Try the IUPAC systematic name",
-                "Provide the SMILES string directly",
-                f"Search PubChem for '{identifier}' to find the correct identifier"
-            ]
+            "suggestions": [],
+            "similar_molecules": [],
+            "structural_hints": {},
         }
     }
+
+    # Step 1: Check for normalization suggestions
+    normalized = ChemicalNameNormalizer.normalize(identifier)
+    if normalized != identifier.lower().strip():
+        error_response["error"]["normalized_query"] = normalized
+        error_response["error"]["suggestions"].append(
+            f"Try the normalized form: '{normalized}'"
+        )
+
+    # Check if it's a known misspelling
+    if identifier.lower() in ChemicalNameNormalizer.MISSPELLINGS:
+        corrected = ChemicalNameNormalizer.MISSPELLINGS[identifier.lower()]
+        error_response["error"]["suggestions"].insert(0,
+            f"Did you mean '{corrected}'? (common misspelling)"
+        )
+
+    # Check if it's an abbreviation
+    if identifier.lower() in ChemicalNameNormalizer.ABBREVIATIONS:
+        expanded = ChemicalNameNormalizer.ABBREVIATIONS[identifier.lower()]
+        error_response["error"]["suggestions"].insert(0,
+            f"'{identifier}' expands to '{expanded}' - try the full name"
+        )
+
+    # Step 2: Parse IUPAC structure for hints
+    parsed = IUPACFragmentParser.parse(identifier)
+    if parsed.get("recognized"):
+        hints = error_response["error"]["structural_hints"]
+
+        if parsed.get("parent"):
+            parent_info = parsed["parent"]
+            hints["parent_structure"] = parent_info["name"]
+            hints["parent_smiles"] = parent_info.get("smiles", "")
+            error_response["error"]["suggestions"].append(
+                f"Recognized parent structure: {parent_info['name']} ({parent_info.get('type', '')})"
+            )
+
+        if parsed.get("prefixes"):
+            hints["substituents"] = [p["name"] for p in parsed["prefixes"]]
+            substituent_str = ", ".join(hints["substituents"])
+            error_response["error"]["suggestions"].append(
+                f"Recognized substituents: {substituent_str}"
+            )
+
+        if parsed.get("suffixes"):
+            hints["functional_groups"] = [s["type"] for s in parsed["suffixes"]]
+            fg_str = ", ".join(hints["functional_groups"])
+            error_response["error"]["suggestions"].append(
+                f"Recognized functional groups: {fg_str}"
+            )
+
+        # Suggest related molecules based on parsed structure
+        related_names = IUPACFragmentParser.suggest_related_names(parsed)
+        if related_names:
+            error_response["error"]["suggestions"].append(
+                f"Try these related molecules: {', '.join(related_names[:5])}"
+            )
+
+    # Step 3: Query database for similar names
+    db = get_molecule_database()
+    fuzzy_result = db.find_suggestions(identifier, max_results=5, min_similarity=0.3)
+
+    if fuzzy_result.get("suggestions"):
+        for sugg in fuzzy_result["suggestions"][:5]:
+            error_response["error"]["similar_molecules"].append({
+                "name": sugg["name"],
+                "smiles": sugg["smiles"],
+                "score": sugg["score"],
+                "match_type": sugg["match_type"],
+            })
+
+        top_match = fuzzy_result["suggestions"][0]
+        error_response["error"]["suggestions"].insert(0,
+            f"Best match: '{top_match['name']}' (score: {top_match['score']:.2f}) - "
+            f"SMILES: {top_match['smiles']}"
+        )
+
+    # Add alternative query suggestions from IUPAC analysis
+    if fuzzy_result.get("alternative_queries"):
+        alt_queries = [q for q in fuzzy_result["alternative_queries"]
+                      if not q.startswith("Try providing")]
+        if alt_queries:
+            error_response["error"]["suggestions"].append(
+                f"Alternative search terms: {', '.join(alt_queries[:5])}"
+            )
+
+    # Step 4: Add generic helpful suggestions
+    generic_suggestions = [
+        "Provide the SMILES string directly for exact structure",
+        "Try the IUPAC systematic name",
+        f"Search PubChem for '{identifier}' to find the correct identifier",
+        "Use the PubChem CID (numeric ID) if known",
+    ]
+
+    # Only add generic suggestions if we don't have many specific ones
+    current_count = len(error_response["error"]["suggestions"])
+    for sugg in generic_suggestions:
+        if current_count >= 6:
+            break
+        if sugg not in error_response["error"]["suggestions"]:
+            error_response["error"]["suggestions"].append(sugg)
+            current_count += 1
+
+    return error_response
+
+
+def suggest_molecules(
+    query: str,
+    max_results: int = 10,
+    include_smiles: bool = True,
+) -> Dict[str, Any]:
+    """
+    Suggest similar molecule names based on a query.
+
+    This function is designed to be called by LLMs when a molecule name
+    resolution fails. It provides:
+    - Fuzzy matching suggestions from the database
+    - IUPAC fragment analysis to understand structure
+    - Normalization suggestions (misspellings, abbreviations)
+
+    Args:
+        query: The molecule name to search for
+        max_results: Maximum number of suggestions
+        include_smiles: Whether to include SMILES in results
+
+    Returns:
+        Dict with suggestions and analysis
+    """
+    result = {
+        "query": query,
+        "suggestions": [],
+        "normalization": {},
+        "iupac_analysis": {},
+        "alternative_queries": [],
+    }
+
+    # Normalization
+    normalized = ChemicalNameNormalizer.normalize(query)
+    variations = ChemicalNameNormalizer.get_variations(query)
+
+    result["normalization"] = {
+        "original": query,
+        "normalized": normalized,
+        "was_corrected": normalized != query.lower().strip(),
+        "variations": variations,
+    }
+
+    if query.lower() in ChemicalNameNormalizer.MISSPELLINGS:
+        result["normalization"]["misspelling_correction"] = \
+            ChemicalNameNormalizer.MISSPELLINGS[query.lower()]
+
+    if query.lower() in ChemicalNameNormalizer.ABBREVIATIONS:
+        result["normalization"]["abbreviation_expansion"] = \
+            ChemicalNameNormalizer.ABBREVIATIONS[query.lower()]
+
+    # IUPAC analysis
+    parsed = IUPACFragmentParser.parse(query)
+    if parsed.get("recognized"):
+        parent_info = parsed.get("parent") or {}
+        result["iupac_analysis"] = {
+            "recognized": True,
+            "parent": parent_info.get("name") if parent_info else None,
+            "parent_smiles": parent_info.get("smiles") if parent_info else None,
+            "prefixes": [p["name"] for p in parsed.get("prefixes", [])],
+            "suffixes": [s["type"] for s in parsed.get("suffixes", [])],
+            "positions": parsed.get("positions", []),
+        }
+        result["alternative_queries"] = IUPACFragmentParser.suggest_related_names(parsed)
+
+    # Database suggestions
+    db = get_molecule_database()
+    fuzzy_result = db.find_suggestions(query, max_results=max_results)
+
+    for sugg in fuzzy_result.get("suggestions", []):
+        suggestion_entry = {
+            "name": sugg["name"],
+            "score": sugg["score"],
+            "match_type": sugg["match_type"],
+        }
+        if include_smiles:
+            suggestion_entry["smiles"] = sugg.get("smiles", "")
+        if sugg.get("pubchem_cid"):
+            suggestion_entry["pubchem_cid"] = sugg["pubchem_cid"]
+        result["suggestions"].append(suggestion_entry)
+
+    # Add database alternative queries
+    if fuzzy_result.get("alternative_queries"):
+        for alt in fuzzy_result["alternative_queries"]:
+            if alt not in result["alternative_queries"]:
+                result["alternative_queries"].append(alt)
+
+    return result
 
 
 def get_supported_molecules() -> Dict[str, Any]:
     """
     Get information about supported molecule generation capabilities.
-    
+
     Returns:
         Dict with local database contents and supported input types
     """
+    # Get database stats
+    db = get_molecule_database()
+    db_stats = db.stats()
+
     return {
         "local_database": list(MOLECULE_DATABASE.keys()),
         "local_aliases": list(MOLECULE_ALIASES.keys()),
@@ -779,5 +986,11 @@ def get_supported_molecules() -> Dict[str, Any]:
             "name_resolution": REQUESTS_AVAILABLE,
             "iupac_resolution": REQUESTS_AVAILABLE,
             "3d_optimization": RDKIT_AVAILABLE,
-        }
+            "fuzzy_matching": True,
+            "iupac_fragment_parsing": True,
+            "misspelling_correction": True,
+            "phonetic_matching": True,
+        },
+        "database_stats": db_stats,
+        "known_abbreviations": list(ChemicalNameNormalizer.ABBREVIATIONS.keys()),
     }

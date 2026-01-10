@@ -35,6 +35,7 @@ import { handleGenerateNanostructure } from "./tools/generation/nanostructure.js
 import { handleExploreSymmetryRelations } from "./tools/analysis/symmetry-relations.js";
 import { handleBuildMolecule } from "./tools/generation/build-molecule.js";
 import { handleBuildMolecularCluster } from "./tools/generation/build-molecular-cluster.js";
+import { handleSuggestMolecules } from "./tools/generation/suggest-molecules.js";
 import { handleCreateAlloy } from "./tools/transformation/alloy.js";
 import { handleCreateHeterostructure } from "./tools/transformation/heterostructure.js";
 import { handleAddAdsorbate } from "./tools/transformation/adsorbate.js";
@@ -163,6 +164,9 @@ export function createServer(): Server {
 
       case "build_molecular_cluster":
         return await handleBuildMolecularCluster(args);
+
+      case "suggest_molecules":
+        return await handleSuggestMolecules(args);
 
       case "create_alloy":
         return await handleCreateAlloy(args);

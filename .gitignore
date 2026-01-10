@@ -80,3 +80,4 @@ Thumbs.db
 *.local.json
 crystal-gui-web/tests/e2e/screenshots/
 dist/
+debug_arrangement.log

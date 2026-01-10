@@ -656,6 +656,33 @@ export type BuildMoleculeInput = z.infer<typeof BuildMoleculeSchema>;
 
 
 /**
+ * Schema for suggest_molecules tool
+ *
+ * Provides intelligent molecule name suggestions when exact match fails.
+ * Uses multiple strategies:
+ * - Fuzzy string matching (trigram similarity)
+ * - Phonetic matching (sounds-like)
+ * - IUPAC fragment recognition
+ * - Chemical name normalization (misspellings, abbreviations)
+ */
+export const SuggestMoleculesSchema = z.object({
+  query: z.string()
+    .describe("The molecule name to search for. Can be a partial name, misspelling, abbreviation, or IUPAC fragment."),
+
+  max_results: z.number().int().min(1).max(50).default(10).optional()
+    .describe("Maximum number of suggestions to return (default: 10)"),
+
+  include_smiles: z.boolean().default(true).optional()
+    .describe("Whether to include SMILES strings in results (default: true)"),
+
+  min_similarity: z.number().min(0).max(1).default(0.3).optional()
+    .describe("Minimum similarity score for suggestions (0-1, default: 0.3)")
+});
+
+export type SuggestMoleculesInput = z.infer<typeof SuggestMoleculesSchema>;
+
+
+/**
  * Schema for build_molecular_cluster tool
  * 
  * Generate molecular clusters for quantum chemistry:
@@ -1000,6 +1027,22 @@ export const TOOL_DEFINITIONS: readonly ToolMetadata[] = [
     inputSchema: BuildMolecularClusterSchema,
     annotations: {
       readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true
+    }
+  },
+  {
+    name: "suggest_molecules",
+    description: "Find similar molecule names when exact match fails. " +
+      "Use this tool when build_molecule fails to resolve a molecule name, or when the user asks for suggestions. " +
+      "Provides: fuzzy matching (typos), phonetic matching (sounds-like), IUPAC fragment analysis, " +
+      "misspelling corrections (asprin→aspirin), and abbreviation expansion (THF→tetrahydrofuran). " +
+      "Returns ranked suggestions with SMILES strings that can be used with build_molecule. " +
+      "Example: suggest_molecules({query: '1,4-phenylene-2,3-dicarboximide'}) might suggest 'phthalimide' or similar structures.",
+    inputSchema: SuggestMoleculesSchema,
+    annotations: {
+      readOnlyHint: true,
       destructiveHint: false,
       idempotentHint: true,
       openWorldHint: true
