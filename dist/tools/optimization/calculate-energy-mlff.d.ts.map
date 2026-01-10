@@ -1,1 +1,0 @@
-{"version":3,"file":"calculate-energy-mlff.d.ts","sourceRoot":"","sources":["../../../src/tools/optimization/calculate-energy-mlff.ts"],"names":[],"mappings":"AAAA;;;;GAIG;AAGH,OAAO,EAAE,MAAM,EAA+E,MAAM,uBAAuB,CAAC;AAG5H,wBAAsB,mBAAmB,CAAC,KAAK,EAAE,OAAO,GAAG,OAAO,CAAC,MAAM,CAAC,GAAG,CAAC,CAAC,CAiD9E;AAED,wBAAsB,yBAAyB,CAAC,IAAI,EAAE,OAAO,GAAG,OAAO,CAAC,GAAG,CAAC,CAwD3E"}

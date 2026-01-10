@@ -1,1 +1,0 @@
-{"version":3,"file":"alloy.d.ts","sourceRoot":"","sources":["../../../src/tools/transformation/alloy.ts"],"names":[],"mappings":"AAAA;;;;GAIG;AAGH,OAAO,EAAE,MAAM,EAA+D,MAAM,uBAAuB,CAAC;AAI5G,wBAAsB,WAAW,CAAC,KAAK,EAAE,OAAO,GAAG,OAAO,CAAC,MAAM,CAAC,GAAG,CAAC,CAAC,CAqCtE;AAED,wBAAsB,iBAAiB,CAAC,IAAI,EAAE,OAAO,GAAG,OAAO,CAAC,GAAG,CAAC,CAmCnE"}

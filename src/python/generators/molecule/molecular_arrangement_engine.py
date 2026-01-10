@@ -54,10 +54,19 @@ import sys
 from collections import defaultdict
 
 
-# Debug print helper - writes to stderr so stdout stays clean for JSON
+# Debug setup
+DEBUG_LOG_FILE = "/home/niel/git/crystal-mcp-server/debug_arrangement.log"
+
 def debug(msg: str) -> None:
+    # Write to stderr for realtime visibility
     sys.stderr.write(f"[DEBUG molecular_arrangement_engine] {msg}\n")
     sys.stderr.flush()
+    # Write to log file for audit
+    try:
+        with open(DEBUG_LOG_FILE, "a") as f:
+            f.write(f"[DEBUG molecular_arrangement_engine] {msg}\n")
+    except Exception:
+        pass
 
 
 
@@ -452,6 +461,12 @@ class AtomSelector:
             idx1 = args.get("arg0", 0)
             idx2 = args.get("arg1", 1)
             return coords[idx2] - coords[idx1]
+        
+        elif target == "carbonyl":
+            return self._find_carbonyl_oxygen(coords, atoms)
+            
+        elif target == "amide":
+            return self._find_amide_nitrogen(coords, atoms)
         
         else:
             raise ValueError(f"Unknown selector target: {target}")
@@ -878,7 +893,11 @@ class ConstraintSolver:
             total_violation = sum(c.evaluate(self.molecules, self.poses) 
                                  for c in self.constraints)
             
+            if iteration % 100 == 0:
+                debug(f"Solver iteration {iteration}: violation={total_violation:.6f}, step={step_size:.6f}")
+
             if total_violation < tolerance:
+                debug(f"Solver converged at iteration {iteration} with violation {total_violation:.6f}")
                 break
             
             # Compute numerical gradient for each pose
@@ -1252,6 +1271,7 @@ class NLArrangementParser:
         
         # Detect arrangement pattern
         result['pattern'] = self._detect_pattern(text_lower)
+        debug(f"NL Parser: detected pattern '{result['pattern']}' from text: '{text[:50]}...'")
         
         # Extract additional parameters based on pattern
         if result['pattern'] in ['helical', 'helix']:
@@ -1296,6 +1316,12 @@ class NLArrangementParser:
                 if kw_normalized in text:
                     return pattern_name
         
+        # Check for planar/planner (PTCDA/sheet like) -> map to linear for dimers
+        if 'planner' in text or 'planar' in text:
+            # If large count, maybe grid? For now map to linear/grid based on N?
+            # Default to linear (side-by-side)
+            return 'linear'
+        
         # Check for specific molecule counts
         if 'dimer' in text:
             if 't-shape' in text or 't shape' in text:
@@ -1315,6 +1341,9 @@ def parse_arrangement_request(text: str) -> Dict[str, Any]:
     """
     parser = NLArrangementParser()
     return parser.parse(text)
+
+
+
 
 
 # =============================================================================
@@ -1555,6 +1584,18 @@ def generate_molecular_cluster(
                 distance = parsed['distance']
             kwargs.update(parsed.get('parameters', {}))
             debug(f"NL parsed: pattern={arrangement}, distance={distance}")
+            
+            # Update molecule count if inferred from NL
+            if parsed.get('n_molecules') and parsed['n_molecules'] > n:
+                target_n = parsed['n_molecules']
+                debug(f"Resizing molecule list from {n} to {target_n} based on NL")
+                if n == 1:
+                     # Clone the single molecule
+                     template = molecules[0]
+                     molecules = [template.copy() for _ in range(target_n)]
+                     n = target_n
+                else:
+                     debug(f"WARNING: Cannot resize {n} heterogeneous molecules to {target_n}")
     
     # Set default distance
     if distance is None:
@@ -1693,7 +1734,7 @@ def _generate_pattern(pattern: str, n: int, distance: float,
         orientations = generate_face_center_orientations(positions, facing="outward")
         return positions, orientations
     
-    elif pattern_lower in ['grid', 'planar']:
+    elif pattern_lower in ['grid', 'planar', 'planner', 'sheet']:
         positions = generate_grid_positions(n, distance)
         orientations = generate_fixed_orientations(n)
         return positions, orientations
@@ -1749,46 +1790,75 @@ def _parse_constraint_string(s: str) -> Optional[Constraint]:
     func_name = match.group(1).lower()
     args_str = match.group(2)
     
-    # Parse arguments
+    # Parse arguments with parenthesis awareness
+    args = []
+    current_arg = []
+    paren_depth = 0
+    
+    for char in args_str:
+        if char == ',' and paren_depth == 0:
+            args.append("".join(current_arg).strip())
+            current_arg = []
+        else:
+            if char == '(':
+                paren_depth += 1
+            elif char == ')':
+                paren_depth -= 1
+            current_arg.append(char)
+    if current_arg:
+        args.append("".join(current_arg).strip())
+    
     kwargs = {}
-    for part in args_str.split(","):
-        part = part.strip()
+    positional_idx = 0
+    
+    for part in args:
         if "=" in part:
-            k, v = part.split("=", 1)
-            k = k.strip()
-            v = v.strip()
-            if v.replace(".", "").replace("-", "").isdigit():
-                kwargs[k] = float(v)
-            else:
-                kwargs[k] = v.strip("'\"")
+             # Heuristic to check if it's a kwarg (key=value) vs selector with = inside?
+             # Selectors shouldn't have = outside parens usually.
+             k, v = part.split("=", 1)
+             k = k.strip()
+             v = v.strip()
+             if v.replace(".", "").replace("-", "").isdigit():
+                 kwargs[k] = float(v)
+             else:
+                 kwargs[k] = v.strip("'\"")
+        else:
+             # Positional argument
+             val = part
+             if val.replace(".", "").replace("-", "").isdigit():
+                 val = float(val)
+             else:
+                 val = val.strip("'\"")
+             kwargs[f"arg{positional_idx}"] = val
+             positional_idx += 1
     
     if func_name == "distance":
         return DistanceConstraint(
-            selector1=kwargs.get('sel1', '0:centroid()'),
-            selector2=kwargs.get('sel2', '1:centroid()'),
-            target=kwargs.get('target'),
+            selector1=kwargs.get('sel1', kwargs.get('arg0', '0:centroid()')),
+            selector2=kwargs.get('sel2', kwargs.get('arg1', '1:centroid()')),
+            target=kwargs.get('target', kwargs.get('arg2')),
             min_dist=kwargs.get('min'),
             max_dist=kwargs.get('max')
         )
     
     elif func_name == "angle":
         return AngleConstraint(
-            selector1=kwargs.get('sel1', '0:centroid()'),
-            selector2=kwargs.get('sel2', '1:centroid()'),
-            selector3=kwargs.get('sel3', '2:centroid()'),
-            target=kwargs.get('target')
+            selector1=kwargs.get('sel1', kwargs.get('arg0', '0:centroid()')),
+            selector2=kwargs.get('sel2', kwargs.get('arg1', '1:centroid()')),
+            selector3=kwargs.get('sel3', kwargs.get('arg2', '2:centroid()')),
+            target=kwargs.get('target', kwargs.get('arg3'))
         )
     
     elif func_name in ["h_bond", "hbond"]:
         return HBondConstraint(
-            donor_mol=int(kwargs.get('donor', 0)),
-            acceptor_mol=int(kwargs.get('acceptor', 1))
+            donor_mol=int(kwargs.get('donor', kwargs.get('arg0', 0))),
+            acceptor_mol=int(kwargs.get('acceptor', kwargs.get('arg1', 1)))
         )
     
     elif func_name in ["plane_parallel", "parallel"]:
         return PlaneAlignmentConstraint(
-            mol1=int(kwargs.get('mol1', 0)),
-            mol2=int(kwargs.get('mol2', 1)),
+            mol1=int(kwargs.get('mol1', kwargs.get('arg0', 0))),
+            mol2=int(kwargs.get('mol2', kwargs.get('arg1', 1))),
             mode="parallel"
         )
     
