@@ -31,12 +31,15 @@ export async function handleComprehensiveGenerate(
     const validatedArgs = parsed.data;
 
     // Execute Python script
+    console.error(`[MCP DEBUG] 🔄 Executing comprehensive_structures.py for operation: ${validatedArgs.operation}`);
+
     const result = await executePythonWithJSON(
         "comprehensive_structures.py",
         validatedArgs
     );
 
     if (!result.success) {
+        console.error(`[MCP DEBUG] ❌ Python execution failed: ${result.error.message}`);
         return {
             content: [
                 {
@@ -47,6 +50,8 @@ export async function handleComprehensiveGenerate(
             isError: true
         };
     }
+
+    console.error(`[MCP DEBUG] ✅ Python execution successful`);
 
     // Handle errors returned from Python
     const data = result.data;
@@ -107,7 +112,7 @@ export async function handleComprehensiveGenerate(
     }
 
     // Return formatted result
-    
+
     // Include raw JSON data for the frontend viewer
     // Note: 'structure' variable here currently holds the full response object 'data'
     // We need to extract the actual structure dictionary if it exists

@@ -20,6 +20,8 @@ export async function buildMolecule(input: unknown): Promise<Result<any>> {
         ));
     }
 
+    console.error(`[MCP DEBUG] 🔄 Executing molecule_generator.py for ${parsed.data.name || 'custom structure'}`);
+
     const result = await executePythonWithJSON<typeof parsed.data, any>(
         "molecule_generator.py",
         parsed.data,
@@ -27,12 +29,15 @@ export async function buildMolecule(input: unknown): Promise<Result<any>> {
     );
 
     if (!result.success) {
+        console.error(`[MCP DEBUG] ❌ Python execution failed: ${result.error.message}`);
         return createFailure(result.error);
     }
 
     const pythonResult = result.data;
+    console.error(`[MCP DEBUG] ✅ Python execution successful. Result success: ${pythonResult.success}`);
 
     if (!pythonResult.success) {
+        console.error(`[MCP DEBUG] ❌ Python logical error: ${pythonResult.error?.message}`);
         return createFailure(createError(
             CrystalErrorCode.GENERATION_FAILED,
             pythonResult.error.message || "Failed to generate molecule",

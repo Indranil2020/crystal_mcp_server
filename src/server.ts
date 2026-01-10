@@ -105,6 +105,10 @@ export function createServer(): Server {
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
 
+    // DEBUG: Log all tool calls
+    console.error(`[MCP DEBUG] 📞 Request received: Tool='${name}'`);
+    console.error(`[MCP DEBUG] 📦 Arguments: ${JSON.stringify(args, null, 2)}`);
+
     switch (name) {
       case "comprehensive_generate":
         return await handleComprehensiveGenerate(args);

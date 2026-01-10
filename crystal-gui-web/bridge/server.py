@@ -68,7 +68,7 @@ class McpProcess:
             ["node", str(MCP_SERVER_PATH)],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stderr=sys.stderr, # Direct stderr to console for visibility
             text=True,
             bufsize=1,
         )

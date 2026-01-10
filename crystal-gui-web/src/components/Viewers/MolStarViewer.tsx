@@ -757,7 +757,7 @@ export default function MolStarViewer({ className = '' }: Props) {
 
                 <div className="flex items-center gap-2">
                     {/* Delete selection */}
-                    <Tooltip content="Delete selected atoms (Del)" position="top">
+                    <Tooltip content="Delete selected atoms (Del)" position="bottom">
                         <button
                             onClick={() => selection && activeStructureId && dispatch(deleteAtoms({
                                 structureId: activeStructureId,
@@ -771,7 +771,7 @@ export default function MolStarViewer({ className = '' }: Props) {
                     </Tooltip>
 
                     {/* Selection Mode Toggle */}
-                    <Tooltip content="Toggle selection mode (Click atoms to select)" position="top">
+                    <Tooltip content="Toggle selection mode (Click atoms to select)" position="bottom">
                         <button
                             onClick={() => {
                                 const plugin = pluginRef.current;
@@ -794,7 +794,7 @@ export default function MolStarViewer({ className = '' }: Props) {
                     </Tooltip>
 
                     {/* Measure / Controls Toggle */}
-                    <Tooltip content="Toggle detailed Mol* controls (Measurements, Components)" position="top">
+                    <Tooltip content="Toggle detailed Mol* controls (Measurements)" position="bottom">
                         <button
                             onClick={() => {
                                 const plugin = pluginRef.current;
@@ -811,7 +811,7 @@ export default function MolStarViewer({ className = '' }: Props) {
                     </Tooltip>
 
                     {/* Export Measurements */}
-                    <Tooltip content="Export measurements to CSV (Shift+Click to copy)" position="top">
+                    <Tooltip content="Export measurements to CSV (Shift+Click to copy)" position="bottom">
                         <button
                             onClick={() => exportMeasurements(false)}
                             disabled={!isInitialized}
@@ -828,7 +828,7 @@ export default function MolStarViewer({ className = '' }: Props) {
                     <div className="w-px h-4 bg-slate-600 mx-1" />
 
                     {/* Representation */}
-                    <Tooltip content="Change molecular representation style" position="top">
+                    <Tooltip content="Change molecular representation style" position="bottom">
                         <select
                             value={viewerSettings.representation}
                             onChange={e => handleRepresentationChange(e.target.value as RepresentationMode)}
@@ -843,7 +843,7 @@ export default function MolStarViewer({ className = '' }: Props) {
                     </Tooltip>
 
                     {/* Unit Cell */}
-                    <Tooltip content="Toggle crystal unit cell box (Shortcut: C)" position="top">
+                    <Tooltip content="Toggle crystal unit cell box (Shortcut: C)" position="bottom">
                         <button
                             onClick={() => dispatch(updateViewerSettings({ showUnitCell: !viewerSettings.showUnitCell }))}
                             className={`text-xs px-2 py-1 rounded ${viewerSettings.showUnitCell
@@ -856,7 +856,7 @@ export default function MolStarViewer({ className = '' }: Props) {
                     </Tooltip>
 
                     {/* Screenshot */}
-                    <Tooltip content="Save screenshot as PNG (Shortcut: Ctrl+S)" position="top">
+                    <Tooltip content="Save screenshot as PNG (Shortcut: Ctrl+S)" position="bottom">
                         <button
                             onClick={exportScreenshot}
                             disabled={!activeStructure}
@@ -869,7 +869,7 @@ export default function MolStarViewer({ className = '' }: Props) {
                     <div className="w-px h-4 bg-slate-600 mx-1" />
 
                     {/* Session Save */}
-                    <Tooltip content="Save current view state to browser storage" position="top">
+                    <Tooltip content="Save current view state to browser storage" position="bottom">
                         <button
                             onClick={async () => {
                                 const plugin = pluginRef.current;
@@ -887,7 +887,7 @@ export default function MolStarViewer({ className = '' }: Props) {
                     </Tooltip>
 
                     {/* Session Load */}
-                    <Tooltip content="Load saved state from browser storage" position="top">
+                    <Tooltip content="Load saved state from browser storage" position="bottom">
                         <button
                             onClick={async () => {
                                 const plugin = pluginRef.current;

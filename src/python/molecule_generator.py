@@ -83,6 +83,7 @@ def _cached_molecule_lookup(name: str, input_type: str, optimize: bool) -> Tuple
     
     # Try universal molecule generation first (supports ~130M+ molecules)
     if UNIVERSAL_AVAILABLE:
+        _debug_log("LOOKUP", f"Trying universal generator for '{name}'...")
         result = generate_molecule_universal(
             identifier=name,
             input_type=input_type,
@@ -92,11 +93,15 @@ def _cached_molecule_lookup(name: str, input_type: str, optimize: bool) -> Tuple
         
         if result.get("success"):
             source = result.get("source", "universal")
+            _debug_log("SUCCESS", f"Found via universal generator (Source: {source})")
             return (True, json.dumps({"result": result, "source": source}))
+        else:
+             _debug_log("FAIL", f"Universal generator failed: {result.get('error')}")
     
     # Fallback to ASE for molecules in g2 database
     if ASE_AVAILABLE:
         if g2 and name in g2.names:
+            _debug_log("SUCCESS", f"Found in ASE G2 database: '{name}'")
             atoms = ase_molecule(name)
             atoms.center(vacuum=10.0)
             result = {
@@ -107,6 +112,7 @@ def _cached_molecule_lookup(name: str, input_type: str, optimize: bool) -> Tuple
             return (True, json.dumps({"result": result, "source": "ase_g2", "ase_atoms": True}))
         
         if name in extra:
+            _debug_log("SUCCESS", f"Found in ASE Extra database: '{name}'")
             atoms = ase_molecule(name)
             atoms.center(vacuum=10.0)
             result = {
@@ -115,6 +121,8 @@ def _cached_molecule_lookup(name: str, input_type: str, optimize: bool) -> Tuple
                 "formula": atoms.get_chemical_formula(),
             }
             return (True, json.dumps({"result": result, "source": "ase_extra", "ase_atoms": True}))
+    
+    _debug_log("FAIL", "ASE lookup failed")
     
     # All methods failed
     return (False, json.dumps({"error": f"Unknown molecule '{name}'"}))

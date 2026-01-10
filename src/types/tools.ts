@@ -716,11 +716,18 @@ export const BuildMolecularClusterSchema = z.object({
     "spherical",         // 3D spherical distribution
     "helical",           // Helical/spiral arrangement
     "spiral",            // Alias for helical
-    "swastika",          // 4-molecule cross pattern
     "swastic",           // Alias for swastika (typo tolerance)
+    "planar",            // 2D planar/grid
+    "planner",           // Alias for planar (typo tolerance)
+    "grid",              // Grid arrangement
+    "sheet",             // 2D Sheet
     "custom"             // User-defined positions/rotations
   ]).default("auto").optional()
     .describe("Arrangement type. IMPORTANT: Use 'linear' if user specifies a direction (e.g. 'along x') or distance. Use 'auto' only for general stacking."),
+
+  // Natural language query pass-through
+  natural_language: z.string().optional()
+    .describe("Original natural language query for complex arrangements (e.g. 'stack 5 benzene with alternating offset')"),
 
   // Distance control
   intermolecular_distance: z.number().positive().optional()
