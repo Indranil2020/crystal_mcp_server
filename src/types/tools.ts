@@ -796,7 +796,69 @@ export const BuildMolecularClusterSchema = z.object({
 
   // Vacuum box
   vacuum: z.number().default(10.0).optional()
-    .describe("Vacuum padding around the cluster in Angstroms")
+    .describe("Vacuum padding around the cluster in Angstroms"),
+
+  // ==========================================================================
+  // GENERIC ARRANGEMENT SYSTEM - For ANY mathematical arrangement
+  // ==========================================================================
+
+  // Formula-based positioning (POWERFUL - can create ANY shape)
+  formulas: z.object({
+    x: z.string().describe("X position formula"),
+    y: z.string().describe("Y position formula"),
+    z: z.string().describe("Z position formula")
+  }).optional()
+    .describe(`Mathematical formulas for molecule positions. Creates ANY arrangement.
+
+VARIABLES available:
+  i = molecule index (0, 1, 2, ...)
+  n = total number of molecules
+  t = normalized index i/(n-1), range [0, 1]
+  pi = 3.14159...
+  e = 2.71828...
+
+FUNCTIONS available:
+  sin, cos, tan, sqrt, exp, log, abs, atan2, floor, ceil, round
+
+EXAMPLES:
+  Circular ring:     {"x": "5*cos(2*pi*i/n)", "y": "5*sin(2*pi*i/n)", "z": "0"}
+  Helix/DNA:         {"x": "3*cos(i*0.5)", "y": "3*sin(i*0.5)", "z": "i*2"}
+  Fibonacci spiral:  {"x": "sqrt(i)*cos(i*2.399)", "y": "sqrt(i)*sin(i*2.399)", "z": "0"}
+  3D sphere:         {"x": "5*sin(pi*t)*cos(2*pi*i/n)", "y": "5*sin(pi*t)*sin(2*pi*i/n)", "z": "5*cos(pi*t)"}
+  Linear along X:    {"x": "i*3.4", "y": "0", "z": "0"}
+  Zigzag:            {"x": "i*3", "y": "(i%2)*2", "z": "0"}
+  Grid 2D:           {"x": "(i%4)*3", "y": "floor(i/4)*3", "z": "0"}
+
+When user requests custom/unusual arrangement, USE THIS instead of predefined patterns.`),
+
+  // Constraint-based arrangements (for chemical accuracy)
+  constraints: z.array(z.string()).optional()
+    .describe(`Chemical constraints for arrangement. Use with use_solver=true.
+
+CONSTRAINT TYPES:
+  distance(sel1, sel2, target)     - Set distance between two points
+  angle(sel1, sel2, sel3, target)  - Set angle at sel2
+  plane_parallel(mol1, mol2)       - Make molecular planes parallel
+  plane_perpendicular(mol1, mol2)  - Make molecular planes perpendicular
+  h_bond(donor, acceptor)          - Create H-bond geometry
+
+ATOM SELECTORS (for sel1, sel2, etc.):
+  0:centroid()    - Center of molecule 0
+  1:ring_center(0) - Center of first ring in molecule 1
+  0:atom(O)       - First oxygen in molecule 0
+  0:atom(N,1)     - Second nitrogen in molecule 0
+  0:plane_normal() - Normal vector of molecule 0's plane
+  0:donor_h(0)    - First H-bond donor hydrogen
+  0:acceptor(0)   - First H-bond acceptor (O, N, F)
+
+EXAMPLES:
+  ["distance(0:centroid(), 1:centroid(), 3.4)"]  - 3.4Å between centers
+  ["plane_parallel(0, 1)", "distance(0:centroid(), 1:centroid(), 3.5)"]
+  ["h_bond(donor=0, acceptor=1)"]  - Create H-bond`),
+
+  // Constraint solver
+  use_solver: z.boolean().default(false).optional()
+    .describe("Enable constraint solver to optimize arrangement. Required when using constraints.")
 });
 
 export type BuildMolecularClusterInput = z.infer<typeof BuildMolecularClusterSchema>;
@@ -1015,15 +1077,19 @@ export const TOOL_DEFINITIONS: readonly ToolMetadata[] = [
   },
   {
     name: "build_molecular_cluster",
-    description: "Generate molecular clusters (dimers, trimers, n-mers) or COMBINATIONS of different molecules. " +
+    description: "Generate molecular clusters with ANY arrangement - predefined patterns OR custom mathematical formulas. " +
       "MANDATORY: Use this tool whenever the user asks for: " +
       "1. A cluster/dimer/stack (e.g. 'benzene dimer') " +
-      "2. A LIST of molecules (e.g. 'generate water and benzene', 'create NTCDA and PTCDA'). " +
-      "Combines any molecules from build_molecule with various arrangements. " +
-      "Auto-detects optimal stacking. Supports full rotation. " +
+      "2. A LIST of molecules (e.g. 'generate water and benzene') " +
+      "3. ANY custom arrangement (e.g. 'arrange in a spiral', 'fibonacci pattern', 'tetrahedron vertices'). " +
+      "TWO MODES: " +
+      "(A) Predefined patterns: Use 'stacking' parameter (pi_pi_parallel, circular, helical, grid, etc.) " +
+      "(B) Custom formulas: Use 'formulas' parameter for ANY mathematical shape - formulas can use i (index), n (count), pi, sin, cos, sqrt, etc. " +
       "Examples: " +
-      "- 'benzene dimer': {molecules: [{identifier: 'benzene', count: 2}], stacking: 'pi_pi_parallel'} " +
-      "- 'water and benzene': {molecules: [{identifier: 'water'}, {identifier: 'benzene'}], stacking: 'auto'}",
+      "- Benzene dimer: {molecules: [{identifier: 'benzene', count: 2}], stacking: 'pi_pi_parallel'} " +
+      "- Circular ring: {molecules: [...], formulas: {x: '5*cos(2*pi*i/n)', y: '5*sin(2*pi*i/n)', z: '0'}} " +
+      "- Fibonacci spiral: {molecules: [...], formulas: {x: 'sqrt(i)*cos(i*2.399)', y: 'sqrt(i)*sin(i*2.399)', z: '0'}} " +
+      "For unusual/custom arrangements, ALWAYS use formulas instead of predefined patterns.",
     inputSchema: BuildMolecularClusterSchema,
     annotations: {
       readOnlyHint: false,

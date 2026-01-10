@@ -28,7 +28,7 @@ export async function buildMolecularCluster(input: unknown): Promise<Result<any>
     const result = await executePythonWithJSON<typeof parsed.data, any>(
         "molecular_cluster_generator.py",
         parsed.data,
-        { timeout: 60000 }  // Longer timeout for cluster generation
+        { timeout: 600000 }  // Longer timeout for cluster generation
     );
 
     if (!result.success) {
