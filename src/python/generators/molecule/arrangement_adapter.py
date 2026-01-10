@@ -33,9 +33,17 @@ _UNIFIED_AVAILABLE = True
 logger = logging.getLogger(__name__)
 
 # Debug print helper - writes to stderr so stdout stays clean for JSON
+# Debug print helper - writes to stderr so stdout stays clean for JSON
+DEBUG_LOG_FILE = "/home/niel/git/crystal-mcp-server/debug_arrangement.log"
+
 def debug(msg: str) -> None:
     sys.stderr.write(f"[DEBUG arrangement_adapter] {msg}\n")
     sys.stderr.flush()
+    try:
+        with open(DEBUG_LOG_FILE, "a") as f:
+            f.write(f"[DEBUG arrangement_adapter] {msg}\n")
+    except Exception:
+        pass
 
 # Import legacy molecular cluster
 from .molecular_cluster import (
@@ -51,31 +59,19 @@ from .molecular_cluster import (
 # Import molecule generation
 from .universal_molecule import generate_molecule_universal
 
-# Lazy import of new engines (only when needed)
-_arrangement_engine = None
-_unified_arrangement = None
+# Lazy import of new unified engine
+_molecular_arrangement = None
 
 
 def _get_arrangement_engine():
-    """Lazy load the molecular_arrangement_engine module."""
-    global _arrangement_engine
-    if _arrangement_engine is None and _ENGINE_AVAILABLE:
-        debug("Lazy loading molecular_arrangement_engine...")
-        from . import molecular_arrangement_engine as mae
-        _arrangement_engine = mae
-        debug("molecular_arrangement_engine loaded successfully")
-    return _arrangement_engine
-
-
-def _get_unified_arrangement():
-    """Lazy load the unified_molecular_arrangement module."""
-    global _unified_arrangement
-    if _unified_arrangement is None and _UNIFIED_AVAILABLE:
-        debug("Lazy loading unified_molecular_arrangement...")
-        from . import unified_molecular_arrangement as uma
-        _unified_arrangement = uma
-        debug("unified_molecular_arrangement loaded successfully")
-    return _unified_arrangement
+    """Lazy load the new unified molecular_arrangement module."""
+    global _molecular_arrangement
+    if _molecular_arrangement is None:
+        debug("Lazy loading molecular_arrangement (unified engine)...")
+        from . import molecular_arrangement as ma
+        _molecular_arrangement = ma
+        debug("molecular_arrangement loaded successfully")
+    return _molecular_arrangement
 
 
 # =============================================================================
@@ -109,6 +105,7 @@ def _needs_new_engine(
     relative_poses: Optional[List] = None,
     use_solver: bool = False,
     natural_language: Optional[str] = None,
+    stacking: Optional[str] = None,
     **kwargs
 ) -> bool:
     """
@@ -126,6 +123,14 @@ def _needs_new_engine(
         return True
     if natural_language:
         return True
+        
+    # Check for non-legacy stacking patterns
+    if stacking:
+        legacy_patterns = {'stacked', 'linear', 't_shaped', 'circular', 'helical', 'custom', 'swastika', 'dimer', 'trimer', 'auto'}
+        if stacking.lower() not in legacy_patterns:
+            # e.g. "planner", "pi_pi_parallel", "grid"
+            return True
+            
     return False
 
 
@@ -138,17 +143,19 @@ def _generate_molecules(
 ) -> List[Dict[str, Any]]:
     """
     Generate actual molecule structures from specifications.
-    
+
     Takes: [{"identifier": "benzene", "count": 2}, ...]
     Returns: [{"atoms": [...], "coords": [...], ...}, ...]
     """
     molecules = []
-    
+
     for spec in molecule_specs:
         identifier = spec.get("identifier", spec.get("name", ""))
         count = spec.get("count", 1)
         input_type = spec.get("input_type", "auto")
-        
+
+        debug(f"_generate_molecules: Resolving '{identifier}' (type={input_type}, count={count})")
+
         # Generate the molecule using universal_molecule
         result = generate_molecule_universal(
             identifier=identifier,
@@ -156,9 +163,14 @@ def _generate_molecules(
             optimize=spec.get("optimize", True),
             allow_external=spec.get("allow_external", True)
         )
-        
+
+        debug(f"_generate_molecules: Result success={result.get('success')}, source={result.get('source', 'N/A')}")
+
         if not result.get("success", False):
-            logger.warning(f"Failed to generate molecule '{identifier}': {result.get('error', 'unknown error')}")
+            error_info = result.get('error', {})
+            error_msg = error_info.get('message', str(error_info)) if isinstance(error_info, dict) else str(error_info)
+            debug(f"_generate_molecules: FAILED - {error_msg}")
+            logger.warning(f"Failed to generate molecule '{identifier}': {error_msg}")
             continue
         
         # Create molecule dict compatible with arrangement engines
@@ -190,130 +202,60 @@ def _arrange_with_new_engine(
     constraints: Optional[List[str]] = None,
     use_solver: bool = False,
     natural_language: Optional[str] = None,
+    optimize: bool = False,
     validate: bool = True,
     **kwargs
 ) -> Dict[str, Any]:
     """
-    Arrange molecules using the new molecular_arrangement_engine.
+    Arrange molecules using the new unified molecular_arrangement module.
     
     Supports:
-    - Named patterns: "pi_pi_parallel", "circular", etc.
+    - Named patterns: "pi_pi_parallel", "circular", "helical", etc.
     - Position formulas: {"x": "5*cos(i)", "y": "5*sin(i)", "z": "0"}
     - Chemical constraints: ["distance(0:centroid(), 1:centroid(), 3.4)"]
     - Constraint solver optimization
     """
+    debug("_arrange_with_new_engine: starting")
+    debug(f"  molecules: {len(molecules)}")
+    debug(f"  arrangement: {arrangement}")
+    debug(f"  distance: {distance}")
+    debug(f"  formulas: {formulas}")
+    debug(f"  constraints: {constraints}")
+    debug(f"  optimize: {optimize}")
+    
     engine = _get_arrangement_engine()
     if engine is None:
-        raise ImportError("molecular_arrangement_engine not available")
+        debug("ERROR: molecular_arrangement module not available")
+        return {
+            "success": False,
+            "error": {"code": "ENGINE_UNAVAILABLE", "message": "molecular_arrangement module not available"}
+        }
     
-    # Handle natural language parsing
+    # NL parsing is no longer needed - LLM handles this at MCP client level
+    # The natural_language parameter is kept for backward compatibility but ignored
     if natural_language:
-        parsed = engine.parse_arrangement_request(natural_language)
-        arrangement = parsed.get("pattern", arrangement)
-        if parsed.get("distance"):
-            distance = parsed["distance"]
-        if parsed.get("n_molecules") and parsed["n_molecules"] > len(molecules):
-            # Extend molecules if NL specifies more
-            while len(molecules) < parsed["n_molecules"]:
-                molecules.append(molecules[-1].copy())
+        debug(f"NOTE: natural_language parameter ignored (LLM handles NL at client level)")
     
-    # Set default distance
+    # Default distance
     if distance is None:
         distance = 3.4
+        debug(f"  using default distance: {distance}")
     
-    # If formulas provided, use formula generator
-    if formulas:
-        positions = engine.generate_formula_positions(
-            len(molecules),
-            x_formula=formulas.get("x", "0"),
-            y_formula=formulas.get("y", "0"),
-            z_formula=formulas.get("z", f"{distance} * i")
-        )
-        orientations = engine.generate_fixed_orientations(len(molecules))
-        poses = [
-            engine.MoleculePose(
-                position=pos,
-                orientation=ori,
-                molecule_idx=i
-            )
-            for i, (pos, ori) in enumerate(zip(positions, orientations))
-        ]
-    else:
-        # Use generate_molecular_cluster from engine
-        result = engine.generate_molecular_cluster(
-            molecules=molecules,
-            arrangement=arrangement,
-            distance=distance,
-            constraints=constraints or [],
-            optimize=use_solver,
-            validate=validate,
-            **kwargs
-        )
-        return result
-    
-    # Build constraints if provided
-    constraint_objects = []
-    if constraints:
-        for spec in constraints:
-            if isinstance(spec, str):
-                parsed = engine._parse_constraint_string(spec)
-                if parsed:
-                    constraint_objects.append(parsed)
-            else:
-                constraint_objects.append(spec)
-    
-    # Apply solver if requested
-    if use_solver and constraint_objects:
-        solver = engine.ConstraintSolver(molecules, poses, constraint_objects)
-        poses = solver.solve()
-    
-    # Apply poses to molecules
-    arranged = engine.apply_poses_to_molecules(molecules, poses)
-    
-    return {
-        "success": True,
-        "molecules": arranged,
-        "poses": [
-            {
-                "position": [p.position.x, p.position.y, p.position.z],
-                "orientation": [p.orientation.roll, p.orientation.pitch, p.orientation.yaw],
-                "molecule_idx": p.molecule_idx
-            }
-            for p in poses
-        ],
-        "metadata": {
-            "pattern": arrangement,
-            "n_molecules": len(molecules),
-            "distance": distance,
-            "optimized": use_solver
-        },
-        "validation": {
-            "valid": True  # Simplified for now
-        }
-    }
-
-
-def _arrange_with_unified_engine(
-    molecules: List[Dict],
-    arrangement: str = "auto",
-    distance: float = 3.4,
-    **kwargs
-) -> List[Dict]:
-    """
-    Arrange molecules using unified_molecular_arrangement.
-    
-    Returns: List of molecules with transformed coordinates.
-    """
-    unified = _get_unified_arrangement()
-    if unified is None:
-        raise ImportError("unified_molecular_arrangement not available")
-    
-    return unified.arrange_molecules_unified(
+    # Use the unified arrange_molecules API
+    debug("Calling engine.arrange_molecules...")
+    result = engine.arrange_molecules(
         molecules=molecules,
-        arrangement=arrangement,
+        pattern=arrangement,
         distance=distance,
+        constraints=constraints,
+        optimize=use_solver or optimize,
+        validate=validate,
+        formulas=formulas,
         **kwargs
     )
+    
+    debug(f"arrange_molecules returned: success={result.get('success')}")
+    return result
 
 
 # =============================================================================
@@ -416,7 +358,8 @@ def generate_molecular_cluster(
         formulas=formulas,
         constraints=constraints,
         use_solver=use_solver,
-        natural_language=natural_language
+        natural_language=natural_language,
+        stacking=stacking
     )
     
     debug(f"needs_new_engine: {needs_new}")
@@ -460,6 +403,7 @@ def generate_molecular_cluster(
             constraints=constraints,
             use_solver=use_solver,
             natural_language=natural_language,
+            optimize=optimize,
             validate=validate,
             **kwargs
         )
