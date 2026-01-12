@@ -28,6 +28,11 @@ interface OllamaChatRequest {
     stream: boolean;
     tools?: OllamaToolDef[];
     format?: string;
+    options?: {
+        temperature?: number;
+        top_p?: number;
+        seed?: number;
+    };
 }
 
 interface OllamaChatResponse {
@@ -62,11 +67,12 @@ export class LlmClient {
     private baseUrl: string;
     private model: string;
     private availableModels: string[] = [];
+    private _temperature: number = 0; // Default 0 for deterministic tool calling
 
     constructor(baseUrl: string = DEFAULT_OLLAMA_URL, model: string = DEFAULT_MODEL) {
         this.baseUrl = baseUrl;
         this.model = model;
-        debug('LLM_CLIENT', `Created LLM client: url=${baseUrl}, model=${model}`);
+        debug('LLM_CLIENT', `Created LLM client: url=${baseUrl}, model=${model}, temperature=${this._temperature}`);
     }
 
     /**
@@ -120,6 +126,22 @@ export class LlmClient {
     }
 
     /**
+     * Set temperature (0-1). Lower = more deterministic, higher = more creative.
+     * Default 0 for precise tool calling.
+     */
+    setTemperature(temp: number): void {
+        this._temperature = Math.max(0, Math.min(1, temp));
+        debug('LLM_CLIENT', `Temperature set to ${this._temperature}`);
+    }
+
+    /**
+     * Get current temperature
+     */
+    getTemperature(): number {
+        return this._temperature;
+    }
+
+    /**
      * Chat with native Ollama tool calling
      * 
      * @param messages - Chat message history
@@ -149,6 +171,9 @@ export class LlmClient {
             tools: ollamaTools.length > 0 ? ollamaTools : undefined,
             // DO NOT use format: 'json' - it DISABLES native tool calling!
             format: undefined,
+            options: {
+                temperature: this._temperature,
+            },
         };
 
         debug('LLM_CLIENT', `Full request:`, debugInspect(request, 2000));
@@ -227,6 +252,9 @@ export class LlmClient {
             messages,
             stream: false,
             format,
+            options: {
+                temperature: this._temperature,
+            },
         };
 
         try {

@@ -20,7 +20,7 @@ import {
     updateToolExecution,
 } from '../../store/chatSlice';
 import { addStructure } from '../../store/structureSlice';
-import { toolOrchestrator } from '../../services';
+import { toolOrchestrator, llmClient } from '../../services';
 import { debug, debugError } from '../../debug';
 import type { ChatMessage } from '../../types';
 import ChatMessageItem from './ChatMessageItem';
@@ -32,8 +32,16 @@ export default function ChatPanel() {
     const { tools, connectionStatus } = useAppSelector(state => state.mcp);
 
     const [input, setInput] = useState('');
+    const [temperature, setTemperature] = useState(llmClient.getTemperature());
+    const [showSettings, setShowSettings] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
+
+    // Sync temperature with LLM client
+    const handleTemperatureChange = (value: number) => {
+        setTemperature(value);
+        llmClient.setTemperature(value);
+    };
 
     // Auto-scroll to bottom on new messages
     useEffect(() => {
@@ -179,9 +187,43 @@ export default function ChatPanel() {
     return (
         <div className="flex flex-col h-full bg-slate-800">
             {/* Header */}
-            <div className="px-4 py-3 border-b border-slate-700 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-slate-200">Crystal Assistant</h2>
-                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+            <div className="px-4 py-3 border-b border-slate-700">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-sm font-semibold text-slate-200">Crystal Assistant</h2>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setShowSettings(!showSettings)}
+                            className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-slate-200"
+                            title="Settings"
+                        >
+                            ⚙️
+                        </button>
+                        <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+                    </div>
+                </div>
+
+                {/* Temperature Settings (collapsible) */}
+                {showSettings && (
+                    <div className="mt-3 p-3 bg-slate-700 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                            <label className="text-xs text-slate-300">Temperature</label>
+                            <span className="text-xs text-blue-400 font-mono">{temperature.toFixed(2)}</span>
+                        </div>
+                        <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.05"
+                            value={temperature}
+                            onChange={(e) => handleTemperatureChange(parseFloat(e.target.value))}
+                            className="w-full h-1 bg-slate-600 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                        />
+                        <div className="flex justify-between text-xs text-slate-500 mt-1">
+                            <span>Precise (0)</span>
+                            <span>Creative (1)</span>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Messages */}
