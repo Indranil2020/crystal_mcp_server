@@ -36,6 +36,7 @@ import { handleExploreSymmetryRelations } from "./tools/analysis/symmetry-relati
 import { handleBuildMolecule } from "./tools/generation/build-molecule.js";
 import { handleBuildMolecularCluster } from "./tools/generation/build-molecular-cluster.js";
 import { handleSuggestMolecules } from "./tools/generation/suggest-molecules.js";
+import { handleEditMolecule } from "./tools/generation/edit-molecule.js";
 import { handleCreateAlloy } from "./tools/transformation/alloy.js";
 import { handleCreateHeterostructure } from "./tools/transformation/heterostructure.js";
 import { handleAddAdsorbate } from "./tools/transformation/adsorbate.js";
@@ -110,104 +111,144 @@ export function createServer(): Server {
     console.error(`[MCP DEBUG] 📞 Request received: Tool='${name}'`);
     console.error(`[MCP DEBUG] 📦 Arguments: ${JSON.stringify(args, null, 2)}`);
 
-    switch (name) {
-      case "comprehensive_generate":
-        return await handleComprehensiveGenerate(args);
+    const result = await (async () => {
+      switch (name) {
+        case "comprehensive_generate":
+          return await handleComprehensiveGenerate(args);
 
-      case "generate_crystal":
-        return await handleGenerateCrystal(args);
+        case "generate_crystal":
+          return await handleGenerateCrystal(args);
 
-      case "generate_space_group_scan":
-        return await handleSpaceGroupScan(args);
+        case "generate_space_group_scan":
+          return await handleSpaceGroupScan(args);
 
-      case "make_supercell":
-        return await handleMakeSupercell(args);
+        case "make_supercell":
+          return await handleMakeSupercell(args);
 
-      case "generate_slab":
-        return await handleGenerateSlab(args);
+        case "generate_slab":
+          return await handleGenerateSlab(args);
 
-      case "analyze_symmetry":
-        return await handleAnalyzeSymmetry(args);
+        case "analyze_symmetry":
+          return await handleAnalyzeSymmetry(args);
 
-      case "validate_structure":
-        return await handleValidateStructure(args);
+        case "validate_structure":
+          return await handleValidateStructure(args);
 
-      case "optimize_structure_mlff":
-        return await handleOptimizeStructureMLFF(args);
+        case "optimize_structure_mlff":
+          return await handleOptimizeStructureMLFF(args);
 
-      case "calculate_energy_mlff":
-        return await handleCalculateEnergyMLFF(args);
+        case "calculate_energy_mlff":
+          return await handleCalculateEnergyMLFF(args);
 
-      case "ground_state_search":
-        return await handleGroundStateSearch(args);
+        case "ground_state_search":
+          return await handleGroundStateSearch(args);
 
-      case "export_structure":
-        return await handleExportStructure(args);
+        case "export_structure":
+          return await handleExportStructure(args);
 
-      case "generate_visualization":
-        return await handleVisualization(args);
+        case "generate_visualization":
+          return await handleVisualization(args);
 
-      case "create_defect":
-        return await handleCreateDefect(args);
+        case "create_defect":
+          return await handleCreateDefect(args);
 
-      case "generate_molecular_crystal":
-        return await handleGenerateMolecularCrystal(args);
+        case "generate_molecular_crystal":
+          return await handleGenerateMolecularCrystal(args);
 
-      case "generate_nanostructure":
-        return await handleGenerateNanostructure(args);
+        case "generate_nanostructure":
+          return await handleGenerateNanostructure(args);
 
-      case "explore_symmetry_relations":
-        return await handleExploreSymmetryRelations(args);
+        case "explore_symmetry_relations":
+          return await handleExploreSymmetryRelations(args);
 
-      case "build_molecule":
-        return await handleBuildMolecule(args);
+        case "build_molecule":
+          return await handleBuildMolecule(args);
 
-      case "build_molecular_cluster":
-        return await handleBuildMolecularCluster(args);
+        case "build_molecular_cluster":
+          return await handleBuildMolecularCluster(args);
 
-      case "suggest_molecules":
-        return await handleSuggestMolecules(args);
+        case "suggest_molecules":
+          return await handleSuggestMolecules(args);
 
-      case "create_alloy":
-        return await handleCreateAlloy(args);
+        case "edit_molecule":
+          return await handleEditMolecule(args);
 
-      case "create_heterostructure":
-        return await handleCreateHeterostructure(args);
+        case "create_alloy":
+          return await handleCreateAlloy(args);
 
-      case "add_adsorbate":
-        return await handleAddAdsorbate(args);
+        case "create_heterostructure":
+          return await handleCreateHeterostructure(args);
 
-      case "apply_strain":
-        return await handleApplyStrain(args);
+        case "add_adsorbate":
+          return await handleAddAdsorbate(args);
 
-      // New advanced structure tools
-      case "generate_prototype":
-        return await handleGeneratePrototype(args);
+        case "apply_strain":
+          return await handleApplyStrain(args);
 
-      case "generate_twisted_bilayer":
-        return await handleGenerateTwistedBilayer(args);
+        // New advanced structure tools
+        case "generate_prototype":
+          return await handleGeneratePrototype(args);
 
-      case "generate_high_entropy_alloy":
-        return await handleGenerateHighEntropyAlloy(args);
+        case "generate_twisted_bilayer":
+          return await handleGenerateTwistedBilayer(args);
 
-      case "generate_2d_material":
-        return await handleGenerate2DMaterial(args);
+        case "generate_high_entropy_alloy":
+          return await handleGenerateHighEntropyAlloy(args);
 
-      case "generate_mof":
-        return await handleGenerateMOF(args);
+        case "generate_2d_material":
+          return await handleGenerate2DMaterial(args);
 
-      case "generate_cage":
-        return await handleGenerateCage(args);
+        case "generate_mof":
+          return await handleGenerateMOF(args);
 
-      default:
-        return {
-          content: [{
-            type: "text",
-            text: `❌ Unknown tool: ${name}\n\nAvailable tools:\n${TOOL_DEFINITIONS.map(t => `- ${t.name}`).join('\n')}`
-          }],
-          isError: true
-        };
+        case "generate_cage":
+          return await handleGenerateCage(args);
+
+        default:
+          return {
+            content: [{
+              type: "text",
+              text: `❌ Unknown tool: ${name}\n\nAvailable tools:\n${TOOL_DEFINITIONS.map(t => `- ${t.name}`).join('\n')}`
+            }],
+            isError: true
+          };
+      }
+    })();
+
+    // DEBUG: Log response (Sanitized)
+    const logResult = JSON.parse(JSON.stringify(result)); // Deep copy
+    if (logResult && typeof logResult === 'object') {
+      // Helper to walk object and truncate huge strings
+      const truncateLargeStrings = (obj: any) => {
+        if (!obj) return;
+        if (Array.isArray(obj)) {
+          obj.forEach(truncateLargeStrings);
+        } else if (typeof obj === 'object') {
+          for (const key in obj) {
+            if (typeof obj[key] === 'string') {
+              // Check for <json-data> block
+              if (obj[key].includes('<json-data>')) {
+                obj[key] = obj[key].replace(
+                  /<json-data>[\s\S]*?<\/json-data>/,
+                  '<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>'
+                );
+              }
+              // Also truncate just very long strings if they don't have tags
+              else if (obj[key].length > 1000) {
+                obj[key] = obj[key].substring(0, 200) + ' ... [TRUNCATED]';
+              }
+            } else if (typeof obj[key] === 'object') {
+              truncateLargeStrings(obj[key]);
+            }
+          }
+        }
+      };
+      truncateLargeStrings(logResult);
     }
+
+    console.error(`[MCP DEBUG] 🏁 Response: ${JSON.stringify(logResult, null, 2)}`);
+
+    return result;
   });
 
   return server;

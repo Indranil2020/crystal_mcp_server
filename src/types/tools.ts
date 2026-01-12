@@ -683,6 +683,73 @@ export type SuggestMoleculesInput = z.infer<typeof SuggestMoleculesSchema>;
 
 
 /**
+ * Schema for edit_molecule tool
+ *
+ * Modify existing molecules using natural language or structured operations.
+ * Supports: hydroxylation, methylation, acetylation, halogenation, epimerization,
+ * atom/bond operations, ring modifications, and functional group transformations.
+ *
+ * Workflow: Use build_molecule to create a molecule, then edit_molecule to modify it.
+ * Annotations from previous calls are preserved for iterative editing.
+ */
+
+// Operation specification for structured edit operations
+const EditOperationSchema = z.object({
+  type: z.string()
+    .describe("Operation type: HYDROXYLATE, METHYLATE, ACETYLATE, HALOGENATE, EPIMERIZE, " +
+      "DELETE_ATOM, ADD_BOND, DELETE_BOND, SUBSTITUTE, ADD_RING, DELETE_RING, etc."),
+  target: z.string()
+    .describe("Target specification using DSL: 'label:C-7', 'smarts:[OH]', 'ring:benzene:0', " +
+      "'group:hydroxyl:0', 'atom:0', or 'atom_pair:0,1'"),
+  params: z.record(z.any()).optional()
+    .describe("Operation-specific parameters: orientation (axial/equatorial), " +
+      "element (F/Cl/Br/I for halogenation), stereo (R/S/E/Z), bond_order (1/2/3)")
+});
+
+// Molecule input specification (from previous build_molecule or edit_molecule call)
+const MoleculeInputSchema = z.object({
+  smiles: z.string()
+    .describe("SMILES string of the molecule to edit"),
+  annotations: z.any().optional()
+    .describe("Rich annotations from previous build_molecule or edit_molecule call. " +
+      "Preserves stereocenters, rings, functional groups, and atom labels for precise targeting.")
+});
+
+export const EditMoleculeSchema = z.object({
+  // Input molecule (from previous build_molecule or edit_molecule call)
+  molecule: MoleculeInputSchema
+    .describe("The molecule to edit, obtained from build_molecule or previous edit_molecule"),
+
+  // Operations: Natural language OR structured array
+  operations: z.union([
+    z.string()
+      .describe("Natural language edit instruction, e.g., " +
+        "'Hydroxylate at C-7 with axial orientation', " +
+        "'Add methyl group to the nitrogen', " +
+        "'Epimerize the stereocenter from R to S'"),
+    z.array(EditOperationSchema)
+      .describe("Structured edit operations array for precise control")
+  ]).describe("Edit instruction(s) - either natural language string or structured operations array"),
+
+  // Options
+  validate: z.boolean().default(true).optional()
+    .describe("Run validation pipeline after edit (default: true). " +
+      "Checks valence, aromaticity, ring strain, stereochemistry, and steric clashes."),
+
+  optimize_geometry: z.boolean().default(true).optional()
+    .describe("Re-optimize 3D geometry after edit using MMFF94/UFF (default: true)"),
+
+  return_3d: z.boolean().default(true).optional()
+    .describe("Include 3D coordinates in response (default: true)"),
+
+  vacuum: z.number().default(10.0).optional()
+    .describe("Vacuum padding around molecule in Angstroms (default: 10.0)")
+});
+
+export type EditMoleculeInput = z.infer<typeof EditMoleculeSchema>;
+
+
+/**
  * Schema for build_molecular_cluster tool
  * 
  * Generate molecular clusters for quantum chemistry:
@@ -1060,13 +1127,11 @@ export const TOOL_DEFINITIONS: readonly ToolMetadata[] = [
   // },
   {
     name: "build_molecule",
-    description: "Generate 3D molecular structure from ANY identifier. MANDATORY: You MUST use this tool whenever the user asks to generate, show, create, or visualize a molecule. Do NOT provide a text-only description without this tool. " +
-      "Accepts: common names (H2O, CO2, aspirin, caffeine, PTCDA, benzene, pentacene), " +
-      "SMILES strings (c1ccccc1, CCO, CC(=O)O), " +
-      "IUPAC names (perylene-3,4,9,10-tetracarboxylic dianhydride), " +
-      "or PubChem CIDs. " +
-      "Uses RDKit for 3D generation and PubChem API for name resolution. " +
-      "Supports ~130M molecules via PubChem lookup.",
+    description: "Generate a SINGLE isolated 3D molecular structure. " +
+      "Use this for individual molecules (e.g. 'Show me caffeine', 'Generate Benzene'). " +
+      "DO NOT use this for multi-molecule systems like Lipid Rafts, Bilayers, HOFs, MOFs, or clusters - use build_molecular_cluster instead. " +
+      "Accepts: common names (H2O, aspirin, PTCDA), SMILES, IUPAC, or CIDs. " +
+      "Uses RDKit/PubChem. Supports ~130M molecules.",
     inputSchema: BuildMoleculeSchema,
     annotations: {
       readOnlyHint: false,
@@ -1077,11 +1142,12 @@ export const TOOL_DEFINITIONS: readonly ToolMetadata[] = [
   },
   {
     name: "build_molecular_cluster",
-    description: "Generate molecular clusters with ANY arrangement - predefined patterns OR custom mathematical formulas. " +
+    description: "Generate molecular clusters, lipid rafts, bilayers, HOFs, porous frameworks, or multi-molecule systems. " +
       "MANDATORY: Use this tool whenever the user asks for: " +
       "1. A cluster/dimer/stack (e.g. 'benzene dimer') " +
-      "2. A LIST of molecules (e.g. 'generate water and benzene') " +
-      "3. ANY custom arrangement (e.g. 'arrange in a spiral', 'fibonacci pattern', 'tetrahedron vertices'). " +
+      "2. A multi-component system (e.g. 'Lipid Raft with POPC/Cholesterol', 'HOF with guanidinium/sulfonate') " +
+      "3. A LIST of molecules (e.g. 'generate water and benzene') " +
+      "4. ANY custom arrangement (e.g. 'arrange in a spiral', 'fibonacci pattern', 'tetrahedron vertices'). " +
       "TWO MODES: " +
       "(A) Predefined patterns: Use 'stacking' parameter (pi_pi_parallel, circular, helical, grid, etc.) " +
       "(B) Custom formulas: Use 'formulas' parameter for ANY mathematical shape - formulas can use i (index), n (count), pi, sin, cos, sqrt, etc. " +
@@ -1109,6 +1175,27 @@ export const TOOL_DEFINITIONS: readonly ToolMetadata[] = [
     inputSchema: SuggestMoleculesSchema,
     annotations: {
       readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true
+    }
+  },
+  {
+    name: "edit_molecule",
+    description: "Modify an existing molecule using natural language or structured operations. " +
+      "WORKFLOW: First use build_molecule to create a molecule, then use edit_molecule to modify it iteratively. " +
+      "SUPPORTS: hydroxylation, methylation, acetylation, halogenation, epimerization, stereochemistry changes, " +
+      "atom/bond operations, ring modifications, and functional group transformations. " +
+      "TARGETING: Uses labels (C-7), SMARTS patterns ([OH]), ring names (benzene), or functional group names (hydroxyl). " +
+      "EXAMPLES: " +
+      "- 'Hydroxylate at C-7 with axial orientation' " +
+      "- 'Epimerize the stereocenter from R to S' " +
+      "- 'Add methyl group to the nitrogen' " +
+      "- [{type: 'HALOGENATE', target: 'ring:benzene:0', params: {element: 'Br'}}] " +
+      "Returns edited molecule with updated annotations for continued editing.",
+    inputSchema: EditMoleculeSchema,
+    annotations: {
+      readOnlyHint: false,
       destructiveHint: false,
       idempotentHint: true,
       openWorldHint: true
