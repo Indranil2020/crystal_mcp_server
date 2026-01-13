@@ -1,0 +1,15 @@
+# Molecular Arrangement System Audit Report
+
+| ID | Prompt | LLM Interpretation (Payload) | Backend Output | Analysis |
+|----|--------|-----------------------------|----------------|----------|
+| 101 | generate 2 planar ptcda separated by 12 angstrom along x axis | `{"axis":"x","intermolecular_distance":12,"molecules":[{"count":2,"identifier":"PTCDA"}],"offset_x":12}` | ❌ **FAILED**<br>`Severe clash: mol0:atom0 - mol1:atom1 = 0.66Å` | ❌ **CLASH**: Severe atom overlap detected.<br>❌ **MCP ERROR**: Backend returned an error. |
+| 102 | generate 3 planar ptcda separated by 15 angstrom along y axis | `{"axis":"y","intermolecular_distance":15,"molecules":[{"count":3,"identifier":"PTCDA"}]}` | ✅ **BUILT**<br>Molecules: : 3<br>Atoms: : 114 | ✅ **SUCCESS** |
+| 103 | generate 4 planar ptcda separated by 6 angstrom along z axis | `{"axis":"z","intermolecular_distance":6,"molecules":[{"count":4,"identifier":"PTCDA"}],"offset_y":0}` | ❌ **FAILED**<br>`Atoms overlapping: Severe clash: mol0:atom0 - mol1:atom7 = 1.09Å` | ❌ **CLASH**: Severe atom overlap detected.<br>❌ **MCP ERROR**: Backend returned an error. |
+| 105 | generate 2 benzene molecules separated by 8 angstrom along x axis | `{"intermolecular_distance":8,"molecules":[{"count":2,"identifier":"benzene"}],"offset_x":8}` | ✅ **BUILT**<br>Molecules: : 2<br>Atoms: : 24 | ✅ **SUCCESS** |
+| 201 | generate 5 benzene molecules separated by 6 angstrom along x axis | `{"axis":"x","intermolecular_distance":6,"molecules":[{"count":5,"identifier":"benzene"}]}` | ❌ **FAILED**<br>`Severe clash: mol0:atom10 - mol1:atom7 = 1.49Å` | ❌ **CLASH**: Severe atom overlap detected.<br>❌ **MCP ERROR**: Backend returned an error. |
+| 202 | generate 10 water molecules separated by 3 angstrom along y axis | `{"molecules":[{"count":10,"identifier":"water"}],"offset_y":3}` | ✅ **BUILT**<br>Molecules: : 10<br>Atoms: : 30 | ✅ **SUCCESS** |
+| 203 | generate 2 planar ptcda separated by 50 angstrom along x axis | `{"axis":"x","intermolecular_distance":50,"molecules":[{"count":2,"identifier":"PTCDA"}]}` | ✅ **BUILT**<br>Molecules: : 2<br>Atoms: : 76 | ✅ **SUCCESS** |
+| 204 | generate 2 planar ptcda separated by 1.5 angstrom along x axis | `{"intermolecular_distance":1.5,"molecules":[{"count":2,"identifier":"PTCDA"}],"offset_x":1.5}` | ❌ **FAILED**<br>`Constraint Violation: ClashConstraint mismatch by 8.71 (tol=0.5)` | ❌ **CLASH**: Severe atom overlap detected.<br>❌ **MCP ERROR**: Backend returned an error. |
+| 301 | generate 2 planar ptcda separated by 20 angstrom along 30 degree direction in xy plane | `null` | No Output | ✅ **SUCCESS** |
+| 801 | generate 2 adamantane molecules separated by 10 angstrom along x axis | `{"intermolecular_distance":10,"molecules":[{"count":2,"identifier":"adamantane"}],"offset_x":10}` | ✅ **BUILT**<br>Molecules: : 2<br>Atoms: : 52 | ✅ **SUCCESS** |
+| 802 | generate 2 C60 molecules separated by 15 angstrom along y axis | `{"intermolecular_distance":15,"molecules":[{"count":2,"identifier":"C60"}],"offset_y":15}` | ✅ **BUILT**<br>Molecules: : 2<br>Atoms: : 120 | ✅ **SUCCESS** |

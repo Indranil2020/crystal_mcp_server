@@ -782,9 +782,20 @@ const Rotation3DSchema = z.object({
 }).describe("3D rotation in degrees");
 
 export const BuildMolecularClusterSchema = z.object({
-  // Molecules list
+  // Molecules list - REQUIRED
   molecules: z.array(MoleculeSpecSchema).min(1)
-    .describe("List of molecules to combine. Example: [{\"identifier\": \"benzene\", \"count\": 2}] for benzene dimer, or [{\"identifier\": \"water\"}, {\"identifier\": \"benzene\"}] for hetero-dimer"),
+    .describe(`REQUIRED: List of molecules to arrange. You MUST provide this parameter.
+    
+FORMAT: [{"identifier": "name", "count": N}]
+
+IMPORTANT: Always use the "identifier" key (NOT "type", "formula", "name", or "label")
+
+Examples:
+- Benzene dimer: [{"identifier": "benzene", "count": 2}]
+- Water trimer: [{"identifier": "water", "count": 3}]
+- Hetero-dimer: [{"identifier": "benzene"}, {"identifier": "naphthalene"}]
+
+The identifier can be: common name (benzene, water, PTCDA), SMILES, IUPAC, or PubChem CID.`),
 
   // Stacking/arrangement type  
   stacking: z.enum([
@@ -847,7 +858,17 @@ export const BuildMolecularClusterSchema = z.object({
 
   // Axis for linear arrangement
   axis: z.enum(["x", "y", "z"]).default("z").optional()
-    .describe("Axis for linear arrangement (default: z)"),
+    .describe("Axis for linear arrangement (default: z). Use direction_vector for arbitrary directions."),
+
+  // Generic direction vector (for ANY direction, not just x/y/z)
+  direction_vector: z.tuple([z.number(), z.number(), z.number()]).optional()
+    .describe("Direction vector [x, y, z] for placement. Example: [1, 1, 0] for 45° in XY plane. Overrides 'axis' if provided."),
+
+  // Direction from angles (natural language friendly)
+  direction_angle: z.number().optional()
+    .describe("Azimuth angle in degrees for placement direction. 0°=X, 90°=Y. Example: 30 for '30 degree direction'. Use with direction_elevation."),
+  direction_elevation: z.number().default(0).optional()
+    .describe("Elevation angle in degrees. 0°=horizontal (XY plane), 90°=up (Z). Default: 0 (horizontal)."),
 
   // Custom positions (for 'custom' stacking)
   positions: z.array(Position3DSchema).optional()

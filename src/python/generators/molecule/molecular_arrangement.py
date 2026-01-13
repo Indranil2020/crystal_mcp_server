@@ -668,6 +668,332 @@ def generate_linear_positions(n: int, spacing: float = 3.4,
     return positions
 
 
+# -----------------------------------------------------------------------------
+# Gap-Aware Positioning Helpers (Smart Spacing)
+# -----------------------------------------------------------------------------
+
+def _get_molecule_extent_along_axis(mol: Dict[str, Any], axis: np.ndarray) -> Tuple[float, float]:
+    """
+    Project molecule onto axis and return (min, max) extent including VdW radii.
+    
+    This is the core helper for gap-based positioning. It calculates how far
+    a molecule extends along a given direction vector.
+    
+    Args:
+        mol: Molecule dict with 'atoms' and 'coords'
+        axis: Normalized unit vector for projection direction
+    
+    Returns:
+        (min_extent, max_extent) in Angstroms, including VdW radii at extremes
+    """
+    coords = np.array(mol.get('coords', [[0, 0, 0]]))
+    atoms = mol.get('atoms', ['C'] * len(coords))
+    
+    if len(coords) == 0:
+        return 0.0, 0.0
+    
+    # Project all atoms onto axis: scalar projection = coord · axis
+    projections = coords @ axis
+    
+    # Find extreme atoms and add their VdW radii
+    min_idx = int(np.argmin(projections))
+    max_idx = int(np.argmax(projections))
+    
+    min_atom = atoms[min_idx] if min_idx < len(atoms) else 'C'
+    max_atom = atoms[max_idx] if max_idx < len(atoms) else 'C'
+    
+    min_vdw = VDW_RADII.get(min_atom, 1.7)
+    max_vdw = VDW_RADII.get(max_atom, 1.7)
+    
+    return float(projections.min() - min_vdw), float(projections.max() + max_vdw)
+
+
+def generate_gap_based_positions(
+    molecules: List[Dict[str, Any]],
+    gaps: Union[float, List[float]],
+    axis: Tuple[float, float, float] = (0, 0, 1),
+    orientations: Optional[List['Orientation']] = None
+) -> List[Position]:
+    """
+    Generate positions ensuring surface separation (gap) between molecules.
+    
+    This is the SMART position generator that replaces naive center-to-center
+    spacing. It calculates molecular extents and places each molecule so that
+    the gap between VdW surfaces equals the requested value.
+    
+    Args:
+        molecules: List of molecule dicts with 'atoms' and 'coords'
+        gaps: Single gap value (Å) OR list of gaps between consecutive pairs
+        axis: Placement direction vector (will be normalized)
+        orientations: Pre-computed orientations (for rotation-aware extent)
+    
+    Returns:
+        List of Position objects with gap-aware spacing
+    
+    Example:
+        # Place 3 PTCDAs with 3.4Å gap between surfaces
+        positions = generate_gap_based_positions(
+            molecules=[ptcda1, ptcda2, ptcda3],
+            gaps=3.4,
+            axis=(0, 0, 1)
+        )
+        # Result: ~18Å center-to-center (14Å molecule + 3.4Å gap)
+    """
+    debug(f"generate_gap_based_positions: n={len(molecules)}, gaps={gaps}, axis={axis}")
+    
+    axis_arr = np.array(axis, dtype=float)
+    norm = np.linalg.norm(axis_arr)
+    if norm < 1e-10:
+        axis_arr = np.array([0, 0, 1], dtype=float)
+    else:
+        axis_arr = axis_arr / norm
+    
+    n = len(molecules)
+    if n == 0:
+        return []
+    
+    # Normalize gaps to a list
+    if isinstance(gaps, (int, float)):
+        gap_list = [float(gaps)] * max(n - 1, 1)
+    else:
+        gap_list = [float(g) for g in gaps]
+        # Extend if needed
+        while len(gap_list) < n - 1:
+            gap_list.append(gap_list[-1] if gap_list else 3.4)
+    
+    positions = []
+    current_pos = 0.0
+    prev_max = 0.0
+    
+    for i in range(n):
+        mol = molecules[i]
+        
+        # If orientations provided, apply rotation before calculating extent
+        if orientations and i < len(orientations):
+            R = orientations[i].to_matrix()
+            coords = np.array(mol.get('coords', [[0, 0, 0]]))
+            if len(coords) > 0:
+                center = coords.mean(axis=0)
+                rotated = (R @ (coords - center).T).T
+                temp_mol = {**mol, 'coords': rotated.tolist()}
+                min_ext, max_ext = _get_molecule_extent_along_axis(temp_mol, axis_arr)
+            else:
+                min_ext, max_ext = 0.0, 0.0
+        else:
+            min_ext, max_ext = _get_molecule_extent_along_axis(mol, axis_arr)
+        
+        if i == 0:
+            # First molecule: place so its min_extent is at origin
+            current_pos = -min_ext
+        else:
+            # Subsequent: place so gap exists between prev_max and curr_min
+            gap = gap_list[i - 1]
+            current_pos = prev_max + gap - min_ext
+        
+        prev_max = current_pos + max_ext
+        
+        # Convert scalar position along axis to 3D position
+        pos_3d = axis_arr * current_pos
+        positions.append(Position(float(pos_3d[0]), float(pos_3d[1]), float(pos_3d[2])))
+        
+        debug(f"  gap_position[{i}]: pos={current_pos:.3f}, extent=[{min_ext:.2f}, {max_ext:.2f}]")
+    
+    return positions
+
+
+
+def direction_from_angles(azimuth: float = 0.0, elevation: float = 0.0) -> Tuple[float, float, float]:
+    """
+    Convert spherical angles to unit direction vector.
+    
+    This enables natural language like "along 30 degree direction" to be
+    converted to a proper placement vector.
+    
+    Args:
+        azimuth: Angle in XY plane from X-axis (degrees). 0°=X, 90°=Y
+        elevation: Angle from XY plane (degrees). 0°=horizontal, 90°=Z
+    
+    Returns:
+        (x, y, z) unit vector
+    
+    Examples:
+        direction_from_angles(0, 0)   -> (1, 0, 0)  # Along X
+        direction_from_angles(90, 0)  -> (0, 1, 0)  # Along Y
+        direction_from_angles(0, 90)  -> (0, 0, 1)  # Along Z
+        direction_from_angles(30, 0)  -> (0.866, 0.5, 0)  # 30° in XY plane
+    """
+    az_rad = np.radians(azimuth)
+    el_rad = np.radians(elevation)
+    x = np.cos(el_rad) * np.cos(az_rad)
+    y = np.cos(el_rad) * np.sin(az_rad)
+    z = np.sin(el_rad)
+    return (float(x), float(y), float(z))
+
+
+# =============================================================================
+# SMART POSITION GENERATOR - GENERIC FOR ALL SCENARIOS
+# =============================================================================
+
+def generate_smart_positions(
+    molecules: List[Dict[str, Any]],
+    distance: Optional[float],
+    axis: Tuple[float, float, float],
+    orientations: Optional[List['Orientation']] = None,
+    allow_clashes: bool = False
+) -> Tuple[List[Position], Dict[str, Any]]:
+    """
+    SMART position placement for ANY scenario.
+    
+    This is the UNIFIED position generator that handles:
+    - Any axis (X, Y, Z, or arbitrary vectors)
+    - Asymmetric molecules (calculates extent along placement axis)
+    - Clash prevention (uses safe distance when needed)
+    - User notification (returns info about adjustments)
+    
+    Algorithm:
+    1. If distance is None/0, treat as requesting minimum safe distance
+    2. Calculate molecular extent along the specified axis
+    3. Compute minimum_safe_distance = max half-extents + VdW buffer
+    4. If requested distance >= safe_distance: use requested distance
+       Else: use safe_distance (and mark as adjusted)
+    5. Place molecules along axis at that distance
+    
+    Args:
+        molecules: List of molecule dicts with 'atoms' and 'coords'
+        distance: User's requested center-to-center distance (or None/0)
+        axis: Placement direction vector (will be normalized)
+        orientations: Optional pre-computed orientations for extent calculation
+        allow_clashes: If True, use distance even if clashes occur
+    
+    Returns:
+        (positions, position_info) where position_info contains:
+            - requested_distance: what user asked for
+            - actual_distance: what was used
+            - was_adjusted: True if we had to change the distance
+            - minimum_safe_distance: calculated safe distance
+            - axis_used: the normalized axis tuple
+            - adjustment_reason: explanation if adjusted
+    """
+    n = len(molecules)
+    if n == 0:
+        return [], {'error': 'No molecules provided'}
+    
+    # Normalize axis
+    axis_arr = np.array(axis, dtype=float)
+    norm = np.linalg.norm(axis_arr)
+    if norm < 1e-10:
+        axis_arr = np.array([0, 0, 1], dtype=float)  # Default to Z
+    else:
+        axis_arr = axis_arr / norm
+    
+    debug(f"generate_smart_positions: n={n}, distance={distance}, axis={tuple(axis_arr)}")
+    
+    # =========================================================================
+    # PRE-ALIGNMENT FOR EXTENT CALCULATION
+    # =========================================================================
+    # For Z-axis stacking of planar molecules, we need to align them to XY plane
+    # BEFORE calculating extents. This ensures minimal Z-extent.
+    # For non-Z axes, we use the molecule as-is (respecting its natural shape).
+    # =========================================================================
+    is_z_axis = np.allclose(axis_arr, [0, 0, 1]) or np.allclose(axis_arr, [0, 0, -1])
+    
+    aligned_molecules = []
+    for mol in molecules:
+        if is_z_axis:
+            # For Z-axis stacking, pre-align planar molecules to XY plane
+            aligned_mol = _align_planar_molecule_to_xy(mol)
+        else:
+            # For X/Y or arbitrary axes, use natural molecule orientation
+            aligned_mol = mol
+        aligned_molecules.append(aligned_mol)
+    
+    # Calculate molecular extents along the specified axis
+    extents = []
+    for i, mol in enumerate(aligned_molecules):
+        if orientations and i < len(orientations):
+            # Apply orientation before calculating extent
+            R = orientations[i].to_matrix()
+            coords = np.array(mol.get('coords', [[0, 0, 0]]))
+            if len(coords) > 0:
+                center = coords.mean(axis=0)
+                rotated = (R @ (coords - center).T).T
+                temp_mol = {**mol, 'coords': rotated.tolist()}
+                min_ext, max_ext = _get_molecule_extent_along_axis(temp_mol, axis_arr)
+            else:
+                min_ext, max_ext = 0.0, 0.0
+        else:
+            min_ext, max_ext = _get_molecule_extent_along_axis(mol, axis_arr)
+        
+        extent_size = max_ext - min_ext
+        extents.append({
+            'min': min_ext,
+            'max': max_ext,
+            'size': extent_size,
+            'half': extent_size / 2
+        })
+        debug(f"  molecule[{i}]: extent=[{min_ext:.2f}, {max_ext:.2f}], size={extent_size:.2f}Å")
+    
+    # Calculate minimum safe distance for adjacent molecules
+    # Safe distance = half-extent of mol_i + half-extent of mol_{i+1} + VdW buffer
+    VDW_BUFFER = 0.5  # Small buffer to prevent surface contact
+    
+    min_safe_distances = []
+    for i in range(n - 1):
+        safe_dist = extents[i]['half'] + extents[i + 1]['half'] + VDW_BUFFER
+        min_safe_distances.append(safe_dist)
+        debug(f"  safe_distance[{i}→{i+1}] = {safe_dist:.2f}Å")
+    
+    max_safe = max(min_safe_distances) if min_safe_distances else 3.4
+    
+    # Determine actual distance to use
+    requested = distance if distance is not None else 0.0
+    was_adjusted = False
+    adjustment_reason = None
+    actual_distance = requested
+    
+    if requested <= 0:
+        # User didn't specify distance - use safe distance
+        actual_distance = max_safe
+        was_adjusted = True
+        adjustment_reason = f"No distance specified, using minimum safe distance ({max_safe:.2f}Å)"
+        debug(f"  No distance specified -> using safe distance {max_safe:.2f}Å")
+    elif requested < max_safe and not allow_clashes:
+        # User's distance is too small - would cause clashes
+        actual_distance = max_safe
+        was_adjusted = True
+        adjustment_reason = f"Requested {requested:.2f}Å would cause clashes, adjusted to {max_safe:.2f}Å"
+        debug(f"  Distance {requested}Å too small -> adjusted to {max_safe:.2f}Å")
+    else:
+        debug(f"  Using requested distance {requested}Å")
+    
+    # Generate positions along the axis
+    positions = []
+    for i in range(n):
+        pos_3d = axis_arr * actual_distance * i
+        positions.append(Position(float(pos_3d[0]), float(pos_3d[1]), float(pos_3d[2])))
+        debug(f"  position[{i}] = ({pos_3d[0]:.3f}, {pos_3d[1]:.3f}, {pos_3d[2]:.3f})")
+    
+    position_info = {
+        'requested_distance': requested,
+        'actual_distance': actual_distance,
+        'was_adjusted': was_adjusted,
+        'minimum_safe_distance': max_safe,
+        'axis_used': tuple(axis_arr.tolist()),
+        'adjustment_reason': adjustment_reason,
+        'molecular_extents': [e['size'] for e in extents]
+    }
+    
+    return positions, position_info
+
+
+# Patterns that should use SMART position calculation
+GAP_BASED_PATTERNS = {
+    'linear', 'pi_pi_parallel', 'pi_pi_antiparallel', 'pi_pi_offset', 
+    'herringbone', 'sandwich', 'stacked'
+}
+
+
+
 def generate_circular_positions(n: int, radius: float = 5.0,
                                 center: Tuple[float, float, float] = (0, 0, 0)) -> List[Position]:
     """Generate positions on a circle in the XY plane."""
@@ -731,34 +1057,129 @@ def generate_grid_positions(n: int, spacing: float = 3.4) -> List[Position]:
     return positions
 
 
+class FormulaError(Exception):
+    """Error in formula evaluation."""
+    pass
+
+
+def _safe_sqrt(x):
+    """Safe sqrt that returns 0 for negative values instead of NaN."""
+    return 0.0 if x < 0 else np.sqrt(x)
+
+
+def _eval_formula(formula: str, local_vars: dict, axis: str, i: int) -> float:
+    """
+    Safely evaluate a formula string.
+
+    Security: eval() is sandboxed with __builtins__={} and only whitelisted
+    math functions are available. This is necessary for mathematical formula
+    evaluation in this scientific computing context.
+    """
+    result = eval(formula, {"__builtins__": {}}, local_vars)  # noqa: S307
+    return float(result)
+
+
 def generate_formula_positions(n: int, x_formula: str = "0", y_formula: str = "0",
                                z_formula: str = "i * 3.4") -> List[Position]:
-    """Generate positions using mathematical formulas."""
+    """
+    Generate positions using mathematical formulas.
+
+    Handles errors gracefully:
+    - Division by zero returns 0
+    - sqrt of negative returns 0
+    - Invalid functions raise FormulaError with helpful message
+    - NaN/Inf values are replaced with 0
+    - Coordinates > 1000 Å are clamped (physically unreasonable)
+    """
     debug(f"generate_formula_positions: n={n}")
     debug(f"  x_formula = '{x_formula}'")
     debug(f"  y_formula = '{y_formula}'")
     debug(f"  z_formula = '{z_formula}'")
-    
+
+    if n <= 0:
+        return []
+
     positions = []
+
+    # Whitelisted safe math functions with common aliases
     safe_dict = {
+        # Trig functions
         'sin': np.sin, 'cos': np.cos, 'tan': np.tan,
-        'sqrt': np.sqrt, 'exp': np.exp, 'log': np.log,
-        'abs': np.abs, 'pi': np.pi, 'e': np.e,
-        'atan2': np.arctan2, 'floor': np.floor, 'ceil': np.ceil, 'round': np.round,
-        'int': int
+        'asin': np.arcsin, 'acos': np.arccos, 'atan': np.arctan,
+        'arcsin': np.arcsin, 'arccos': np.arccos, 'arctan': np.arctan,
+        'sinh': np.sinh, 'cosh': np.cosh, 'tanh': np.tanh,
+        # Power/log
+        'sqrt': _safe_sqrt, 'exp': np.exp, 'log': np.log, 'log10': np.log10,
+        'pow': pow,
+        # Rounding
+        'abs': np.abs, 'floor': np.floor, 'ceil': np.ceil, 'round': np.round,
+        # Other
+        'atan2': np.arctan2,
+        'min': min, 'max': max,
+        'int': int, 'float': float,
+        # Constants
+        'pi': np.pi, 'e': np.e,
+        'phi': (1 + np.sqrt(5)) / 2,  # Golden ratio
     }
-    
+
+    # Grid dimensions for 3D decomposition
+    side = int(np.ceil(n**(1/3))) if n > 0 else 1
+
+    # Maximum reasonable coordinate (1000 Å = 100 nm)
+    MAX_COORD = 1000.0
+
     for i in range(n):
-        t = i / max(n - 1, 1)  # Normalized [0, 1]
-        local_vars = {'i': i, 'n': n, 't': t, **safe_dict}
-        
-        x = float(eval(x_formula, {"__builtins__": {}}, local_vars))
-        y = float(eval(y_formula, {"__builtins__": {}}, local_vars))
-        z = float(eval(z_formula, {"__builtins__": {}}, local_vars))
-        
+        # Avoid division by zero in t calculation
+        t = i / (n - 1) if n > 1 else 0.0
+
+        # Grid variables for 3D formulas
+        iz = i // (side * side)
+        rem = i % (side * side)
+        iy = rem // side
+        ix = rem % side
+
+        local_vars = {
+            'i': i, 'n': n, 't': t,
+            'j': iy, 'k': iz,
+            'ix': ix, 'iy': iy, 'iz': iz,
+            **safe_dict
+        }
+
+        # Evaluate each formula with error handling
+        coords = []
+        for axis, formula in [('x', x_formula), ('y', y_formula), ('z', z_formula)]:
+            try:
+                value = _eval_formula(formula, local_vars, axis, i)
+            except ZeroDivisionError:
+                debug(f"  WARNING: Division by zero in {axis}_formula at i={i}, using 0")
+                value = 0.0
+            except NameError as err:
+                raise FormulaError(
+                    f"Unknown function in {axis}_formula: {err}. "
+                    f"Available: sin, cos, tan, sqrt, exp, log, abs, floor, ceil, "
+                    f"asin, acos, atan, atan2, sinh, cosh, tanh, pow, min, max, pi, e, phi"
+                )
+            except SyntaxError as err:
+                raise FormulaError(f"Syntax error in {axis}_formula '{formula}': {err}")
+            except Exception as err:
+                raise FormulaError(f"Error evaluating {axis}_formula '{formula}' at i={i}: {err}")
+
+            # Check for NaN or Inf
+            if np.isnan(value) or np.isinf(value):
+                debug(f"  WARNING: {axis}_formula produced {'NaN' if np.isnan(value) else 'Inf'} at i={i}, using 0")
+                value = 0.0
+
+            # Clamp unreasonable coordinates
+            if abs(value) > MAX_COORD:
+                debug(f"  WARNING: {axis}={value:.2e} Å exceeds {MAX_COORD}, clamping")
+                value = MAX_COORD if value > 0 else -MAX_COORD
+
+            coords.append(value)
+
+        x, y, z = coords
         positions.append(Position(x, y, z))
         debug(f"  position[{i}] = ({x:.3f}, {y:.3f}, {z:.3f})")
-    
+
     return positions
 
 
@@ -850,24 +1271,24 @@ class ChemicalPatterns:
     """Library of chemically-meaningful arrangement patterns."""
     
     @staticmethod
-    def pi_pi_parallel(n: int, distance: float = 3.4) -> Tuple[List[Position], List[Orientation]]:
+    def pi_pi_parallel(n: int, distance: float = 3.4, axis: Tuple[float, float, float] = (0, 0, 1), **kwargs) -> Tuple[List[Position], List[Orientation]]:
         """Face-to-face π-stacking with all molecules parallel."""
-        debug(f"ChemicalPatterns.pi_pi_parallel: n={n}, distance={distance}")
-        positions = generate_linear_positions(n, spacing=distance, axis=(0, 0, 1))
+        debug(f"ChemicalPatterns.pi_pi_parallel: n={n}, distance={distance}, axis={axis}")
+        positions = generate_linear_positions(n, spacing=distance, axis=axis)
         orientations = generate_fixed_orientations(n)
         return positions, orientations
     
     @staticmethod
-    def pi_pi_antiparallel(n: int, distance: float = 3.4) -> Tuple[List[Position], List[Orientation]]:
+    def pi_pi_antiparallel(n: int, distance: float = 3.4, axis: Tuple[float, float, float] = (0, 0, 1), **kwargs) -> Tuple[List[Position], List[Orientation]]:
         """Face-to-face stacking with alternating 180° rotation."""
-        debug(f"ChemicalPatterns.pi_pi_antiparallel: n={n}, distance={distance}")
-        positions = generate_linear_positions(n, spacing=distance, axis=(0, 0, 1))
+        debug(f"ChemicalPatterns.pi_pi_antiparallel: n={n}, distance={distance}, axis={axis}")
+        positions = generate_linear_positions(n, spacing=distance, axis=axis)
         orientations = generate_alternating_orientations(n, (0, 0, 0), (0, 0, 180))
         return positions, orientations
     
     @staticmethod
-    def pi_pi_offset(n: int, distance: float = 3.4, 
-                     offset: float = 1.5) -> Tuple[List[Position], List[Orientation]]:
+    def pi_pi_offset(n: int, distance: float = 3.4,
+                     offset: float = 1.5, **kwargs) -> Tuple[List[Position], List[Orientation]]:
         """Slip-stacked arrangement with lateral offset."""
         debug(f"ChemicalPatterns.pi_pi_offset: n={n}, distance={distance}, offset={offset}")
         positions = []
@@ -879,7 +1300,7 @@ class ChemicalPatterns:
         return positions, orientations
     
     @staticmethod
-    def t_shaped(distance: float = 5.0) -> Tuple[List[Position], List[Orientation]]:
+    def t_shaped(distance: float = 5.0, **kwargs) -> Tuple[List[Position], List[Orientation]]:
         """Edge-to-face perpendicular dimer."""
         debug(f"ChemicalPatterns.t_shaped: distance={distance}")
         positions = [Position(0, 0, 0), Position(distance, 0, 0)]
@@ -887,8 +1308,8 @@ class ChemicalPatterns:
         return positions, orientations
     
     @staticmethod
-    def herringbone(n: int, distance: float = 5.5, 
-                    tilt: float = 45.0) -> Tuple[List[Position], List[Orientation]]:
+    def herringbone(n: int, distance: float = 5.5,
+                    tilt: float = 45.0, **kwargs) -> Tuple[List[Position], List[Orientation]]:
         """Alternating tilt pattern (common in organic crystals)."""
         debug(f"ChemicalPatterns.herringbone: n={n}, distance={distance}, tilt={tilt}")
         positions = generate_linear_positions(n, spacing=distance, axis=(0, 0, 1))
@@ -901,7 +1322,7 @@ class ChemicalPatterns:
         return positions, orientations
     
     @staticmethod
-    def h_bonded_dimer(distance: float = 2.8) -> Tuple[List[Position], List[Orientation]]:
+    def h_bonded_dimer(distance: float = 2.8, **kwargs) -> Tuple[List[Position], List[Orientation]]:
         """Hydrogen-bonded dimer with optimal geometry."""
         debug(f"ChemicalPatterns.h_bonded_dimer: distance={distance}")
         positions = [Position(0, 0, 0), Position(distance, 0, 0)]
@@ -909,7 +1330,7 @@ class ChemicalPatterns:
         return positions, orientations
     
     @staticmethod
-    def h_bonded_circular(n: int, radius: float = 5.0) -> Tuple[List[Position], List[Orientation]]:
+    def h_bonded_circular(n: int, radius: float = 5.0, **kwargs) -> Tuple[List[Position], List[Orientation]]:
         """Circular ring with H-bond connectivity."""
         debug(f"ChemicalPatterns.h_bonded_circular: n={n}, radius={radius}")
         positions = generate_circular_positions(n, radius)
@@ -918,7 +1339,7 @@ class ChemicalPatterns:
     
     @staticmethod
     def helical(n: int, radius: float = 5.0, pitch: float = 3.4,
-                turns: float = 1.0) -> Tuple[List[Position], List[Orientation]]:
+                turns: float = 1.0, **kwargs) -> Tuple[List[Position], List[Orientation]]:
         """Helical (DNA-like) arrangement."""
         debug(f"ChemicalPatterns.helical: n={n}, radius={radius}, pitch={pitch}, turns={turns}")
         positions = generate_helical_positions(n, radius, pitch, turns)
@@ -926,7 +1347,7 @@ class ChemicalPatterns:
         return positions, orientations
     
     @staticmethod
-    def sandwich(distance: float = 3.4) -> Tuple[List[Position], List[Orientation]]:
+    def sandwich(distance: float = 3.4, **kwargs) -> Tuple[List[Position], List[Orientation]]:
         """A-B-A intercalated sandwich arrangement."""
         debug(f"ChemicalPatterns.sandwich: distance={distance}")
         positions = [
@@ -938,7 +1359,7 @@ class ChemicalPatterns:
         return positions, orientations
     
     @staticmethod
-    def grid(n: int, spacing: float = 3.4) -> Tuple[List[Position], List[Orientation]]:
+    def grid(n: int, spacing: float = 3.4, **kwargs) -> Tuple[List[Position], List[Orientation]]:
         """2D grid arrangement in XY plane."""
         debug(f"ChemicalPatterns.grid: n={n}, spacing={spacing}")
         positions = generate_grid_positions(n, spacing)
@@ -946,7 +1367,7 @@ class ChemicalPatterns:
         return positions, orientations
     
     @staticmethod
-    def spherical(n: int, radius: float = 5.0) -> Tuple[List[Position], List[Orientation]]:
+    def spherical(n: int, radius: float = 5.0, **kwargs) -> Tuple[List[Position], List[Orientation]]:
         """Molecules distributed on sphere surface."""
         debug(f"ChemicalPatterns.spherical: n={n}, radius={radius}")
         positions = generate_spherical_positions(n, radius)
@@ -954,15 +1375,15 @@ class ChemicalPatterns:
         return positions, orientations
     
     @staticmethod
-    def linear(n: int, distance: float = 5.0) -> Tuple[List[Position], List[Orientation]]:
-        """Simple linear arrangement along Z axis."""
-        debug(f"ChemicalPatterns.linear: n={n}, distance={distance}")
-        positions = generate_linear_positions(n, spacing=distance, axis=(0, 0, 1))
+    def linear(n: int, distance: float = 5.0, axis: Tuple[float, float, float] = (0, 0, 1), **kwargs) -> Tuple[List[Position], List[Orientation]]:
+        """Simple linear arrangement along defined axis."""
+        debug(f"ChemicalPatterns.linear: n={n}, distance={distance}, axis={axis}")
+        positions = generate_linear_positions(n, spacing=distance, axis=axis)
         orientations = generate_fixed_orientations(n)
         return positions, orientations
     
     @staticmethod
-    def swastika(arm_length: float = 10.0) -> Tuple[List[Position], List[Orientation]]:
+    def swastika(arm_length: float = 10.0, **kwargs) -> Tuple[List[Position], List[Orientation]]:
         """Four molecules in swastika arrangement."""
         debug(f"ChemicalPatterns.swastika: arm_length={arm_length}")
         half = arm_length / 2
@@ -1049,12 +1470,142 @@ def auto_detect_pattern(molecules: List[Dict]) -> str:
     return pattern
 
 
-def apply_poses_to_molecules(molecules: List[Dict], 
+def _align_planar_molecule_to_xy(mol: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Align a planar molecule so its plane lies in XY (normal along Z).
+
+    This is critical for pi-stacking: molecules must be flat in XY plane
+    before being stacked along Z-axis. Without this, molecules from
+    database with arbitrary orientations cause atom clashes.
+
+    Uses SVD to find the plane normal (direction of minimum variance),
+    then applies Rodrigues' rotation to align it with Z-axis.
+
+    Args:
+        mol: Molecule dict with 'atoms' and 'coords'
+
+    Returns:
+        New molecule dict with aligned coordinates
+    """
+    coords = np.array(mol.get('coords', []))
+    if len(coords) < 3:
+        return mol  # Can't align with fewer than 3 atoms
+
+    # Center the molecule
+    center = coords.mean(axis=0)
+    centered = coords - center
+
+    # SVD to find plane normal (last singular vector = direction of min variance)
+    try:
+        _, S, Vt = np.linalg.svd(centered)
+    except np.linalg.LinAlgError:
+        debug("  WARNING: SVD failed in _align_planar_molecule_to_xy")
+        return mol
+
+    # Check planarity: if 3rd singular value is small compared to others, it's planar
+    planarity_ratio = S[2] / S[0] if S[0] > 1e-10 else 1.0
+    if planarity_ratio > 0.3:
+        debug(f"  Molecule is not planar (planarity_ratio={planarity_ratio:.3f}), skipping alignment")
+        return mol  # Not planar enough, don't align
+
+    # Current plane normal
+    current_normal = Vt[2]  # Last row = min variance direction
+
+    # Ensure consistent normal direction (prefer positive Z component)
+    if current_normal[2] < 0:
+        current_normal = -current_normal
+
+    # Target: Z-axis
+    target_normal = np.array([0.0, 0.0, 1.0])
+
+    # Check if already aligned
+    alignment = np.abs(np.dot(current_normal, target_normal))
+    if alignment > 0.999:
+        debug(f"  Molecule already aligned to XY (alignment={alignment:.4f})")
+        return mol  # Already aligned
+
+    # Rodrigues' rotation formula: R = I + sin(θ)K + (1-cos(θ))K²
+    # where K is the skew-symmetric cross-product matrix
+    axis = np.cross(current_normal, target_normal)
+    axis_norm = np.linalg.norm(axis)
+    if axis_norm < 1e-10:
+        # Vectors are parallel or anti-parallel
+        if np.dot(current_normal, target_normal) < 0:
+            # Anti-parallel: rotate 180° around X-axis
+            R = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
+        else:
+            # Parallel: no rotation needed
+            return mol
+    else:
+        axis = axis / axis_norm  # Normalize rotation axis
+        angle = np.arccos(np.clip(np.dot(current_normal, target_normal), -1.0, 1.0))
+
+        # Skew-symmetric matrix K
+        K = np.array([
+            [0, -axis[2], axis[1]],
+            [axis[2], 0, -axis[0]],
+            [-axis[1], axis[0], 0]
+        ])
+
+        # Rodrigues' formula
+        R = np.eye(3) + np.sin(angle) * K + (1 - np.cos(angle)) * (K @ K)
+
+    # Apply rotation (coordinates stay centered at origin after rotation)
+    rotated = (R @ centered.T).T
+
+    # Translate back so center is at origin (for subsequent stacking)
+    # We keep it centered - the pose system will translate it
+    new_mol = mol.copy()
+    new_mol['coords'] = rotated.tolist()
+
+    # Compute angle for debug output
+    rotation_angle = np.degrees(np.arccos(np.clip(alignment, -1.0, 1.0)))
+    debug(f"  Aligned planar molecule: angle={rotation_angle:.1f}°, "
+          f"normal ({current_normal[0]:.3f}, {current_normal[1]:.3f}, {current_normal[2]:.3f}) → (0, 0, 1)")
+
+    return new_mol
+
+
+def _prealign_molecules_for_pattern(molecules: List[Dict[str, Any]],
+                                    pattern: str) -> List[Dict[str, Any]]:
+    """
+    Pre-align molecules for patterns that require specific orientations.
+
+    For pi-stacking patterns, ensures all planar molecules are flat in XY plane.
+    This must happen BEFORE pose generation and application.
+
+    Args:
+        molecules: List of molecule dicts
+        pattern: The arrangement pattern name
+
+    Returns:
+        List of pre-aligned molecule dicts
+    """
+    # Patterns that require planar alignment (molecules flat in XY)
+    # Includes grid since planar molecules in 2D grid should be flat
+    planar_patterns = {
+        'pi_pi_parallel', 'pi_pi_antiparallel', 'pi_pi_offset',
+        't_shaped', 'herringbone', 'sandwich', 'grid'
+    }
+
+    if pattern not in planar_patterns:
+        return molecules  # No pre-alignment needed
+
+    debug(f"Pre-aligning molecules for {pattern} pattern")
+    aligned = []
+    for mol in molecules:
+        aligned_mol = _align_planar_molecule_to_xy(mol)
+        aligned.append(aligned_mol)
+
+    return aligned
+
+
+def apply_poses_to_molecules(molecules: List[Dict],
                              poses: List[MoleculePose]) -> List[Dict]:
     """Apply poses to molecules, transforming their coordinates."""
     debug(f"apply_poses_to_molecules: n_molecules={len(molecules)}, n_poses={len(poses)}")
     result = []
-    
+
     for i, mol in enumerate(molecules):
         coords = np.array(mol.get('coords', []))
         debug(f"  molecule[{i}]: n_atoms={len(coords)}")
@@ -1093,17 +1644,26 @@ def apply_poses_to_molecules(molecules: List[Dict],
 
 
 def validate_arrangement(molecules: List[Dict], poses: List[MoleculePose],
-                        min_distance: float = 1.5) -> Dict[str, Any]:
-    """Validate arrangement for clashes and physical plausibility."""
+                        min_distance: float = 1.5, constraints: Optional[List['Constraint']] = None) -> Dict[str, Any]:
+    """
+    Validate arrangement for clashes and physical plausibility.
+
+    Returns:
+        Dict with keys:
+        - valid: bool - True if no errors
+        - warnings: List[str] - Non-fatal issues
+        - errors: List[str] - Fatal issues
+        - clash_pairs: List[Tuple] - Clashing atom pairs
+        - physics_violation: bool - True if atoms overlap (< 0.5Å)
+    """
     debug(f"validate_arrangement: n_molecules={len(molecules)}, min_distance={min_distance}")
-    
+
     transformed = apply_poses_to_molecules(molecules, poses)
-    
-    warnings = []
-    warnings = []
-    errors = []
-    clash_pairs = []
-    validation = {'valid': True, 'warnings': warnings, 'errors': errors}
+
+    warnings: List[str] = []
+    errors: List[str] = []
+    clash_pairs: List[Tuple] = []
+    physics_violation = False
     
     n = len(transformed)
     for i in range(n):
@@ -1127,13 +1687,17 @@ def validate_arrangement(molecules: List[Dict], poses: List[MoleculePose],
                     if dist < 0.5:
                         # CRITICAL ERROR: Physics violation (nuclear fusion)
                         debug(f"    CRITICAL: Physics violation between mol {i} atom {ai} and mol {j} atom {aj}: dist={dist:.4f}A")
-                        validation['valid'] = False
-                        if 'errors' not in validation: validation['errors'] = []
-                        validation['errors'].append(f"Physics violation: Atom overlap at {dist:.2f}A (<0.5A)")
-                        # In strict mode, we might raise here, but for now we mark invalid
-                        # Actually, let's raise for blatant 0.0 case
+                        physics_violation = True
+                        errors.append(f"Physics violation: Atoms overlapping at {dist:.4f}A between mol {i} atom {ai} and mol {j} atom {aj}")
+                        # Return immediately for severe violations - no point checking more
                         if dist < 0.1:
-                            raise ValueError(f"Physics violation: Atoms overlapping at {dist:.4f}A")
+                            return {
+                                'valid': False,
+                                'warnings': warnings,
+                                'errors': errors,
+                                'clash_pairs': clash_pairs,
+                                'physics_violation': True
+                            }
 
                     
                     if dist < min_allowed:
@@ -1142,15 +1706,29 @@ def validate_arrangement(molecules: List[Dict], poses: List[MoleculePose],
                             errors.append(f"Severe clash: mol{i}:atom{ai} - mol{j}:atom{aj} = {dist:.2f}Å")
                         else:
                             warnings.append(f"Close contact: mol{i}:atom{ai} - mol{j}:atom{aj} = {dist:.2f}Å")
-    
-    valid = len(errors) == 0
-    debug(f"  validation result: valid={valid}, warnings={len(warnings)}, errors={len(errors)}")
-    
+                            
+    # Generic Constraint Validation
+    if constraints:
+        debug(f"Checking {len(constraints)} constraints...")
+        for i, constraint in enumerate(constraints):
+            violation = constraint.evaluate(molecules, poses)
+            # Use a generous tolerance (0.5A) to allow for minor optimization residuals
+            # but flag significant deviations.
+            TOLERANCE = 0.5
+            if violation > TOLERANCE:
+                debug(f"  Constraint {i} violation: {violation:.4f}")
+                errors.append(f"Constraint Violation: {type(constraint).__name__} mismatch by {violation:.2f} (tol={TOLERANCE})")
+
+    # Valid only if no errors AND no physics violations
+    valid = len(errors) == 0 and not physics_violation
+    debug(f"  validation result: valid={valid}, physics_violation={physics_violation}, warnings={len(warnings)}, errors={len(errors)}")
+
     return {
         'valid': valid,
         'warnings': warnings,
         'errors': errors,
-        'clash_pairs': clash_pairs
+        'clash_pairs': clash_pairs,
+        'physics_violation': physics_violation
     }
 
 
@@ -1192,6 +1770,18 @@ def combine_molecules(molecules: List[Dict], vacuum: float = 10.0) -> Dict[str, 
             'gamma': 90.0
         }
     }
+
+
+def _parse_axis(axis: Union[str, Tuple[float, float, float], List[float]]) -> Tuple[float, float, float]:
+    """Convert axis specification to normalized vector tuple."""
+    if isinstance(axis, str):
+        if axis.lower() == 'x': return (1.0, 0.0, 0.0)
+        if axis.lower() == 'y': return (0.0, 1.0, 0.0)
+        return (0.0, 0.0, 1.0)
+    try:
+        return tuple(axis)
+    except:
+        return (0.0, 0.0, 1.0) # Default Z
 
 
 def arrange_molecules(
@@ -1279,9 +1869,40 @@ def arrange_molecules(
         distance = default_distances[0] if default_distances else 3.4
         debug(f"  using default distance: {distance}")
     
+    # Optimization: Large System Heuristic
+    if n > 50 and pattern == "auto" and not constraints:
+        debug(f"Optimization: Large cluster (n={n}) detected, auto-selecting 'grid' pattern for efficiency")
+        pattern_normalized = "grid"
+
+    # PRE-ALIGNMENT: Align planar molecules for patterns that require it
+    # This must happen BEFORE pose generation to ensure proper stacking
+    molecules = _prealign_molecules_for_pattern(molecules, pattern_normalized)
+
+    # =========================================================================
+    # GENERIC DIRECTION PARSING (supports axis, direction_vector, direction_angle)
+    # =========================================================================
+    # Priority: direction_vector > direction_angle > axis
+    if 'direction_vector' in kwargs and kwargs['direction_vector'] is not None:
+        # Direct vector: [x, y, z]
+        vec = kwargs['direction_vector']
+        parsed_axis = _parse_axis(vec)
+        debug(f"  Direction from vector: {parsed_axis}")
+    elif 'direction_angle' in kwargs and kwargs['direction_angle'] is not None:
+        # Angle-based: azimuth + elevation
+        azimuth = kwargs['direction_angle']
+        elevation = kwargs.get('direction_elevation', 0.0)
+        parsed_axis = direction_from_angles(azimuth, elevation)
+        debug(f"  Direction from angles: azimuth={azimuth}°, elevation={elevation}° -> {parsed_axis}")
+    else:
+        # Legacy axis string: 'x', 'y', 'z'
+        axis_param = kwargs.get('axis', 'z')
+        parsed_axis = _parse_axis(axis_param)
+        debug(f"  Direction from axis: {axis_param} -> {parsed_axis}")
+
     # Generate positions and orientations
     positions = []
     orientations = []
+    position_info = {}  # Will be filled by SMART positioning if used
     
     if formulas:
         # Use formula-based generation
@@ -1289,7 +1910,18 @@ def arrange_molecules(
         x_formula = formulas.get('x', '0')
         y_formula = formulas.get('y', '0')
         z_formula = formulas.get('z', f'{distance} * i')
-        positions = generate_formula_positions(n, x_formula, y_formula, z_formula)
+        try:
+            positions = generate_formula_positions(n, x_formula, y_formula, z_formula)
+        except FormulaError as err:
+            debug(f"FormulaError: {err}")
+            return {
+                'success': False,
+                'error': {
+                    'code': 'FORMULA_ERROR',
+                    'message': str(err),
+                    'formulas': formulas
+                }
+            }
         orientations = generate_fixed_orientations(n)
     else:
         # Use pattern-based generation
@@ -1297,8 +1929,8 @@ def arrange_molecules(
         generator = _get_pattern_generator(pattern_normalized)
         
         # Build kwargs for generator
-        gen_kwargs = {'n': n, 'distance': distance}
-        gen_kwargs.update(kwargs)
+        gen_kwargs = kwargs.copy()
+        gen_kwargs.update({'n': n, 'distance': distance, 'axis': parsed_axis})
         
         # Handle different generator signatures
         if pattern_normalized in ['t_shaped', 'h_bonded', 'sandwich']:
@@ -1333,8 +1965,68 @@ def arrange_molecules(
             debug(f"  grid pattern: using spacing={spacing:.2f}")
             positions, orientations = generator(n=n, spacing=spacing)
         else:
-            # Standard generators (linear, pi_pi_*) take n and distance
-            positions, orientations = generator(n=n, distance=distance, **{k: v for k, v in kwargs.items() if k not in ['n', 'distance']})
+            # =========================================================
+            # CENTER-TO-CENTER POSITIONING (Chemical convention)
+            # =========================================================
+            # When user says "separated by 3.4Å", they mean center-to-center
+            # distance, which is the standard chemical convention for
+            # intermolecular distances (especially in pi-stacking).
+            # =========================================================
+            if pattern_normalized in GAP_BASED_PATTERNS:
+                debug(f"  Using CENTER-TO-CENTER positioning for {pattern_normalized}")
+                
+                # Generate orientations first (pattern-dependent)
+                if pattern_normalized == 'pi_pi_antiparallel':
+                    orientations = generate_alternating_orientations(n, (0, 0, 0), (0, 0, 180))
+                elif pattern_normalized == 'herringbone':
+                    tilt = kwargs.get('tilt', 45.0)
+                    orientations = []
+                    for i in range(n):
+                        if i % 2 == 0:
+                            orientations.append(Orientation(tilt, 0, 0))
+                        else:
+                            orientations.append(Orientation(-tilt, 0, 0))
+                elif pattern_normalized == 'pi_pi_offset':
+                    # For offset, we use fixed orientations but the offset is in positions
+                    orientations = generate_fixed_orientations(n)
+                else:
+                    orientations = generate_fixed_orientations(n)
+                
+                # =========================================================
+                # SMART POSITION CALCULATION - Generic for ALL scenarios
+                # =========================================================
+                # Uses generate_smart_positions which:
+                # 1. Works for ANY axis (X, Y, Z, or arbitrary vectors)
+                # 2. Calculates molecular extent along the placement axis
+                # 3. Uses safe distance if requested distance would cause clashes
+                # 4. Returns position_info for user notification
+                # =========================================================
+                positions, position_info = generate_smart_positions(
+                    molecules=molecules,
+                    distance=distance,  # May be None/0 -> use safe distance
+                    axis=parsed_axis,   # CRITICAL: Use parsed axis!
+                    orientations=orientations,
+                    allow_clashes=kwargs.get('allow_clashes', False)
+                )
+                
+                if position_info.get('was_adjusted'):
+                    debug(f"  ⚠ Distance adjusted: {position_info.get('adjustment_reason')}")
+                
+                # Handle lateral offset for pi_pi_offset pattern
+                if pattern_normalized == 'pi_pi_offset':
+                    offset = kwargs.get('offset', 1.5)
+                    for i in range(len(positions)):
+                        if i % 2 == 1:
+                            positions[i] = Position(
+                                positions[i].x + offset,
+                                positions[i].y,
+                                positions[i].z
+                            )
+            else:
+                # Fallback to legacy generator for unknown patterns
+                debug(f"  Using legacy generator for {pattern_normalized}")
+                positions, orientations = generator(**gen_kwargs)
+                position_info = {}
     
     # Trim to actual number of molecules
     positions = positions[:n]
@@ -1402,13 +2094,71 @@ def arrange_molecules(
     debug("Applying poses to molecules")
     arranged_molecules = apply_poses_to_molecules(molecules, poses)
     
-    # Validate
+    # =========================================================================
+    # SMART VALIDATION WITH AUTO-RELAXATION
+    # =========================================================================
     validation = {}
-    if validate:
-        debug("Validating arrangement")
-        validation = validate_arrangement(molecules, poses)
-        debug(f"Validation: valid={validation.get('valid')}, warnings={len(validation.get('warnings', []))}")
+    original_distance = distance
+    relaxation_applied = False
+    relaxation_attempts = 0
+    max_relax_attempts = 5
+    relax_factor = 1.2
     
+    if validate:
+        debug("Validating arrangement with auto-relaxation")
+        
+        for attempt in range(max_relax_attempts + 1):
+            validation = validate_arrangement(molecules, poses, min_distance=1.5, constraints=constraint_objs)
+            debug(f"  Attempt {attempt}: valid={validation.get('valid')}, physics_violation={validation.get('physics_violation')}")
+            
+            # Physics violation is unrecoverable (atoms at same position)
+            if validation.get('physics_violation'):
+                debug("  FATAL: Physics violation detected, cannot auto-relax")
+                break
+            
+            # If valid, we're done
+            if validation.get('valid'):
+                break
+            
+            # If not valid and we can try again, auto-relax by expanding spacing
+            if attempt < max_relax_attempts:
+                relaxation_attempts = attempt + 1
+                relaxation_applied = True
+                distance = distance * relax_factor
+                debug(f"  Auto-relaxing: increasing distance to {distance:.2f}Å (attempt {relaxation_attempts})")
+                
+                # Re-generate positions with increased gap
+                if pattern_normalized in GAP_BASED_PATTERNS:
+                    positions = generate_gap_based_positions(
+                        molecules=molecules,
+                        gaps=distance,
+                        axis=parsed_axis,
+                        orientations=orientations
+                    )
+                    # Update poses with new positions
+                    for i, pos in enumerate(positions):
+                        if i < len(poses):
+                            poses[i].position = pos
+                    
+                    # Re-apply poses
+                    arranged_molecules = apply_poses_to_molecules(molecules, poses)
+        
+        if relaxation_applied:
+            debug(f"  Relaxation complete: {original_distance:.2f}Å -> {distance:.2f}Å ({relaxation_attempts} attempts)")
+        
+        # Return early with clear error for physics violations
+        if validation.get('physics_violation'):
+            errors = validation.get('errors', [])
+            return {
+                'success': False,
+                'error': {
+                    'code': 'PHYSICS_VIOLATION',
+                    'message': f"Atoms overlapping: {errors[0] if errors else 'molecules placed at same position'}",
+                    'details': errors
+                },
+                'validation': validation
+            }
+
     # Combine into single structure
     debug("Combining molecules into single structure")
     combined = combine_molecules(arranged_molecules, vacuum)
@@ -1427,11 +2177,14 @@ def arrange_molecules(
         ]
     }
     
-    debug("arrange_molecules completed successfully")
+    # Determine success
+    success = validation.get('valid', True) if validate else True
+
+    debug(f"arrange_molecules completed: success={success}")
     debug("=" * 70)
-    
-    return {
-        'success': True,
+
+    result = {
+        'success': success,
         'molecules': arranged_molecules,
         'poses': [
             {
@@ -1450,10 +2203,44 @@ def arrange_molecules(
         'coords': combined['coords'],
         'metadata': {
             'pattern': pattern_normalized,
-            'distance': distance,
-            'optimized': optimize
+            # Transparency: what was requested vs what was used
+            'requested_distance': original_distance,
+            'actual_distance': distance,
+            'spacing_mode': 'smart' if pattern_normalized in GAP_BASED_PATTERNS else 'center_to_center',
+            'direction_vector': list(parsed_axis),
+            # SMART positioning info - for user notification
+            'position_info': position_info if 'position_info' in dir() else {},
+            # Relaxation info
+            'relaxation_applied': relaxation_applied,
+            'relaxation_attempts': relaxation_attempts,
+            'relaxation_factor': distance / original_distance if relaxation_applied else 1.0,
+            'optimized': optimize,
         }
     }
+
+    # Add error field when validation fails (BUG #2 fix)
+    if not success and validate:
+        errors = validation.get('errors', [])
+        if validation.get('physics_violation'):
+            result['error'] = {
+                'code': 'PHYSICS_VIOLATION',
+                'message': errors[0] if errors else 'Atoms overlapping',
+                'details': errors
+            }
+        elif errors:
+            result['error'] = {
+                'code': 'VALIDATION_FAILED',
+                'message': errors[0],
+                'details': errors
+            }
+        else:
+            result['error'] = {
+                'code': 'VALIDATION_FAILED',
+                'message': 'Arrangement validation failed',
+                'details': validation.get('warnings', [])
+            }
+
+    return result
 
 
 def _parse_constraint_string(s: str) -> Optional[Constraint]:

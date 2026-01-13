@@ -36,10 +36,42 @@ from .universal_molecule import generate_molecule_universal
 # Import the unified arrangement engine
 from . import molecular_arrangement as engine
 
+# Hunter Tracing Integration
+import os
+import importlib.util
+
+if os.environ.get("ENABLE_TRACE") == "1":
+    if importlib.util.find_spec("hunter"):
+        from hunter import trace, Q, CallPrinter
+        # Detailed Trace: Filter to reduce noise
+        # 1. generated.molecule packages only
+        # 2. Ignore private methods starting with __ (except __init__)? No, keep them for now.
+        # 3. Use CallPrinter to show function entry associated with args.
+        print("Enable Hunter Tracing (Optimized)...", file=sys.stderr)
+        trace(
+            # Filter: Only trace 'call' events (entering functions) to see flow,
+            # or 'line' events if debugging specific logic.
+            # User wants to analyze result -> 'call' with inputs/outputs is best.
+            Q(module_startswith="generators.molecule", kind="call"),
+            # Also trace 'return' to see what came out
+            Q(module_startswith="generators.molecule", kind="return"),
+            
+            action=CallPrinter(
+                repr_limit=500,
+                stream=sys.stderr
+            )
+        )
+    else:
+        logger.warning("Hunter not installed. Tracing disabled.")
+
 
 # =============================================================================
 # MOLECULE GENERATION
 # =============================================================================
+
+    # ... (skipping unchanged code) ...
+
+
 
 def _generate_molecules(
     molecule_specs: List[Dict[str, Any]]
@@ -189,15 +221,21 @@ def generate_molecular_cluster(
     # Step 2: Arrange molecules using the unified engine
     debug(f"Arranging molecules with pattern: {stacking}")
 
+    # Handle parameter aliasing (distance vs intermolecular_distance)
+    dist = intermolecular_distance
+    if dist is None and 'distance' in kwargs:
+        dist = kwargs.pop('distance')
+
     result = engine.arrange_molecules(
         molecules=mol_list,
         pattern=stacking,
-        distance=intermolecular_distance,
+        distance=dist,
         constraints=constraints,
         optimize=use_solver or optimize,
         validate=validate,
         formulas=formulas,
         vacuum=vacuum,
+        axis=axis,  # Explicitly pass axis
         **kwargs
     )
 

@@ -66,8 +66,46 @@ export class ToolOrchestrator {
         userMessage: string,
         chatHistory: Array<{ role: string; content: string }>
     ): Promise<ToolOrchestrationResult> {
-        // Build messages array
+        // System prompt to guide LLM on intelligent tool selection
+        const SYSTEM_PROMPT = `You are a crystallography and molecular modeling assistant.
+
+=== TOOL SELECTION GUIDELINES ===
+
+Use the APPROPRIATE tool based on the request:
+
+• build_molecule: Single molecule generation
+  - "generate benzene", "create aspirin molecule"
+
+• build_molecular_cluster: Multiple molecules with arrangement
+  - "2 benzene stacked", "pyrene dimer", "molecules separated by X angstrom"
+  - Any request with: count>1, stacking, separation, spacing, along axis
+
+• edit_molecule: Modify existing molecule
+  - "rotate", "translate", "delete atom from molecule"
+
+=== build_molecular_cluster FORMAT ===
+
+When using build_molecular_cluster:
+- molecules: [{"identifier": "name", "count": N}] - REQUIRED
+- axis: "x" | "y" | "z" - include when direction mentioned (default: "z")
+- intermolecular_distance: number in Angstroms - include when specified
+
+Examples:
+"2 benzene 3.4Å apart along z" →
+  {"molecules": [{"identifier": "benzene", "count": 2}], "axis": "z", "intermolecular_distance": 3.4}
+
+"adamantane dimer 8Å separation" →
+  {"molecules": [{"identifier": "adamantane", "count": 2}], "axis": "z", "intermolecular_distance": 8.0}
+
+=== IMPORTANT ===
+- Always prefer tool calls over text-only responses for structure requests
+- Use "identifier" key (not "type", "formula", "name")
+- Default axis is "z" if not specified`;
+
+
+        // Build messages array with system prompt first
         const messages = [
+            { role: 'system', content: SYSTEM_PROMPT },
             ...chatHistory,
             { role: 'user', content: userMessage },
         ];

@@ -1,0 +1,50 @@
+
+# Audit Report: Molecular Backend Fixes & Critical Analysis (Jan 26, 2026)
+
+## Overview
+This report documents the resolution of critical issues in the `crystal-mcp-server` backend and provides a "Best Critique" analysis based on rigorous stress testing ("Torture Test").
+
+## 1. Traceability & Debugging
+**Goal**: Provide clear visibility into backend logic without verbose noise.
+**Status**: ✅ **VERIFIED**
+- **Trigger**: `ENABLE_TRACE=1` env var.
+- **Engine**: `hunter` with `CallPrinter` (Optimized).
+- **Behavior**: Logs function entries (args) and returns (values) with reduced noise.
+
+## 2. Bug Fix: PTCDA Directionality
+**Issue**: Requesting "stack along x direction" was ignored, defaulting to Z-axis.
+**Status**: ✅ **VERIFIED**
+- **Fix**: Updated `ChemicalPatterns` and `arrange_molecules` to correctly parse and propagate axis parameters.
+- **Verification**: Logic proven with `benzene` proxy along X-axis (Centroid diff=[d,0,0]).
+
+## 3. Scalability & Performance
+**Issue**: "Lipid Raft" (N=60) requests timed out.
+**Status**: ✅ **VERIFIED**
+- **Fix**: Implemented heuristic in `arrange_molecules` to force "grid" layout for large N (if unconstrained).
+- **Stress Test**: N=1000 `test_massive_scale` completes in <15s.
+- **Physics**: Atomic clashes are avoided (Min dist > 1.0A).
+
+## 4. Robustness Fixes (Generic Solutions)
+**Issue A**: `NameError: name 'j' is not defined` (Formula Crash).
+**Issue B**: "Lipid Raft" incorrectly rooted to single-molecule tool.
+**Status**: ✅ **VERIFIED**
+- **Fix A**: Formula Engine now automatically determines grid indices (`ix, iy, iz`) and aliases (`j, k`) from the linear index.
+- **Fix B**: Updated `src/types/tools.ts` to explicitly route complex systems (Rafts, HOFs) to `build_molecular_cluster`.
+
+## 5. CRITICAL AUDIT FINDINGS (The "Loopholes")
+As requested, the system was subjected to a "Torture Test" (`tests/torture_test_audit.py`).
+
+### Security (Injection)
+- **Test**: Attempted generic Python injection `__import__('os').system(...)` in formula.
+- **Result**: ✅ **PASSED** (Blocked/Failed). The generic `eval` sandbox appears sufficient for standard attacks.
+
+### Constraint Satisfaction (The Flaw)
+- **Test**: Simulating "Impossible Constraints" (Distance(A,B)=2.0 AND Distance(A,B)=10.0).
+- **Result**: ❌ **FAILED (Soft Audit)**.
+  - **Behavior**: The system returned `Success=True` with a resulting distance of ~3.55A.
+  - **Critique**: The Constraint Solver treats user requirements as **Soft Optimization Targets** rather than Hard Constraints. It minimizes error but does not validate if the final error is acceptable.
+  - **Risk**: Users expecting exact engineering constraints (e.g. "Distance=10.0") might receive "Success" even if the system fails to achieve it (result 3.55).
+  - **Recommendation**: Implement a `Residual Check` post-optimization. If the deviation from constraints exceeds a tolerance (e.g., >0.5A), the system should explicitly report `Success=False` or `Warning: Constraints not met`.
+
+## Conclusion
+The backend is functionally robust (does not crash) and performant. However, semantically, it is "optimistic" regarding constraints. Future work should enforce strict residual checks to ensure scientific accuracy.
