@@ -116,11 +116,15 @@ export default function ChatPanel() {
                     result: `Generated ${result.structure.name}`,
                 }));
 
-                // Add assistant message
+                // Add assistant message with transparent feedback
+                const baseMessage = `Successfully generated structure: ${result.structure.name}`;
+                const feedbackPart = result.feedbackMessage ? `\n\n📊 ${result.feedbackMessage}` : '';
+                const assistantContent = baseMessage + feedbackPart;
+
                 dispatch(addMessage({
                     id: uuidv4(),
                     role: 'assistant',
-                    content: `Successfully generated structure: ${result.structure.name}`,
+                    content: assistantContent,
                     timestamp: Date.now(),
                     toolResult: {
                         toolName: result.toolName,

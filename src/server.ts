@@ -36,7 +36,7 @@ import { handleExploreSymmetryRelations } from "./tools/analysis/symmetry-relati
 import { handleBuildMolecule } from "./tools/generation/build-molecule.js";
 import { handleBuildMolecularCluster } from "./tools/generation/build-molecular-cluster.js";
 import { handleSuggestMolecules } from "./tools/generation/suggest-molecules.js";
-import { handleEditMolecule } from "./tools/generation/edit-molecule.js";
+// import { handleEditMolecule } from "./tools/generation/edit-molecule.js";
 import { handleCreateAlloy } from "./tools/transformation/alloy.js";
 import { handleCreateHeterostructure } from "./tools/transformation/heterostructure.js";
 import { handleAddAdsorbate } from "./tools/transformation/adsorbate.js";
@@ -170,8 +170,8 @@ export function createServer(): Server {
         case "suggest_molecules":
           return await handleSuggestMolecules(args);
 
-        case "edit_molecule":
-          return await handleEditMolecule(args);
+        // case "edit_molecule":
+        //   return await handleEditMolecule(args);
 
         case "create_alloy":
           return await handleCreateAlloy(args);

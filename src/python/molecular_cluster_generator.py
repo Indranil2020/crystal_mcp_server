@@ -126,6 +126,40 @@ def generate_cluster(
     
     debug(f"Calling generate_molecular_cluster (use_new_engine={use_new_engine})")
     
+    # Handle rotation arrays: if rotation_x/y/z is a list, convert to rotations format
+    # This allows LLM to specify per-molecule rotations via rotation_x: [0, 0, 90] etc.
+    per_mol_rotations = rotations  # Start with existing rotations if any
+    
+    # Check if any rotation param is a list (per-molecule)
+    rx_is_list = isinstance(rotation_x, list)
+    ry_is_list = isinstance(rotation_y, list)
+    rz_is_list = isinstance(rotation_z, list)
+    
+    if rx_is_list or ry_is_list or rz_is_list:
+        # Determine number of molecules from the lists
+        n_mol = max(
+            len(rotation_x) if rx_is_list else 0,
+            len(rotation_y) if ry_is_list else 0,
+            len(rotation_z) if rz_is_list else 0
+        )
+        if n_mol == 0:
+            # Fallback to counting molecules from input
+            n_mol = sum(m.get('count', 1) for m in molecules)
+        
+        # Build per-molecule rotations list
+        per_mol_rotations = []
+        for i in range(n_mol):
+            rx = rotation_x[i] if rx_is_list and i < len(rotation_x) else (0.0 if rx_is_list else rotation_x)
+            ry = rotation_y[i] if ry_is_list and i < len(rotation_y) else (0.0 if ry_is_list else rotation_y)
+            rz = rotation_z[i] if rz_is_list and i < len(rotation_z) else (0.0 if rz_is_list else rotation_z)
+            per_mol_rotations.append({'x': rx, 'y': ry, 'z': rz})
+        
+        debug(f"  Converted rotation arrays to per_mol_rotations: {per_mol_rotations}")
+        # Reset the global rotation values since we're using per-molecule
+        rotation_x = 0.0
+        rotation_y = 0.0
+        rotation_z = 0.0
+    
     # Call the main generator
     result = generate_molecular_cluster(
         molecules=molecules,
@@ -139,7 +173,7 @@ def generate_cluster(
         rotation_per_molecule=rotation_per_molecule,
         axis=axis,
         positions=positions,
-        rotations=rotations,
+        rotations=per_mol_rotations,  # Use converted per-molecule rotations
         optimize=optimize,
         vacuum=vacuum,
         # Advanced parameters

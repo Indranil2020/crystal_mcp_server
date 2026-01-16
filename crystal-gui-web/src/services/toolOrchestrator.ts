@@ -18,6 +18,7 @@ export interface ToolOrchestrationResult {
     arguments?: Record<string, unknown>;
     structure?: Structure;
     textResponse?: string;
+    feedbackMessage?: string;  // Transparent feedback about what was built
     error?: string;
 }
 
@@ -181,11 +182,50 @@ Examples:
             debug('TOOL_ORCHESTRATOR', `    Lattice: a=${structure.data.lattice.a.toFixed(2)}`);
             debug('TOOL_ORCHESTRATOR', '═'.repeat(50));
 
+            // Generate transparent feedback message from position_info
+            let feedbackMessage: string | undefined;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const metadata = (structureResponse.structure.metadata || {}) as any;
+            const positionInfo = metadata?.position_info;
+
+            if (positionInfo) {
+                const parts: string[] = [];
+
+                // Report actual distance used
+                if (positionInfo.actual_distance !== undefined) {
+                    const dist = positionInfo.actual_distance.toFixed(2);
+                    if (positionInfo.was_adjusted) {
+                        const requested = positionInfo.requested_distance?.toFixed(2) || 'unspecified';
+                        parts.push(`Distance adjusted from ${requested}Å to ${dist}Å to prevent clashes`);
+                    } else {
+                        parts.push(`Molecules placed ${dist}Å apart`);
+                    }
+                }
+
+                // Report axis used
+                if (positionInfo.axis_used) {
+                    const axis = positionInfo.axis_used;
+                    const axisStr = Array.isArray(axis) ? `[${axis.map((v: number) => v.toFixed(2)).join(', ')}]` : axis;
+                    parts.push(`along ${axisStr}`);
+                }
+
+                // Report molecule count
+                if (metadata.n_molecules) {
+                    parts.unshift(`Built ${metadata.n_molecules} molecules`);
+                }
+
+                if (parts.length > 0) {
+                    feedbackMessage = parts.join('. ') + '.';
+                    debug('TOOL_ORCHESTRATOR', `  📋 Feedback: ${feedbackMessage}`);
+                }
+            }
+
             return {
                 success: true,
                 toolName: name,
                 arguments: args as Record<string, unknown>,
                 structure,
+                feedbackMessage,
             };
         }
 

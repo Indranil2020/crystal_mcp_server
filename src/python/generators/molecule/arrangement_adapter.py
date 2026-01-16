@@ -236,6 +236,7 @@ def generate_molecular_cluster(
         formulas=formulas,
         vacuum=vacuum,
         axis=axis,  # Explicitly pass axis
+        rotations=rotations,  # Explicitly pass per-molecule rotations
         **kwargs
     )
 

@@ -498,9 +498,10 @@ def arrange_helical(
 def arrange_linear(
     molecules: List[Dict[str, Any]],
     distance: float = 5.0,
-    axis: str = "z"  # "x", "y", "z"
+    axis: str = "z",  # "x", "y", "z"
+    rotations: Optional[List[Dict[str, float]]] = None  # Per-molecule rotations
 ) -> List[Dict[str, Any]]:
-    """Arrange molecules in a line along specified axis."""
+    """Arrange molecules in a line along specified axis with optional per-molecule rotations."""
     axis_idx = {"x": 0, "y": 1, "z": 2}.get(axis.lower(), 2)
     arranged = []
     
@@ -508,6 +509,16 @@ def arrange_linear(
     for i, mol in enumerate(molecules):
         coords = np.array(mol["coords"])
         coords, _ = center_molecule(coords)
+        
+        # Apply per-molecule rotation if specified
+        if rotations and i < len(rotations):
+            rot = rotations[i]
+            coords = rotate_molecule(
+                coords,
+                rotation_x=rot.get("x", 0),
+                rotation_y=rot.get("y", 0),
+                rotation_z=rot.get("z", 0)
+            )
         
         translation = np.zeros(3)
         translation[axis_idx] = position
@@ -866,10 +877,29 @@ def generate_molecular_cluster(
         }
         stacking_type = stacking_map.get(stacking_lower, StackingType.PI_PI_PARALLEL)
     
+    # Track warnings for user feedback
+    warnings = []
+    
     # Get default distance if not specified
     if intermolecular_distance is None:
         params = STACKING_DEFAULTS.get(stacking_type, STACKING_DEFAULTS[StackingType.PI_PI_PARALLEL])
         intermolecular_distance = params.distance
+        
+        # For LINEAR stacking, calculate smart distance based on molecule size
+        if stacking_type == StackingType.LINEAR and mol_structures:
+            # Get the largest molecule extent
+            max_extent = 0
+            for mol in mol_structures:
+                coords = np.array(mol["coords"])
+                extent = np.max(coords, axis=0) - np.min(coords, axis=0)
+                max_extent = max(max_extent, np.max(extent))
+            
+            # Smart distance = molecule size + 2Å buffer
+            smart_distance = max_extent + 2.0
+            if smart_distance > intermolecular_distance:
+                logger.info(f"Linear stacking: auto-calculated distance {smart_distance:.2f}Å based on molecule size")
+                warnings.append(f"Distance auto-calculated to {smart_distance:.1f}Å based on molecule size (~{max_extent:.1f}Å)")
+                intermolecular_distance = smart_distance
     
     # Step 3: Arrange molecules
     if stacking_type == StackingType.SWASTIKA:
@@ -888,7 +918,7 @@ def generate_molecular_cluster(
             pitch=intermolecular_distance
         )
     elif stacking_type == StackingType.LINEAR:
-        arranged = arrange_linear(mol_structures, distance=intermolecular_distance, axis=axis)
+        arranged = arrange_linear(mol_structures, distance=intermolecular_distance, axis=axis, rotations=rotations)
     else:
         # Stacked arrangements
         arranged = arrange_stacked(
@@ -979,6 +1009,7 @@ def generate_molecular_cluster(
             "n_molecules": combined["n_molecules"],
             "stacking_type": stacking_type.value,
             "intermolecular_distance": intermolecular_distance,
+            "warnings": warnings,
         }
     }
     

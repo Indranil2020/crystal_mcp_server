@@ -10,7 +10,15 @@ import { Result, createSuccess, createFailure, createError, CrystalErrorCode } f
 import { executePythonWithJSON } from "../../utils/python-bridge.js";
 
 export async function buildMolecularCluster(input: unknown): Promise<Result<any>> {
-    const parsed = BuildMolecularClusterSchema.safeParse(input);
+    // Sanitize input: remove null values as Zod optional() doesn't accept null
+    const sanitizedInput = input && typeof input === 'object'
+        ? Object.fromEntries(
+            Object.entries(input as Record<string, unknown>)
+                .filter(([_, v]) => v !== null)
+        )
+        : input;
+
+    const parsed = BuildMolecularClusterSchema.safeParse(sanitizedInput);
     if (!parsed.success) {
         return createFailure(createError(
             CrystalErrorCode.INVALID_INPUT,
@@ -25,9 +33,31 @@ export async function buildMolecularCluster(input: unknown): Promise<Result<any>
         ));
     }
 
-    const result = await executePythonWithJSON<typeof parsed.data, any>(
+    // Normalize input: Handle array-based rotations (LLM quirk)
+    // If rotation_x/y/z is an array, move it to 'rotations' structure
+    const data = { ...parsed.data } as any;
+    const axes = ['x', 'y', 'z'];
+
+    // Initialize rotations array if needed
+    if (!data.rotations) data.rotations = [];
+
+    axes.forEach(axis => {
+        const key = `rotation_${axis}`;
+        const val = data[key];
+        if (Array.isArray(val)) {
+            // Merge into rotations list
+            val.forEach((rotVal: number, i: number) => {
+                if (!data.rotations[i]) data.rotations[i] = { x: 0, y: 0, z: 0 };
+                data.rotations[i][axis] = rotVal;
+            });
+            // Clear the array field to avoid confusing backend which expects scalar
+            delete data[key];
+        }
+    });
+
+    const result = await executePythonWithJSON<any, any>(
         "molecular_cluster_generator.py",
-        parsed.data,
+        data,
         { timeout: 600000 }  // Longer timeout for cluster generation
     );
 
@@ -69,6 +99,12 @@ export async function handleBuildMolecularCluster(args: unknown): Promise<any> {
     // Format formulas
     const formulas = data.formulas?.join(" + ") || metadata.formula || "Unknown";
 
+    // Format warnings
+    const warnings = metadata.warnings || [];
+    const warningText = warnings.length > 0
+        ? `\n\n**⚠️ Warnings:**\n${warnings.map((w: string) => `- ${w}`).join("\n")}`
+        : "";
+
     // Include raw JSON data for the frontend viewer
     const jsonData = JSON.stringify({
         success: true,
@@ -83,7 +119,8 @@ export async function handleBuildMolecularCluster(args: unknown): Promise<any> {
                 `- **Total Atoms**: ${data.n_atoms}\n` +
                 `- **Stacking**: ${data.stacking_type || "auto"}\n` +
                 `- **Distance**: ${data.intermolecular_distance?.toFixed(2) || "auto"} Å\n` +
-                `- **Box Size**: ${structure.lattice.a.toFixed(2)} × ${structure.lattice.b.toFixed(2)} × ${structure.lattice.c.toFixed(2)} Å\n\n` +
+                `- **Box Size**: ${structure.lattice.a.toFixed(2)} × ${structure.lattice.b.toFixed(2)} × ${structure.lattice.c.toFixed(2)} Å\n` +
+                warningText + "\n\n" +
                 `*Cluster structure data is available in the response.*`
         }, {
             type: "text",

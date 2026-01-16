@@ -1,147 +1,86 @@
 [
   {
     "id": 1,
-    "category": "Formula-Lookup",
-    "root_cause": "Backend should resolve C6H6 to benzene",
-    "prompt": "generate 2 C6H6 molecules 3.4 angstrom apart",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "axis": "z",
-      "intermolecular_distance": 3.4,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "benzene"
-        }
-      ]
-    },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 3.4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 3.400014552773568
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324534310,
-      "sent": 1768324534373,
-      "llm_done": 1768324543680,
-      "mcp_done": 1768324544113,
-      "total_ms": 10354,
-      "llm_ms": 9307,
-      "mcp_ms": 433
-    },
+    "prompt": "generate 3 C6H6 molecules in zigzag pattern 3.4 angstrom apart",
+    "category": "Formula-Hard",
+    "root_cause": "Formula + pattern combo",
     "status": "PASSED",
-    "timestamp": "2026-01-13T17:15:44.664Z"
-  },
-  {
-    "id": 2,
-    "category": "Formula-Lookup",
-    "root_cause": "Backend should resolve C10H8 to naphthalene",
-    "prompt": "stack 2 C10H8 molecules along z",
+    "test_details": "✓ 3 molecules",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
-      "axis": "z",
+      "axis": "x",
+      "intermolecular_distance": 3.4,
       "molecules": [
         {
-          "count": 2,
+          "count": 3,
           "identifier": "benzene"
         }
       ],
-      "stacking": "pi_pi_parallel"
+      "stacking": "zigzag"
     },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 3.4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 3.400014552773568
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324544665,
-      "sent": 1768324544704,
-      "llm_done": 1768324546106,
-      "mcp_done": 1768324546531,
-      "total_ms": 2390,
-      "llm_ms": 1402,
-      "mcp_ms": 425
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:15:47.055Z"
+    "llm_time_ms": 9199,
+    "mcp_time_ms": 10003,
+    "atom_count": 36
   },
   {
-    "id": 3,
-    "category": "Formula-Lookup",
-    "root_cause": "C14H10 = anthracene or phenanthrene - ambiguous",
-    "prompt": "create 2 C14H10 molecules 3.5 angstrom apart",
+    "id": 2,
+    "prompt": "stack 4 C10H8 molecules along [1,1,0] at 3.5 angstrom",
+    "category": "Formula-Hard",
+    "root_cause": "Formula + vector + count",
+    "status": "PASSED",
+    "test_details": "✓ 4 molecules",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
       "axis": "z",
+      "formulas": {
+        "x": "i*3.5",
+        "y": "i*3.5",
+        "z": "0"
+      },
       "intermolecular_distance": 3.5,
       "molecules": [
         {
-          "count": 2,
+          "count": 4,
           "identifier": "benzene"
         }
-      ]
+      ],
+      "offset_x": 1.75,
+      "offset_y": 1.75,
+      "vacuum": 20
     },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
+    "llm_time_ms": 3098,
+    "mcp_time_ms": 10001,
+    "atom_count": 48
+  },
+  {
+    "id": 3,
+    "prompt": "create 5 C14H10 molecules in herringbone pattern 3.5 angstrom apart",
+    "category": "Formula-Hard",
+    "root_cause": "C14H10 + pattern",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 5 molecules, got 4",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
       "intermolecular_distance": 3.5,
-      "engine": "molecular_arrangement"
+      "molecules": [
+        {
+          "count": 5,
+          "identifier": "C14H10"
+        }
+      ],
+      "stacking": "herringbone"
     },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 3.5
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324547055,
-      "sent": 1768324547095,
-      "llm_done": 1768324548567,
-      "mcp_done": 1768324549027,
-      "total_ms": 2497,
-      "llm_ms": 1472,
-      "mcp_ms": 460
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:15:49.552Z"
+    "llm_time_ms": 1685,
+    "mcp_time_ms": 10001,
+    "atom_count": 48
   },
   {
     "id": 4,
+    "prompt": "generate 2 C16H10 molecules stacked",
     "category": "Formula-Lookup",
     "root_cause": "C16H10 = pyrene",
-    "prompt": "generate 2 C16H10 molecules stacked",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 2 molecules, got 4",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
       "intermolecular_distance": 3.5,
@@ -151,2842 +90,1704 @@
           "identifier": "C16H10"
         }
       ],
-      "stacking": "pi_pi_parallel"
+      "stacking": "auto"
     },
-    "mcp_success": false,
-    "atom_count": 0,
-    "metadata": null,
-    "test_valid": false,
-    "test_details": "No atoms",
-    "measurements": {},
-    "position_info": null,
-    "timing": {
-      "start": 1768324549553,
-      "sent": 1768324549581,
-      "llm_done": 1768324551208,
-      "mcp_done": 1768324552437,
-      "total_ms": 3393,
-      "llm_ms": 1627,
-      "mcp_ms": 1229
-    },
-    "status": "MCP_FAIL",
-    "timestamp": "2026-01-13T17:15:52.946Z"
+    "llm_time_ms": 1642,
+    "mcp_time_ms": 10003,
+    "atom_count": 48
   },
   {
     "id": 5,
-    "category": "Formula-Lookup",
-    "root_cause": "C18H12 = tetracene/chrysene - LLM uses this",
-    "prompt": "stack 2 C18H12 molecules 3.4 angstrom apart",
+    "prompt": "create tetramer of C18H12 molecules antiparallel at 3.5 angstrom",
+    "category": "Formula-Hard",
+    "root_cause": "C18H12 + tetramer + pattern",
+    "status": "PASSED",
+    "test_details": "✓ 4 molecules",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
-      "intermolecular_distance": 3.4,
+      "intermolecular_distance": 3.5,
       "molecules": [
         {
-          "count": 2,
-          "identifier": "benzene"
+          "count": 4,
+          "identifier": "C18H12"
         }
       ],
-      "stacking": "pi_pi_parallel"
+      "stacking": "antiparallel"
     },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 3.4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 3.400014552773568
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324552947,
-      "sent": 1768324552990,
-      "llm_done": 1768324554569,
-      "mcp_done": 1768324554994,
-      "total_ms": 2571,
-      "llm_ms": 1579,
-      "mcp_ms": 425
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:15:55.518Z"
+    "llm_time_ms": 1725,
+    "mcp_time_ms": 10003,
+    "atom_count": 48
   },
   {
     "id": 6,
+    "prompt": "create 2 C20H12 molecules along z",
     "category": "Formula-Lookup",
     "root_cause": "C20H12 = perylene",
-    "prompt": "create 2 C20H12 molecules along z",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 2 molecules, got 4",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
-      "intermolecular_distance": 3.4,
+      "axis": "z",
+      "intermolecular_distance": 3.5,
       "molecules": [
         {
           "count": 2,
           "identifier": "C20H12"
         }
-      ],
-      "natural_language": "stack 2 C20H12 molecules along z",
-      "stacking": "linear"
+      ]
     },
-    "mcp_success": false,
-    "atom_count": 0,
-    "metadata": null,
-    "test_valid": false,
-    "test_details": "No atoms",
-    "measurements": {},
-    "position_info": null,
-    "timing": {
-      "start": 1768324555519,
-      "sent": 1768324555557,
-      "llm_done": 1768324561105,
-      "mcp_done": 1768324562271,
-      "total_ms": 7262,
-      "llm_ms": 5548,
-      "mcp_ms": 1166
-    },
-    "status": "MCP_FAIL",
-    "timestamp": "2026-01-13T17:16:02.781Z"
+    "llm_time_ms": 1686,
+    "mcp_time_ms": 10001,
+    "atom_count": 48
   },
   {
     "id": 7,
-    "category": "Formula-Lookup",
-    "root_cause": "C24H12 = coronene",
-    "prompt": "generate 2 C24H12 molecules 3.5 angstrom apart",
+    "prompt": "generate trimer of C24H12 at [1,0,1] direction 4 angstrom",
+    "category": "Formula-Hard",
+    "root_cause": "C24H12 + trimer + vector",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 3 molecules, got 4",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
-      "intermolecular_distance": 3.5,
+      "axis": "z",
+      "formulas": {
+        "x": "i*4",
+        "y": "0",
+        "z": "0"
+      },
+      "intermolecular_distance": 4,
       "molecules": [
         {
-          "count": 2,
+          "count": 3,
           "identifier": "C24H12"
         }
-      ]
+      ],
+      "vacuum": 15
     },
-    "mcp_success": true,
-    "atom_count": 72,
-    "metadata": {
-      "formula": "C24H12+C24H12",
-      "natoms": 72,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 3.5,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 72,
-      "actual_distance": 3.5000000000000018
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324562782,
-      "sent": 1768324562831,
-      "llm_done": 1768324567764,
-      "mcp_done": 1768324569405,
-      "total_ms": 7162,
-      "llm_ms": 4933,
-      "mcp_ms": 1641
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:16:09.944Z"
+    "llm_time_ms": 2591,
+    "mcp_time_ms": 10003,
+    "atom_count": 48
   },
   {
     "id": 8,
-    "category": "Formula-Lookup",
-    "root_cause": "C8H8 = cubane or styrene - need disambiguation",
-    "prompt": "stack 2 C8H8 molecules 7 angstrom apart",
+    "prompt": "stack 3 C8H8 molecules in T-shaped arrangement 7 angstrom",
+    "category": "Formula-Hard",
+    "root_cause": "C8H8 + count + pattern",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 3 molecules, got 4",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
+      "axis": "z",
       "intermolecular_distance": 7,
       "molecules": [
         {
-          "count": 2,
+          "count": 3,
           "identifier": "C8H8"
         }
       ],
-      "natural_language": "stack 2 C8H8 molecules 7 angstrom apart",
-      "optimize": true,
-      "vacuum": 10
+      "stacking": "t_shaped"
     },
-    "mcp_success": true,
-    "atom_count": 32,
-    "metadata": {
-      "formula": "C8H8+C8H8",
-      "natoms": 32,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 7,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 32,
-      "actual_distance": 7
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324569944,
-      "sent": 1768324569989,
-      "llm_done": 1768324575672,
-      "mcp_done": 1768324578243,
-      "total_ms": 8853,
-      "llm_ms": 5683,
-      "mcp_ms": 2571
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:16:18.797Z"
+    "llm_time_ms": 1883,
+    "mcp_time_ms": 10003,
+    "atom_count": 48
   },
   {
     "id": 9,
-    "category": "Formula-Lookup",
-    "root_cause": "C20H20 = dodecahedrane",
-    "prompt": "create 2 C20H20 molecules 12 angstrom apart",
+    "prompt": "create 4 C20H20 molecules in tetrahedral arrangement 12 angstrom",
+    "category": "Formula-Hard",
+    "root_cause": "C20H20 + tetrahedral",
+    "status": "PASSED",
+    "test_details": "✓ 4 molecules",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
-      "intermolecular_distance": 12,
+      "axis": "z",
+      "formulas": {
+        "x": "5*cos(2*pi*i/3)",
+        "y": "5*sin(2*pi*i/3)",
+        "z": "12*(i-1)"
+      },
+      "intermolecular_distance": 7,
       "molecules": [
         {
-          "count": 2,
-          "identifier": "C20H20"
+          "count": 4,
+          "identifier": "c20h20"
         }
       ],
-      "stacking": "linear",
+      "optimize": true,
       "vacuum": 10
     },
-    "mcp_success": true,
-    "atom_count": 80,
-    "metadata": {
-      "formula": "C20H20+C20H20",
-      "natoms": 80,
-      "n_molecules": 2,
-      "stacking_type": "linear",
-      "intermolecular_distance": 12,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 80,
-      "actual_distance": 11.99999999999999
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324578798,
-      "sent": 1768324578852,
-      "llm_done": 1768324584177,
-      "mcp_done": 1768324586066,
-      "total_ms": 7810,
-      "llm_ms": 5325,
-      "mcp_ms": 1889
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:16:26.608Z"
+    "llm_time_ms": 3382,
+    "mcp_time_ms": 10001,
+    "atom_count": 160
   },
   {
     "id": 10,
-    "category": "Formula-Lookup",
-    "root_cause": "H2O should resolve to water",
-    "prompt": "generate 2 H2O molecules 3 angstrom apart",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 3,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "water"
-        }
-      ],
-      "stacking": "auto"
-    },
-    "mcp_success": true,
-    "atom_count": 6,
-    "metadata": {
-      "formula": "H2O+H2O",
-      "natoms": 6,
-      "n_molecules": 2,
-      "stacking_type": "linear",
-      "intermolecular_distance": 3,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 6,
-      "actual_distance": 3
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324586608,
-      "sent": 1768324586658,
-      "llm_done": 1768324591532,
-      "mcp_done": 1768324592000,
-      "total_ms": 5931,
-      "llm_ms": 4874,
-      "mcp_ms": 468
-    },
+    "prompt": "generate 5 H2O molecules in circular ring 3 angstrom apart",
+    "category": "Formula-Hard",
+    "root_cause": "H2O + ring pattern",
     "status": "PASSED",
-    "timestamp": "2026-01-13T17:16:32.539Z"
-  },
-  {
-    "id": 11,
-    "category": "Name-Lookup",
-    "root_cause": "Tetracene not in local DB, should use PubChem",
-    "prompt": "stack 2 tetracene molecules 3.4 angstrom apart",
+    "test_details": "✓ 5 molecules",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
-      "intermolecular_distance": 3.4,
+      "axis": "z",
+      "formulas": {
+        "x": "3*cos(2*pi*i/5)",
+        "y": "3*sin(2*pi*i/5)",
+        "z": "0"
+      },
+      "intermolecular_distance": 3,
       "molecules": [
         {
-          "count": 1,
-          "identifier": "tetracene"
-        }
-      ],
-      "natural_language": "stack 2 tetracene molecules 3.4 angstrom apart"
-    },
-    "mcp_success": true,
-    "atom_count": 30,
-    "metadata": {
-      "formula": "C18H12",
-      "natoms": 30,
-      "n_molecules": 1,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 3.4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": false,
-    "test_details": "Expected 2 molecules, got 1",
-    "measurements": {
-      "molecule_count": 1,
-      "total_atoms": 30
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324592539,
-      "sent": 1768324592585,
-      "llm_done": 1768324598057,
-      "mcp_done": 1768324599865,
-      "total_ms": 7875,
-      "llm_ms": 5472,
-      "mcp_ms": 1808
-    },
-    "status": "SEMANTIC_FAIL",
-    "timestamp": "2026-01-13T17:16:40.414Z"
-  },
-  {
-    "id": 12,
-    "category": "Name-Lookup",
-    "root_cause": "Perylene lookup failure",
-    "prompt": "create 2 perylene molecules 3.5 angstrom apart",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 3.5,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "C24H12"
+          "count": 5,
+          "identifier": "water"
         }
       ]
     },
-    "mcp_success": true,
-    "atom_count": 72,
-    "metadata": {
-      "formula": "C24H12+C24H12",
-      "natoms": 72,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 3.5,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 72,
-      "actual_distance": 3.5000000000000018
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324600415,
-      "sent": 1768324600464,
-      "llm_done": 1768324605358,
-      "mcp_done": 1768324607286,
-      "total_ms": 7420,
-      "llm_ms": 4894,
-      "mcp_ms": 1928
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:16:47.835Z"
+    "llm_time_ms": 2669,
+    "mcp_time_ms": 10003,
+    "atom_count": 15
   },
   {
-    "id": 13,
+    "id": 11,
+    "prompt": "stack 2 tetracene molecules 3.4 angstrom apart",
     "category": "Name-Lookup",
-    "root_cause": "Triphenylene not resolving",
-    "prompt": "generate 2 triphenylene molecules stacked",
+    "root_cause": "Tetracene not in local DB",
+    "status": "PASSED",
+    "test_details": "✓ 2 molecules",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
+      "axis": "z",
+      "intermolecular_distance": 3.4,
       "molecules": [
         {
           "count": 2,
+          "identifier": "tetracene"
+        }
+      ]
+    },
+    "llm_time_ms": 1779,
+    "mcp_time_ms": 10002,
+    "atom_count": 60
+  },
+  {
+    "id": 12,
+    "prompt": "create trimer of perylene in slipped-parallel at 3.5 angstrom",
+    "category": "Name-Hard",
+    "root_cause": "perylene + trimer + pattern",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 3 molecules, got 2",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "intermolecular_distance": 3.5,
+      "molecules": [
+        {
+          "count": 3,
+          "identifier": "peryne"
+        }
+      ],
+      "stacking": "slip_stacked"
+    },
+    "llm_time_ms": 1825,
+    "mcp_time_ms": 10002,
+    "atom_count": 60
+  },
+  {
+    "id": 13,
+    "prompt": "generate 4 triphenylene molecules along [1,1,1] at 4 angstrom",
+    "category": "Name-Hard",
+    "root_cause": "triphenylene + vector",
+    "status": "PASSED",
+    "test_details": "✓ 4 molecules",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "axis": "z",
+      "intermolecular_distance": 4,
+      "molecules": [
+        {
+          "count": 4,
           "identifier": "triphenylene"
         }
       ]
     },
-    "mcp_success": true,
-    "atom_count": 60,
-    "metadata": {
-      "formula": "C18H12+C18H12",
-      "natoms": 60,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 3.4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 60,
-      "actual_distance": 3.900013411007258
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324607836,
-      "sent": 1768324607899,
-      "llm_done": 1768324612443,
-      "mcp_done": 1768324612895,
-      "total_ms": 5611,
-      "llm_ms": 4544,
-      "mcp_ms": 452
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:16:53.447Z"
+    "llm_time_ms": 1818,
+    "mcp_time_ms": 10004,
+    "atom_count": 120
   },
   {
     "id": 14,
-    "category": "Name-Lookup",
-    "root_cause": "Chrysene lookup failure",
-    "prompt": "stack 2 chrysene molecules 3.4 angstrom apart",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 3.4,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "chrysene"
-        }
-      ],
-      "vacuum": 10
-    },
-    "mcp_success": true,
-    "atom_count": 60,
-    "metadata": {
-      "formula": "C18H12+C18H12",
-      "natoms": 60,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 3.4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 60,
-      "actual_distance": 3.4000366657079493
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324613447,
-      "sent": 1768324613497,
-      "llm_done": 1768324618605,
-      "mcp_done": 1768324619051,
-      "total_ms": 6156,
-      "llm_ms": 5108,
-      "mcp_ms": 446
-    },
+    "prompt": "stack tetramer of chrysene in herringbone pattern",
+    "category": "Name-Hard",
+    "root_cause": "chrysene + tetramer + pattern",
     "status": "PASSED",
-    "timestamp": "2026-01-13T17:16:59.603Z"
+    "test_details": "✓ 4 molecules",
+    "llm_tool": null,
+    "llm_args": null,
+    "llm_time_ms": 4186,
+    "mcp_time_ms": 10024,
+    "atom_count": 120
   },
   {
     "id": 15,
-    "category": "Name-Lookup",
-    "root_cause": "Large PAH lookup",
-    "prompt": "create 2 pentacene molecules 3.5 angstrom apart",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 3.5,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "pentacene"
-        }
-      ]
-    },
-    "mcp_success": true,
-    "atom_count": 72,
-    "metadata": {
-      "formula": "C22H14+C22H14",
-      "natoms": 72,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 3.5,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 72,
-      "actual_distance": 3.4999999999999964
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324619604,
-      "sent": 1768324619657,
-      "llm_done": 1768324624499,
-      "mcp_done": 1768324626179,
-      "total_ms": 7130,
-      "llm_ms": 4842,
-      "mcp_ms": 1680
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:17:06.734Z"
+    "prompt": "create 5 pentacene molecules in zigzag chain 3.5 angstrom",
+    "category": "Name-Hard",
+    "root_cause": "pentacene + count + pattern",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 5 molecules, got 4",
+    "llm_tool": null,
+    "llm_args": null,
+    "llm_time_ms": 4894,
+    "mcp_time_ms": 10014,
+    "atom_count": 120
   },
   {
     "id": 16,
-    "category": "Name-Lookup",
-    "root_cause": "Bowl PAH lookup",
-    "prompt": "generate 2 corannulene molecules 4 angstrom apart",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 4,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "corannulene"
-        }
-      ]
-    },
-    "mcp_success": true,
-    "atom_count": 60,
-    "metadata": {
-      "formula": "C20H10+C20H10",
-      "natoms": 60,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 60,
-      "actual_distance": 4.000000000000002
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324626735,
-      "sent": 1768324626787,
-      "llm_done": 1768324631632,
-      "mcp_done": 1768324633709,
-      "total_ms": 7534,
-      "llm_ms": 4845,
-      "mcp_ms": 2077
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:17:14.269Z"
+    "prompt": "generate 3 corannulene molecules along [0,1,1] at 4 angstrom",
+    "category": "Name-Hard",
+    "root_cause": "corannulene + vector",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 3 molecules, got 4",
+    "llm_tool": null,
+    "llm_args": null,
+    "llm_time_ms": 4620,
+    "mcp_time_ms": 10015,
+    "atom_count": 120
   },
   {
     "id": 17,
-    "category": "Name-Lookup",
-    "root_cause": "TTF abbreviation not recognized",
-    "prompt": "stack 2 TTF molecules 4 angstrom apart",
+    "prompt": "stack 4 TTF molecules antiparallel at 4 angstrom spacing",
+    "category": "Name-Hard",
+    "root_cause": "TTF + count + pattern",
+    "status": "PASSED",
+    "test_details": "✓ 4 molecules",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
       "intermolecular_distance": 4,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "TTF"
-        }
-      ],
-      "stacking": "pi_pi_parallel"
-    },
-    "mcp_success": true,
-    "atom_count": 28,
-    "metadata": {
-      "formula": "C6H4S4+C6H4S4",
-      "natoms": 28,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 28,
-      "actual_distance": 4.000000000000002
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324634270,
-      "sent": 1768324634331,
-      "llm_done": 1768324639394,
-      "mcp_done": 1768324641188,
-      "total_ms": 7474,
-      "llm_ms": 5063,
-      "mcp_ms": 1794
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:17:21.744Z"
-  },
-  {
-    "id": 18,
-    "category": "Name-Lookup",
-    "root_cause": "TCNQ abbreviation lookup",
-    "prompt": "create 2 TCNQ molecules 4 angstrom apart",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 4,
-      "molecules": [
-        {
-          "identifier": "TCNQ"
-        }
-      ],
-      "natural_language": "stack 2 TCNQ molecules 4 angstrom apart"
-    },
-    "mcp_success": true,
-    "atom_count": 20,
-    "metadata": {
-      "formula": "C12H4N4",
-      "natoms": 20,
-      "n_molecules": 1,
-      "stacking_type": "h_bonded_circular",
-      "intermolecular_distance": 4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": false,
-    "test_details": "Expected 2 molecules, got 1",
-    "measurements": {
-      "molecule_count": 1,
-      "total_atoms": 20
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324641744,
-      "sent": 1768324641801,
-      "llm_done": 1768324647054,
-      "mcp_done": 1768324648849,
-      "total_ms": 7663,
-      "llm_ms": 5253,
-      "mcp_ms": 1795
-    },
-    "status": "SEMANTIC_FAIL",
-    "timestamp": "2026-01-13T17:17:29.407Z"
-  },
-  {
-    "id": 19,
-    "category": "Name-Lookup",
-    "root_cause": "Fullerene should map to C60",
-    "prompt": "generate 2 fullerene molecules 15 angstrom apart",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 15,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "C60"
-        }
-      ]
-    },
-    "mcp_success": true,
-    "atom_count": 120,
-    "metadata": {
-      "formula": "C60+C60",
-      "natoms": 120,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 15,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 120,
-      "actual_distance": 15
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324649408,
-      "sent": 1768324649478,
-      "llm_done": 1768324654299,
-      "mcp_done": 1768324663509,
-      "total_ms": 14674,
-      "llm_ms": 4821,
-      "mcp_ms": 9210
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:17:44.082Z"
-  },
-  {
-    "id": 20,
-    "category": "Name-Lookup",
-    "root_cause": "Buckyball = C60 alias",
-    "prompt": "stack 2 buckyball molecules 15 angstrom apart",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 15,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "C60"
-        }
-      ]
-    },
-    "mcp_success": true,
-    "atom_count": 120,
-    "metadata": {
-      "formula": "C60+C60",
-      "natoms": 120,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 15,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 120,
-      "actual_distance": 15
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324664082,
-      "sent": 1768324664141,
-      "llm_done": 1768324668941,
-      "mcp_done": 1768324678155,
-      "total_ms": 14656,
-      "llm_ms": 4800,
-      "mcp_ms": 9214
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:17:58.738Z"
-  },
-  {
-    "id": 21,
-    "category": "Count-Explicit",
-    "root_cause": "Explicit 'exactly 2' should enforce count=2",
-    "prompt": "generate exactly 2 benzene molecules stacked",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 3.4,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "benzene"
-        }
-      ]
-    },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 3.4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 3.400014552773568
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324678738,
-      "sent": 1768324678797,
-      "llm_done": 1768324683666,
-      "mcp_done": 1768324684209,
-      "total_ms": 6049,
-      "llm_ms": 4869,
-      "mcp_ms": 543
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:18:04.787Z"
-  },
-  {
-    "id": 22,
-    "category": "Count-Dimer",
-    "root_cause": "'Dimer' means exactly 2",
-    "prompt": "create a dimer of pyrene",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "pyrene"
-        }
-      ],
-      "natural_language": "create a dimer of pyrene"
-    },
-    "mcp_success": true,
-    "atom_count": 52,
-    "metadata": {
-      "formula": "C16H10+C16H10",
-      "natoms": 52,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 3.4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 52,
-      "actual_distance": 3.900022805591936
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324684787,
-      "sent": 1768324684854,
-      "llm_done": 1768324689800,
-      "mcp_done": 1768324690247,
-      "total_ms": 6044,
-      "llm_ms": 4946,
-      "mcp_ms": 447
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:18:10.831Z"
-  },
-  {
-    "id": 23,
-    "category": "Count-Trimer",
-    "root_cause": "'Trimer' means exactly 3",
-    "prompt": "generate a trimer of benzene 3.4 angstrom apart",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 3.4,
-      "molecules": [
-        {
-          "count": 3,
-          "identifier": "C6H6"
-        }
-      ]
-    },
-    "mcp_success": true,
-    "atom_count": 36,
-    "metadata": {
-      "formula": "C6H6+C6H6+C6H6",
-      "natoms": 36,
-      "n_molecules": 3,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 3.4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 3 molecules",
-    "measurements": {
-      "molecule_count": 3,
-      "total_atoms": 36,
-      "actual_distance": 3.9001999999999946
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324690852,
-      "sent": 1768324690917,
-      "llm_done": 1768324695811,
-      "mcp_done": 1768324697615,
-      "total_ms": 7355,
-      "llm_ms": 4894,
-      "mcp_ms": 1804
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:18:18.207Z"
-  },
-  {
-    "id": 24,
-    "category": "Count-Tetramer",
-    "root_cause": "'Tetramer' means exactly 4",
-    "prompt": "create a tetramer of naphthalene",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
       "molecules": [
         {
           "count": 4,
-          "identifier": "naphthalene"
+          "identifier": "TTF"
         }
-      ]
+      ],
+      "stacking": "antiparallel"
     },
-    "mcp_success": true,
-    "atom_count": 72,
-    "metadata": {
-      "formula": "C10H8+C10H8+C10H8+C10H8",
-      "natoms": 72,
-      "n_molecules": 4,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 3.4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 4 molecules",
-    "measurements": {
-      "molecule_count": 4,
-      "total_atoms": 72,
-      "actual_distance": 3.4000188145095542
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324698207,
-      "sent": 1768324698273,
-      "llm_done": 1768324702883,
-      "mcp_done": 1768324703324,
-      "total_ms": 5702,
-      "llm_ms": 4610,
-      "mcp_ms": 441
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:18:23.909Z"
+    "llm_time_ms": 5194,
+    "mcp_time_ms": 10002,
+    "atom_count": 56
   },
   {
-    "id": 25,
-    "category": "Count-Explicit",
-    "root_cause": "'2 molecules of X' should be count=2",
-    "prompt": "stack 2 molecules of adamantane 8 angstrom apart",
+    "id": 18,
+    "prompt": "create 2 TCNQ molecules 4 angstrom apart",
+    "category": "Name-Lookup",
+    "root_cause": "TCNQ abbreviation",
+    "status": "PASSED",
+    "test_details": "✓ 2 molecules",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
-      "intermolecular_distance": 8,
+      "intermolecular_distance": 4,
       "molecules": [
         {
           "count": 2,
-          "identifier": "adamantane"
+          "identifier": "TCNQ"
         }
       ]
     },
-    "mcp_success": true,
-    "atom_count": 52,
-    "metadata": {
-      "formula": "C10H16+C10H16",
-      "natoms": 52,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 8,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 52,
-      "actual_distance": 8.000000000000007
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324703910,
-      "sent": 1768324703980,
-      "llm_done": 1768324708802,
-      "mcp_done": 1768324709239,
-      "total_ms": 5917,
-      "llm_ms": 4822,
-      "mcp_ms": 437
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:18:29.827Z"
+    "llm_time_ms": 4965,
+    "mcp_time_ms": 10001,
+    "atom_count": 40
   },
   {
-    "id": 26,
-    "category": "Count-Word",
-    "root_cause": "'three' = 3, not 1",
-    "prompt": "generate three benzene molecules stacked",
+    "id": 19,
+    "prompt": "generate trimer of fullerene in triangular arrangement 15 angstrom",
+    "category": "Name-Hard",
+    "root_cause": "fullerene + trimer + geometry",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 3 molecules, got 2",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
-      "intermolecular_distance": 3.4,
+      "intermolecular_distance": 15,
       "molecules": [
         {
           "count": 3,
-          "identifier": "benzene"
+          "identifier": "C60"
         }
       ],
-      "stacking": "pi_pi_parallel"
-    },
-    "mcp_success": true,
-    "atom_count": 36,
-    "metadata": {
-      "formula": "C6H6+C6H6+C6H6",
-      "natoms": 36,
-      "n_molecules": 3,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 3.4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 3 molecules",
-    "measurements": {
-      "molecule_count": 3,
-      "total_atoms": 36,
-      "actual_distance": 3.400014552773566
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324709827,
-      "sent": 1768324709893,
-      "llm_done": 1768324715058,
-      "mcp_done": 1768324715485,
-      "total_ms": 6246,
-      "llm_ms": 5165,
-      "mcp_ms": 427
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:18:36.073Z"
-  },
-  {
-    "id": 27,
-    "category": "Count-Word",
-    "root_cause": "'five' = 5",
-    "prompt": "create five water molecules along z",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "molecules": [
-        {
-          "count": 5,
-          "identifier": "water"
-        }
-      ],
-      "offset_z": -3.4,
-      "stacking": "linear"
-    },
-    "mcp_success": true,
-    "atom_count": 15,
-    "metadata": {
-      "formula": "H2O+H2O+H2O+H2O+H2O",
-      "natoms": 15,
-      "n_molecules": 5,
-      "stacking_type": "linear",
-      "intermolecular_distance": 3.4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 5 molecules",
-    "measurements": {
-      "molecule_count": 5,
-      "total_atoms": 15,
-      "actual_distance": 3.5
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324716073,
-      "sent": 1768324716142,
-      "llm_done": 1768324721099,
-      "mcp_done": 1768324721590,
-      "total_ms": 6104,
-      "llm_ms": 4957,
-      "mcp_ms": 491
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:18:42.177Z"
-  },
-  {
-    "id": 28,
-    "category": "Count-Word",
-    "root_cause": "'ten' = 10",
-    "prompt": "stack ten methane molecules 4 angstrom apart",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 4,
-      "molecules": [
-        {
-          "count": 10,
-          "identifier": "CH4"
-        }
-      ],
-      "stacking": "linear",
+      "stacking": "t_trigonal_planar",
       "vacuum": 20
     },
-    "mcp_success": true,
-    "atom_count": 50,
-    "metadata": {
-      "formula": "CH4+CH4+CH4+CH4+CH4+CH4+CH4+CH4+CH4+CH4",
-      "natoms": 50,
-      "n_molecules": 10,
-      "stacking_type": "linear",
-      "intermolecular_distance": 4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 10 molecules",
-    "measurements": {
-      "molecule_count": 10,
-      "total_atoms": 50,
-      "actual_distance": 4.159999999999997
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324722178,
-      "sent": 1768324722248,
-      "llm_done": 1768324727526,
-      "mcp_done": 1768324727948,
-      "total_ms": 6376,
-      "llm_ms": 5278,
-      "mcp_ms": 422
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:18:48.554Z"
+    "llm_time_ms": 5615,
+    "mcp_time_ms": 10005,
+    "atom_count": 40
   },
   {
-    "id": 29,
-    "category": "Count-Pair",
-    "root_cause": "'pair' = exactly 2",
-    "prompt": "generate pair of pyrene molecules",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 3.5,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "pyrene"
-        }
-      ]
-    },
-    "mcp_success": true,
-    "atom_count": 52,
-    "metadata": {
-      "formula": "C16H10+C16H10",
-      "natoms": 52,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 3.5,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 52,
-      "actual_distance": 3.900022805591936
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324728554,
-      "sent": 1768324728634,
-      "llm_done": 1768324733430,
-      "mcp_done": 1768324733921,
-      "total_ms": 5971,
-      "llm_ms": 4796,
-      "mcp_ms": 491
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:18:54.525Z"
+    "id": 20,
+    "prompt": "stack 4 buckyball molecules along [1,1,0] at 15 angstrom",
+    "category": "Name-Hard",
+    "root_cause": "buckyball + count + vector",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 4 molecules, got 2",
+    "llm_tool": null,
+    "llm_args": null,
+    "llm_time_ms": 4468,
+    "mcp_time_ms": 10021,
+    "atom_count": 40
   },
   {
-    "id": 30,
-    "category": "Count-Colloquial",
-    "root_cause": "'couple' = ~2",
-    "prompt": "create couple of benzene molecules stacked",
+    "id": 21,
+    "prompt": "generate exactly 6 benzene molecules in herringbone at 3.4 angstrom",
+    "category": "Count-Hard",
+    "root_cause": "exact count + pattern",
+    "status": "PASSED",
+    "test_details": "✓ 6 molecules",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
+      "intermolecular_distance": 3.4,
       "molecules": [
         {
-          "count": 2,
+          "count": 6,
           "identifier": "benzene"
         }
-      ]
-    },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 3.4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 3.400014552773568
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324734526,
-      "sent": 1768324734598,
-      "llm_done": 1768324739123,
-      "mcp_done": 1768324739572,
-      "total_ms": 5646,
-      "llm_ms": 4525,
-      "mcp_ms": 449
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:19:00.172Z"
-  },
-  {
-    "id": 31,
-    "category": "Count-NoMolWord",
-    "root_cause": "'2 cubane' without 'molecules' should work",
-    "prompt": "stack 2 cubane at 7 angstrom",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 7,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "Cub-1"
-        }
       ],
-      "vacuum": 30
+      "stacking": "herringbone",
+      "vacuum": 15
     },
-    "mcp_success": false,
-    "atom_count": 0,
-    "metadata": null,
-    "test_valid": false,
-    "test_details": "No atoms",
-    "measurements": {},
-    "position_info": null,
-    "timing": {
-      "start": 1768324740172,
-      "sent": 1768324740244,
-      "llm_done": 1768324745252,
-      "mcp_done": 1768324746539,
-      "total_ms": 6903,
-      "llm_ms": 5008,
-      "mcp_ms": 1287
-    },
-    "status": "MCP_FAIL",
-    "timestamp": "2026-01-13T17:19:07.075Z"
+    "llm_time_ms": 5543,
+    "mcp_time_ms": 10002,
+    "atom_count": 72
   },
   {
-    "id": 32,
-    "category": "Count-NoMolWord",
-    "root_cause": "'2 X' pattern",
-    "prompt": "generate 2 corannulene stacked",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 7,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "corannulene"
-        }
-      ]
-    },
-    "mcp_success": true,
-    "atom_count": 60,
-    "metadata": {
-      "formula": "C20H10+C20H10",
-      "natoms": 60,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 7,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 60,
-      "actual_distance": 7
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324747076,
-      "sent": 1768324747152,
-      "llm_done": 1768324751918,
-      "mcp_done": 1768324753701,
-      "total_ms": 7255,
-      "llm_ms": 4766,
-      "mcp_ms": 1783
-    },
+    "id": 22,
+    "prompt": "create a pentamer dimer hybrid of pyrene at 3.5 angstrom",
+    "category": "Count-Hard",
+    "root_cause": "pentamer = 5",
     "status": "PASSED",
-    "timestamp": "2026-01-13T17:19:14.331Z"
-  },
-  {
-    "id": 33,
-    "category": "Count-Of",
-    "root_cause": "'2 of X' pattern",
-    "prompt": "create 2 of dodecahedrane 12 angstrom apart",
+    "test_details": "✓ 5 molecules",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
       "axis": "z",
-      "intermolecular_distance": 12,
+      "intermolecular_distance": 3.5,
       "molecules": [
         {
-          "count": 2,
-          "identifier": "dodecahedrane"
+          "count": 5,
+          "identifier": "pyrene"
         }
-      ]
+      ],
+      "stacking": "herringbone"
     },
-    "mcp_success": true,
-    "atom_count": 80,
-    "metadata": {
-      "formula": "C20H20+C20H20",
-      "natoms": 80,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 12,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 80,
-      "actual_distance": 12.000000000000007
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324754332,
-      "sent": 1768324754405,
-      "llm_done": 1768324759537,
-      "mcp_done": 1768324761244,
-      "total_ms": 7533,
-      "llm_ms": 5132,
-      "mcp_ms": 1707
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:19:21.865Z"
+    "llm_time_ms": 6617,
+    "mcp_time_ms": 10004,
+    "atom_count": 130
   },
   {
-    "id": 34,
-    "category": "Count-Both",
-    "root_cause": "'both' implies 2 different types",
-    "prompt": "stack both benzene and naphthalene molecules",
+    "id": 23,
+    "prompt": "generate a hexamer of benzene in zigzag pattern 3.4 angstrom",
+    "category": "Count-Hard",
+    "root_cause": "hexamer = 6 + pattern",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 6 molecules, got 5",
+    "llm_tool": null,
+    "llm_args": null,
+    "llm_time_ms": 4796,
+    "mcp_time_ms": 10021,
+    "atom_count": 130
+  },
+  {
+    "id": 24,
+    "prompt": "create a pentamer of naphthalene antiparallel",
+    "category": "Count-Hard",
+    "root_cause": "pentamer = 5 + pattern",
+    "status": "PASSED",
+    "test_details": "✓ 5 molecules",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
-      "intermolecular_distance": 7,
+      "intermolecular_distance": 3.5,
       "molecules": [
         {
-          "count": 1,
-          "identifier": "benzene"
-        },
-        {
-          "count": 1,
+          "count": 5,
           "identifier": "naphthalene"
         }
       ],
-      "stacking": "auto"
+      "stacking": "antiparallel"
     },
-    "mcp_success": true,
-    "atom_count": 30,
-    "metadata": {
-      "formula": "C6H6+C10H8",
-      "natoms": 30,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 7,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 30,
-      "actual_distance": 5.661681595528104
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324761866,
-      "sent": 1768324761946,
-      "llm_done": 1768324767437,
-      "mcp_done": 1768324768087,
-      "total_ms": 6855,
-      "llm_ms": 5491,
-      "mcp_ms": 650
-    },
+    "llm_time_ms": 5358,
+    "mcp_time_ms": 10006,
+    "atom_count": 90
+  },
+  {
+    "id": 25,
+    "prompt": "stack 7 molecules of adamantane along [1,0,1] at 8 angstrom",
+    "category": "Count-Hard",
+    "root_cause": "7 + vector",
     "status": "PASSED",
-    "timestamp": "2026-01-13T17:19:28.721Z"
-  },
-  {
-    "id": 35,
-    "category": "Count-Identical",
-    "root_cause": "'two identical X' = 2",
-    "prompt": "generate two identical benzene molecules stacked",
+    "test_details": "✓ 7 molecules",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
-      "intermolecular_distance": 7,
+      "intermolecular_distance": 8,
       "molecules": [
         {
-          "count": 2,
-          "identifier": "benzene"
-        }
-      ]
-    },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 7,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 7.000000000000002
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324768722,
-      "sent": 1768324768798,
-      "llm_done": 1768324773634,
-      "mcp_done": 1768324774125,
-      "total_ms": 6027,
-      "llm_ms": 4836,
-      "mcp_ms": 491
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:19:34.749Z"
-  },
-  {
-    "id": 36,
-    "category": "Count-Double",
-    "root_cause": "'double X stack' = 2?",
-    "prompt": "create double benzene stack",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 3.4,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "benzene"
-        }
-      ],
-      "natural_language": "create double benzene stack",
-      "vacuum": 10
-    },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 3.4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 3.400014552773568
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324774750,
-      "sent": 1768324774832,
-      "llm_done": 1768324780260,
-      "mcp_done": 1768324780760,
-      "total_ms": 6632,
-      "llm_ms": 5428,
-      "mcp_ms": 500
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:19:41.382Z"
-  },
-  {
-    "id": 37,
-    "category": "Count-Times",
-    "root_cause": "'X times 2' pattern",
-    "prompt": "stack benzene times 2",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "benzene"
-        }
-      ],
-      "natural_language": "stack benzene times 2"
-    },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 3.4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 3.400014552773568
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324781383,
-      "sent": 1768324781460,
-      "llm_done": 1768324786409,
-      "mcp_done": 1768324786905,
-      "total_ms": 6148,
-      "llm_ms": 4949,
-      "mcp_ms": 496
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:19:47.531Z"
-  },
-  {
-    "id": 38,
-    "category": "Count-2x",
-    "root_cause": "'2x X' pattern",
-    "prompt": "generate 2x pyrene stack",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 3.4,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "pyrene"
-        }
-      ]
-    },
-    "mcp_success": true,
-    "atom_count": 52,
-    "metadata": {
-      "formula": "C16H10+C16H10",
-      "natoms": 52,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 3.4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 52,
-      "actual_distance": 3.900022805591936
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324787532,
-      "sent": 1768324787612,
-      "llm_done": 1768324792418,
-      "mcp_done": 1768324792907,
-      "total_ms": 6008,
-      "llm_ms": 4806,
-      "mcp_ms": 489
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:19:53.540Z"
-  },
-  {
-    "id": 39,
-    "category": "Count-x2",
-    "root_cause": "'X x2' pattern",
-    "prompt": "create benzene x2 stacked",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "benzene"
-        }
-      ]
-    },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 3.4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 3.400014552773568
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324793541,
-      "sent": 1768324793634,
-      "llm_done": 1768324798204,
-      "mcp_done": 1768324798832,
-      "total_ms": 5951,
-      "llm_ms": 4570,
-      "mcp_ms": 628
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:19:59.492Z"
-  },
-  {
-    "id": 40,
-    "category": "Count-Repeat",
-    "root_cause": "'X, X' = 2 molecules",
-    "prompt": "stack benzene, benzene along z 3.4 angstrom apart",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 3.4,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "benzene"
-        }
-      ],
-      "natural_language": "stack benzene, benzene along z 3.4 angstrom apart",
-      "vacuum": 10
-    },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 3.4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 3.400014552773568
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324799492,
-      "sent": 1768324799578,
-      "llm_done": 1768324805258,
-      "mcp_done": 1768324805809,
-      "total_ms": 6996,
-      "llm_ms": 5680,
-      "mcp_ms": 551
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:20:06.488Z"
-  },
-  {
-    "id": 41,
-    "category": "Invalid-Zero",
-    "root_cause": "0Å should use safe default, not crash",
-    "prompt": "generate 2 benzene 0 angstrom apart",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 0,
-      "molecules": [
-        {
-          "count": 1,
-          "identifier": "benzene"
-        }
-      ],
-      "stacking": "auto",
-      "vacuum": 30
-    },
-    "mcp_success": false,
-    "atom_count": 0,
-    "metadata": null,
-    "test_valid": false,
-    "test_details": "No atoms",
-    "measurements": {},
-    "position_info": null,
-    "timing": {
-      "start": 1768324806489,
-      "sent": 1768324806593,
-      "llm_done": 1768324811879,
-      "mcp_done": 1768324811883,
-      "total_ms": 5934,
-      "llm_ms": 5286,
-      "mcp_ms": 4
-    },
-    "status": "MCP_FAIL",
-    "timestamp": "2026-01-13T17:20:12.423Z"
-  },
-  {
-    "id": 42,
-    "category": "Invalid-Negative",
-    "root_cause": "Negative distance should be rejected/abs'd",
-    "prompt": "stack 2 pyrene at -5 angstrom",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": -5,
-      "molecules": [
-        {
-          "count": 1,
-          "identifier": "C16H10"
-        }
-      ],
-      "natural_language": "stack 2 pyrene at -5 angstrom",
-      "vacuum": 10
-    },
-    "mcp_success": false,
-    "atom_count": 0,
-    "metadata": null,
-    "test_valid": false,
-    "test_details": "No atoms",
-    "measurements": {},
-    "position_info": null,
-    "timing": {
-      "start": 1768324812424,
-      "sent": 1768324812525,
-      "llm_done": 1768324818084,
-      "mcp_done": 1768324818086,
-      "total_ms": 6214,
-      "llm_ms": 5559,
-      "mcp_ms": 2
-    },
-    "status": "MCP_FAIL",
-    "timestamp": "2026-01-13T17:20:18.638Z"
-  },
-  {
-    "id": 43,
-    "category": "Invalid-TooSmall",
-    "root_cause": "0.1Å < VdW contact, must adjust",
-    "prompt": "create 2 benzene 0.1 angstrom apart",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 0.1,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "benzene"
-        }
-      ]
-    },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 0.1,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ No clash: 3.40Å",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 3.400014552773568
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324818639,
-      "sent": 1768324818750,
-      "llm_done": 1768324823600,
-      "mcp_done": 1768324824246,
-      "total_ms": 6330,
-      "llm_ms": 4850,
-      "mcp_ms": 646
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:20:24.969Z"
-  },
-  {
-    "id": 44,
-    "category": "Invalid-TooSmall",
-    "root_cause": "1Å for 5Å cage = overlap",
-    "prompt": "generate 2 adamantane 1 angstrom apart",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 1,
-      "molecules": [
-        {
-          "count": 2,
+          "count": 7,
           "identifier": "adamantane"
         }
-      ]
-    },
-    "mcp_success": true,
-    "atom_count": 52,
-    "metadata": {
-      "formula": "C10H16+C10H16",
-      "natoms": 52,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 1,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ No clash: 7.81Å",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 52,
-      "actual_distance": 7.8070834273047325
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324824970,
-      "sent": 1768324825105,
-      "llm_done": 1768324829892,
-      "mcp_done": 1768324830450,
-      "total_ms": 6154,
-      "llm_ms": 4787,
-      "mcp_ms": 558
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:20:31.124Z"
-  },
-  {
-    "id": 45,
-    "category": "Invalid-TooSmall",
-    "root_cause": "0.5Å for large PAH = impossible",
-    "prompt": "stack 2 coronene 0.5 angstrom apart",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 0.5,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "coronene"
-        }
-      ]
-    },
-    "mcp_success": true,
-    "atom_count": 72,
-    "metadata": {
-      "formula": "C24H12+C24H12",
-      "natoms": 72,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 0.5,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ No clash: 3.40Å",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 72,
-      "actual_distance": 3.4006000000000025
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324831125,
-      "sent": 1768324831236,
-      "llm_done": 1768324836078,
-      "mcp_done": 1768324838084,
-      "total_ms": 7697,
-      "llm_ms": 4842,
-      "mcp_ms": 2006
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:20:38.822Z"
-  },
-  {
-    "id": 46,
-    "category": "Invalid-TooSmall",
-    "root_cause": "C60 7Å diameter, 1Å = inside",
-    "prompt": "create 2 C60 1 angstrom apart",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 1,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "C60"
-        }
-      ]
-    },
-    "mcp_success": true,
-    "atom_count": 120,
-    "metadata": {
-      "formula": "C60+C60",
-      "natoms": 120,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 1,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": false,
-    "test_details": "Clash: 3.90Å < 7Å",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 120,
-      "actual_distance": 3.9000000000000075
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768324838823,
-      "sent": 1768324838924,
-      "llm_done": 1768324843693,
-      "mcp_done": 1768324853580,
-      "total_ms": 15443,
-      "llm_ms": 4769,
-      "mcp_ms": 9887
-    },
-    "status": "SEMANTIC_FAIL",
-    "timestamp": "2026-01-13T17:20:54.266Z"
-  },
-  {
-    "id": 47,
-    "category": "Invalid-TooMany",
-    "root_cause": "1000 molecules should work or error gracefully",
-    "prompt": "generate 1000 benzene molecules stacked",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 3.4,
-      "molecules": [
-        {
-          "count": 1000,
-          "identifier": "benzene"
-        }
       ],
-      "stacking": "auto",
-      "vacuum": 50
-    },
-    "mcp_success": false,
-    "atom_count": 0,
-    "metadata": null,
-    "test_valid": false,
-    "test_details": "No atoms",
-    "measurements": {},
-    "position_info": null,
-    "timing": {
-      "start": 1768324854266,
-      "sent": 1768324854369,
-      "llm_done": 1768324859752,
-      "mcp_done": 1768324974269,
-      "total_ms": 120503,
-      "llm_ms": 5383,
-      "mcp_ms": 114517
-    },
-    "status": "MCP_FAIL",
-    "timestamp": "2026-01-13T17:22:54.769Z"
-  },
-  {
-    "id": 48,
-    "category": "Invalid-Zero",
-    "root_cause": "0 count should error gracefully",
-    "prompt": "stack 0 benzene molecules",
-    "llm_tool": null,
-    "llm_args": null,
-    "mcp_success": false,
-    "atom_count": 0,
-    "metadata": null,
-    "test_valid": false,
-    "test_details": "No atoms",
-    "measurements": {},
-    "position_info": null,
-    "timing": {
-      "start": 1768324974770,
-      "sent": 1768325460266,
-      "llm_done": 1768325460266,
-      "mcp_done": 1768325460266,
-      "total_ms": 485997,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "MCP_FAIL",
-    "timestamp": "2026-01-13T17:31:00.767Z"
-  },
-  {
-    "id": 49,
-    "category": "Invalid-Negative",
-    "root_cause": "Negative count should error",
-    "prompt": "generate -2 benzene molecules",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "molecules": [
-        {
-          "count": 0,
-          "identifier": "benzene"
-        }
-      ]
-    },
-    "mcp_success": false,
-    "atom_count": 0,
-    "metadata": null,
-    "test_valid": false,
-    "test_details": "No atoms",
-    "measurements": {},
-    "position_info": null,
-    "timing": {
-      "start": 1768325460768,
-      "sent": 1768325470188,
-      "llm_done": 1768325470188,
-      "mcp_done": 1768325470188,
-      "total_ms": 9922,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "MCP_FAIL",
-    "timestamp": "2026-01-13T17:31:10.690Z"
-  },
-  {
-    "id": 50,
-    "category": "Invalid-TooLarge",
-    "root_cause": "10000Å is valid but unusual",
-    "prompt": "create 2 benzene 10000 angstrom apart",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 10000,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "benzene"
-        }
-      ]
-    },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 10000,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ Distance 10000.00Å",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 10000
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325470691,
-      "sent": 1768325476054,
-      "llm_done": 1768325480885,
-      "mcp_done": 1768325481456,
-      "total_ms": 11473,
-      "llm_ms": 4831,
-      "mcp_ms": 571
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:31:22.164Z"
-  },
-  {
-    "id": 51,
-    "category": "Invalid-Axis",
-    "root_cause": "'q axis' doesn't exist, should default to z",
-    "prompt": "stack 2 benzene along q axis",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 10000,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "benzene"
-        }
-      ],
-      "natural_language": "stack 2 benzene along q axis",
       "offset_x": 0,
       "offset_y": 0,
-      "stacking": "linear"
+      "positions": null,
+      "rotation_per_molecule": 0,
+      "stacking": "linear",
+      "use_solver": false,
+      "vacuum": 15
     },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "linear",
-      "intermolecular_distance": 10000,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 10000
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325482165,
-      "sent": 1768325482283,
-      "llm_done": 1768325488151,
-      "mcp_done": 1768325488707,
-      "total_ms": 7220,
-      "llm_ms": 5868,
-      "mcp_ms": 556
-    },
+    "llm_time_ms": 3855,
+    "mcp_time_ms": 10002,
+    "atom_count": 182
+  },
+  {
+    "id": 26,
+    "prompt": "generate eight benzene molecules in double stack 3.4 angstrom",
+    "category": "Count-Hard",
+    "root_cause": "'eight' = 8",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 8 molecules, got 7",
+    "llm_tool": null,
+    "llm_args": null,
+    "llm_time_ms": 4947,
+    "mcp_time_ms": 10028,
+    "atom_count": 182
+  },
+  {
+    "id": 27,
+    "prompt": "create fifteen water molecules in 3x5 grid along z",
+    "category": "Count-Hard",
+    "root_cause": "fifteen = 15 + grid",
     "status": "PASSED",
-    "timestamp": "2026-01-13T17:31:29.385Z"
-  },
-  {
-    "id": 52,
-    "category": "Invalid-Axis",
-    "root_cause": "'axis 4' not valid, should default",
-    "prompt": "generate 2 benzene along axis 4",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "axis": "q",
-      "intermolecular_distance": 10000,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "benzene"
-        }
-      ],
-      "offset_x": 0,
-      "offset_y": 0
-    },
-    "mcp_success": false,
-    "atom_count": 0,
-    "metadata": null,
-    "test_valid": false,
-    "test_details": "No atoms",
-    "measurements": {},
-    "position_info": null,
-    "timing": {
-      "start": 1768325489386,
-      "sent": 1768325489493,
-      "llm_done": 1768325494954,
-      "mcp_done": 1768325494958,
-      "total_ms": 6125,
-      "llm_ms": 5461,
-      "mcp_ms": 4
-    },
-    "status": "MCP_FAIL",
-    "timestamp": "2026-01-13T17:31:35.511Z"
-  },
-  {
-    "id": 53,
-    "category": "Invalid-Vector",
-    "root_cause": "[0,0,0] is null vector, should default to z",
-    "prompt": "create 2 benzene along [0,0,0] 5 angstrom apart",
-    "llm_tool": "build_molecule",
-    "llm_args": {
-      "query": "benzene"
-    },
-    "mcp_success": false,
-    "atom_count": 0,
-    "metadata": null,
-    "test_valid": false,
-    "test_details": "No atoms",
-    "measurements": {},
-    "position_info": null,
-    "timing": {
-      "start": 1768325495512,
-      "sent": 1768325495624,
-      "llm_done": 1768325501892,
-      "mcp_done": 1768325501894,
-      "total_ms": 6939,
-      "llm_ms": 6268,
-      "mcp_ms": 2
-    },
-    "status": "MCP_FAIL",
-    "timestamp": "2026-01-13T17:31:42.451Z"
-  },
-  {
-    "id": 54,
-    "category": "Invalid-NaN",
-    "root_cause": "NaN should be detected and defaulted",
-    "prompt": "stack benzene at NaN angstrom",
+    "test_details": "✓ 15 molecules",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
       "axis": "z",
-      "intermolecular_distance": 5,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "benzene"
-        }
-      ]
-    },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 5,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 5.000000000000002
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325502453,
-      "sent": 1768325502587,
-      "llm_done": 1768325507664,
-      "mcp_done": 1768325508183,
-      "total_ms": 6410,
-      "llm_ms": 5077,
-      "mcp_ms": 519
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:31:48.863Z"
-  },
-  {
-    "id": 55,
-    "category": "Invalid-Inf",
-    "root_cause": "'infinity' should error gracefully",
-    "prompt": "generate 2 benzene at infinity angstrom",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 100000,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "benzene"
-        }
-      ]
-    },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 100000,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 99999.99999999997
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325508863,
-      "sent": 1768325508982,
-      "llm_done": 1768325510445,
-      "mcp_done": 1768325510986,
-      "total_ms": 2864,
-      "llm_ms": 1463,
-      "mcp_ms": 541
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:31:51.727Z"
-  },
-  {
-    "id": 56,
-    "category": "Pattern-Helix",
-    "root_cause": "Helix pattern implementation",
-    "prompt": "create helical stack of 5 benzene with 3.4 pitch",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
       "intermolecular_distance": 3.4,
       "molecules": [
         {
-          "count": 5,
-          "identifier": "benzene"
+          "count": 15,
+          "identifier": "water"
+        }
+      ]
+    },
+    "llm_time_ms": 2543,
+    "mcp_time_ms": 10001,
+    "atom_count": 45
+  },
+  {
+    "id": 28,
+    "prompt": "stack twenty methane molecules in helix at 4 angstrom pitch",
+    "category": "Count-Hard",
+    "root_cause": "'twenty' = 20 + helix",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 20 molecules, got 15",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "intermolecular_distance": 4,
+      "molecules": [
+        {
+          "count": 20,
+          "identifier": "CH4"
         }
       ],
       "stacking": "helical",
       "vacuum": 10
     },
-    "mcp_success": false,
-    "atom_count": 0,
-    "metadata": null,
-    "test_valid": false,
-    "test_details": "No atoms",
-    "measurements": {},
-    "position_info": null,
-    "timing": {
-      "start": 1768325511728,
-      "sent": 1768325511869,
-      "llm_done": 1768325517240,
-      "mcp_done": 1768325517780,
-      "total_ms": 6597,
-      "llm_ms": 5371,
-      "mcp_ms": 540
-    },
-    "status": "MCP_FAIL",
-    "timestamp": "2026-01-13T17:31:58.325Z"
+    "llm_time_ms": 5488,
+    "mcp_time_ms": 10004,
+    "atom_count": 45
   },
   {
-    "id": 57,
-    "category": "Pattern-Zigzag",
-    "root_cause": "Zigzag pattern implementation",
-    "prompt": "generate zigzag chain of 4 benzene",
-    "llm_tool": "build_molecule",
-    "llm_args": {
-      "query": "benzene"
-    },
-    "mcp_success": false,
-    "atom_count": 0,
-    "metadata": null,
-    "test_valid": false,
-    "test_details": "No atoms",
-    "measurements": {},
-    "position_info": null,
-    "timing": {
-      "start": 1768325518326,
-      "sent": 1768325518433,
-      "llm_done": 1768325522751,
-      "mcp_done": 1768325522753,
-      "total_ms": 4977,
-      "llm_ms": 4318,
-      "mcp_ms": 2
-    },
-    "status": "MCP_FAIL",
-    "timestamp": "2026-01-13T17:32:03.303Z"
+    "id": 29,
+    "prompt": "generate half-dozen pyrene molecules in ring arrangement",
+    "category": "Count-Hard",
+    "root_cause": "'half-dozen' = 6",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 6 molecules, got 15",
+    "llm_tool": null,
+    "llm_args": null,
+    "llm_time_ms": 2424,
+    "mcp_time_ms": 10025,
+    "atom_count": 45
   },
   {
-    "id": 58,
-    "category": "Pattern-Tetrahedral",
-    "root_cause": "3D polyhedra pattern",
-    "prompt": "create tetrahedral arrangement of 4 benzene",
+    "id": 30,
+    "prompt": "create quartet of benzene molecules in T-shaped pattern",
+    "category": "Count-Hard",
+    "root_cause": "'quartet' = 4",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 4 molecules, got 15",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
+      "intermolecular_distance": 3.4,
       "molecules": [
         {
           "count": 4,
           "identifier": "benzene"
         }
       ],
-      "natural_language": "create tetrahedral arrangement of 4 benzene"
+      "stacking": "t_shaped"
     },
-    "mcp_success": true,
-    "atom_count": 48,
-    "metadata": {
-      "formula": "C6H6+C6H6+C6H6+C6H6",
-      "natoms": 48,
-      "n_molecules": 4,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 3.4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 4 molecules",
-    "measurements": {
-      "molecule_count": 4,
-      "total_atoms": 48,
-      "actual_distance": 3.4000145527735697
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325523303,
-      "sent": 1768325523428,
-      "llm_done": 1768325528472,
-      "mcp_done": 1768325529069,
-      "total_ms": 6474,
-      "llm_ms": 5044,
-      "mcp_ms": 597
-    },
+    "llm_time_ms": 5274,
+    "mcp_time_ms": 10002,
+    "atom_count": 45
+  },
+  {
+    "id": 31,
+    "prompt": "stack 2 cubane at 7 angstrom",
+    "category": "Count-NoMolWord",
+    "root_cause": "'2 cubane' without 'molecules'",
     "status": "PASSED",
-    "timestamp": "2026-01-13T17:32:09.777Z"
-  },
-  {
-    "id": 59,
-    "category": "Pattern-Octahedral",
-    "root_cause": "6-vertex polyhedra",
-    "prompt": "generate octahedral arrangement of 6 benzene",
-    "llm_tool": null,
-    "llm_args": null,
-    "mcp_success": false,
-    "atom_count": 0,
-    "metadata": null,
-    "test_valid": false,
-    "test_details": "No atoms",
-    "measurements": {},
-    "position_info": null,
-    "timing": {
-      "start": 1768325529778,
-      "sent": 1768325529902,
-      "llm_done": 1768325649781,
-      "mcp_done": 1768325649781,
-      "total_ms": 120504,
-      "llm_ms": 119879,
-      "mcp_ms": 0
-    },
-    "status": "MCP_FAIL",
-    "timestamp": "2026-01-13T17:34:10.282Z"
-  },
-  {
-    "id": 60,
-    "category": "Pattern-TShape",
-    "root_cause": "T-shaped edge-face interaction",
-    "prompt": "create T-shaped benzene dimer",
-    "llm_tool": "build_molecule",
-    "llm_args": {
-      "query": "benzene"
-    },
-    "mcp_success": false,
-    "atom_count": 0,
-    "metadata": null,
-    "test_valid": false,
-    "test_details": "No atoms",
-    "measurements": {},
-    "position_info": null,
-    "timing": {
-      "start": 1768325650283,
-      "sent": 1768325701859,
-      "llm_done": 1768325701859,
-      "mcp_done": 1768325701859,
-      "total_ms": 52079,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "MCP_FAIL",
-    "timestamp": "2026-01-13T17:35:02.362Z"
-  },
-  {
-    "id": 61,
-    "category": "Pattern-Herringbone",
-    "root_cause": "45° alternating tilt",
-    "prompt": "generate herringbone pattern of 4 benzene",
+    "test_details": "✓ 2 molecules",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
+      "intermolecular_distance": 7,
+      "molecules": [
+        {
+          "count": 2,
+          "identifier": "cubane"
+        }
+      ],
+      "stacking": "linear"
+    },
+    "llm_time_ms": 5101,
+    "mcp_time_ms": 10002,
+    "atom_count": 32
+  },
+  {
+    "id": 32,
+    "prompt": "generate 6 corannulene in alternating orientations 4 angstrom",
+    "category": "Count-Hard",
+    "root_cause": "6 + pattern",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 6 molecules, got 2",
+    "llm_tool": null,
+    "llm_args": null,
+    "llm_time_ms": 4729,
+    "mcp_time_ms": 10027,
+    "atom_count": 32
+  },
+  {
+    "id": 33,
+    "prompt": "create 8 of dodecahedrane in cubic arrangement 12 angstrom",
+    "category": "Count-Hard",
+    "root_cause": "8 + cubic",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 8 molecules, got 2",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "molecules": [
+        {
+          "count": 8,
+          "identifier": "dodecahedrane"
+        }
+      ],
+      "positions": [
+        {
+          "x": 0,
+          "y": 0,
+          "z": 12
+        },
+        {
+          "x": 6,
+          "y": 6,
+          "z": 0
+        },
+        {
+          "x": -6,
+          "y": 6,
+          "z": 0
+        },
+        {
+          "x": 0,
+          "y": -12,
+          "z": 6
+        },
+        {
+          "x": 6,
+          "y": 0,
+          "z": -6
+        },
+        {
+          "x": -6,
+          "y": 0,
+          "z": -6
+        },
+        {
+          "x": 0,
+          "y": 6,
+          "z": -12
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        }
+      ],
+      "stacking": "custom"
+    },
+    "llm_time_ms": 9094,
+    "mcp_time_ms": 10001,
+    "atom_count": 32
+  },
+  {
+    "id": 34,
+    "prompt": "stack benzene, naphthalene, anthracene, pyrene in a line",
+    "category": "Count-Hard",
+    "root_cause": "4 different molecules",
+    "status": "PASSED",
+    "test_details": "✓ 4 molecules",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "axis": "x",
+      "intermolecular_distance": 20,
+      "molecules": [
+        {
+          "count": 1,
+          "identifier": "benzene"
+        },
+        {
+          "count": 1,
+          "identifier": "naphthalene"
+        },
+        {
+          "count": 1,
+          "identifier": "anthracene"
+        },
+        {
+          "count": 1,
+          "identifier": "pyrene"
+        }
+      ]
+    },
+    "llm_time_ms": 5507,
+    "mcp_time_ms": 10003,
+    "atom_count": 80
+  },
+  {
+    "id": 35,
+    "prompt": "generate three identical pairs of benzene at 3.4 angstrom",
+    "category": "Count-Hard",
+    "root_cause": "3 pairs = 6",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 6 molecules, got 2",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "axis": "z",
+      "intermolecular_distance": 3.4,
       "molecules": [
         {
           "count": 2,
           "identifier": "benzene"
         }
-      ],
-      "natural_language": "T-shaped benzene dimer"
+      ]
     },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 3.4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": false,
-    "test_details": "Expected 4 molecules, got 2",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 3.400014552773568
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325702363,
-      "sent": 1768325707778,
-      "llm_done": 1768325707778,
-      "mcp_done": 1768325707778,
-      "total_ms": 5918,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
+    "llm_time_ms": 1585,
+    "mcp_time_ms": 10003,
+    "atom_count": 24
+  },
+  {
+    "id": 36,
+    "prompt": "create double-decker benzene sandwich 3 layers thick",
+    "category": "Count-Hard",
+    "root_cause": "double-decker = 3",
     "status": "SEMANTIC_FAIL",
-    "timestamp": "2026-01-13T17:35:08.281Z"
+    "test_details": "Expected 3 molecules, got 2",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "axis": "z",
+      "intermolecular_distance": 3.4,
+      "molecules": [
+        {
+          "count": 2,
+          "identifier": "benzene"
+        }
+      ]
+    },
+    "llm_time_ms": 1574,
+    "mcp_time_ms": 10004,
+    "atom_count": 24
+  },
+  {
+    "id": 37,
+    "prompt": "stack benzene times 4 in slipped parallel 3.4 angstrom",
+    "category": "Count-Hard",
+    "root_cause": "'times 4' = 4 + pattern",
+    "status": "PASSED",
+    "test_details": "✓ 4 molecules",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "intermolecular_distance": 3.4,
+      "molecules": [
+        {
+          "count": 4,
+          "identifier": "benzene"
+        }
+      ],
+      "stacking": "slip_stacked"
+    },
+    "llm_time_ms": 1682,
+    "mcp_time_ms": 10003,
+    "atom_count": 48
+  },
+  {
+    "id": 38,
+    "prompt": "generate 3x pyrene stack with alternating rotation",
+    "category": "Count-Hard",
+    "root_cause": "'3x' = 3 + rotation",
+    "status": "PASSED",
+    "test_details": "✓ 3 molecules",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "intermolecular_distance": 3.4,
+      "molecules": [
+        {
+          "count": 3,
+          "identifier": "pyrene"
+        }
+      ],
+      "rotation_per_molecule": 60,
+      "stacking": "slip_stacked"
+    },
+    "llm_time_ms": 1914,
+    "mcp_time_ms": 10001,
+    "atom_count": 78
+  },
+  {
+    "id": 39,
+    "prompt": "create benzene x5 in zigzag chain 3.4 angstrom",
+    "category": "Count-Hard",
+    "root_cause": "'x5' = 5 + pattern",
+    "status": "PASSED",
+    "test_details": "✓ 5 molecules",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "axis": "x",
+      "intermolecular_distance": 3.4,
+      "molecules": [
+        {
+          "count": 5,
+          "identifier": "benzene"
+        }
+      ],
+      "stacking": "zigzag"
+    },
+    "llm_time_ms": 1838,
+    "mcp_time_ms": 10002,
+    "atom_count": 60
+  },
+  {
+    "id": 40,
+    "prompt": "stack benzene, benzene, benzene, benzene along [1,1,0]",
+    "category": "Count-Hard",
+    "root_cause": "4 repeated = 4",
+    "status": "PASSED",
+    "test_details": "✓ 4 molecules",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "axis": "z",
+      "direction_vector": [
+        1,
+        1,
+        0
+      ],
+      "intermolecular_distance": 3.4,
+      "molecules": [
+        {
+          "count": 4,
+          "identifier": "benzene"
+        }
+      ]
+    },
+    "llm_time_ms": 1979,
+    "mcp_time_ms": 10002,
+    "atom_count": 48
+  },
+  {
+    "id": 41,
+    "prompt": "generate 2 benzene 0 angstrom apart",
+    "category": "Invalid-Zero",
+    "root_cause": "0Å should default",
+    "status": "PASSED",
+    "test_details": "✓ No clash: 4.68Å",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "axis": "z",
+      "intermolecular_distance": 0,
+      "molecules": [
+        {
+          "count": 2,
+          "identifier": "benzene"
+        }
+      ]
+    },
+    "llm_time_ms": 1707,
+    "mcp_time_ms": 10001,
+    "atom_count": 48
+  },
+  {
+    "id": 42,
+    "prompt": "stack 2 pyrene at -5 angstrom",
+    "category": "Invalid-Negative",
+    "root_cause": "Negative distance",
+    "status": "PASSED",
+    "test_details": "✓ No clash: 6.80Å",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "axis": "z",
+      "intermolecular_distance": 5,
+      "molecules": [
+        {
+          "count": 2,
+          "identifier": "pyrene"
+        }
+      ],
+      "offset_y": -5
+    },
+    "llm_time_ms": 1830,
+    "mcp_time_ms": 10002,
+    "atom_count": 52
+  },
+  {
+    "id": 43,
+    "prompt": "create 3 benzene at 0.1 angstrom along [1,1,1] direction",
+    "category": "Invalid-Hard",
+    "root_cause": "0.1Å + vector + count",
+    "status": "PASSED",
+    "test_details": "✓ No clash: 4.68Å",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "axis": "z",
+      "intermolecular_distance": 0.1,
+      "molecules": [
+        {
+          "count": 3,
+          "identifier": "benzene"
+        }
+      ],
+      "offset_x": 0,
+      "offset_y": 0,
+      "vacuum": 10
+    },
+    "llm_time_ms": 2364,
+    "mcp_time_ms": 10001,
+    "atom_count": 36
+  },
+  {
+    "id": 44,
+    "prompt": "generate 4 adamantane at 1 angstrom in herringbone pattern",
+    "category": "Invalid-Hard",
+    "root_cause": "1Å + 4 + pattern",
+    "status": "PASSED",
+    "test_details": "✓ No clash: 7.89Å",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "axis": "z",
+      "intermolecular_distance": 1,
+      "molecules": [
+        {
+          "count": 4,
+          "identifier": "adamantane"
+        }
+      ],
+      "stacking": "herringbone"
+    },
+    "llm_time_ms": 1964,
+    "mcp_time_ms": 10002,
+    "atom_count": 104
+  },
+  {
+    "id": 45,
+    "prompt": "stack 5 coronene at 0.5 angstrom in ring arrangement",
+    "category": "Invalid-Hard",
+    "root_cause": "0.5Å + 5 + ring",
+    "status": "PASSED",
+    "test_details": "✓ No clash: 7.89Å",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "axis": "z",
+      "intermolecular_distance": 0.5,
+      "molecules": [
+        {
+          "count": 5,
+          "identifier": "coronene"
+        }
+      ],
+      "stacking": "ring"
+    },
+    "llm_time_ms": 1963,
+    "mcp_time_ms": 10003,
+    "atom_count": 104
+  },
+  {
+    "id": 46,
+    "prompt": "create 2 C60 1 angstrom apart",
+    "category": "Invalid-TooSmall",
+    "root_cause": "C60 7Å, 1Å = clash",
+    "status": "PASSED",
+    "test_details": "✓ No clash: 7.89Å",
+    "llm_tool": null,
+    "llm_args": null,
+    "llm_time_ms": 848,
+    "mcp_time_ms": 10045,
+    "atom_count": 104
+  },
+  {
+    "id": 47,
+    "prompt": "generate 1000 benzene molecules stacked",
+    "category": "Invalid-TooMany",
+    "root_cause": "1000 molecules",
+    "status": "PASSED",
+    "test_details": "✓ 4 molecules",
+    "llm_tool": null,
+    "llm_args": null,
+    "llm_time_ms": 1428,
+    "mcp_time_ms": 10047,
+    "atom_count": 104
+  },
+  {
+    "id": 48,
+    "prompt": "stack 0 benzene molecules",
+    "category": "Invalid-Zero",
+    "root_cause": "0 count",
+    "status": "PASSED",
+    "test_details": "✓ 4 molecules",
+    "llm_tool": null,
+    "llm_args": null,
+    "llm_time_ms": 1817,
+    "mcp_time_ms": 10039,
+    "atom_count": 104
+  },
+  {
+    "id": 49,
+    "prompt": "generate -2 benzene molecules",
+    "category": "Invalid-Negative",
+    "root_cause": "Negative count",
+    "status": "PASSED",
+    "test_details": "✓ 4 molecules",
+    "llm_tool": null,
+    "llm_args": null,
+    "llm_time_ms": 4590,
+    "mcp_time_ms": 10046,
+    "atom_count": 104
+  },
+  {
+    "id": 50,
+    "prompt": "create 3 benzene at 10000 angstrom along [0,1,1] in T-shape",
+    "category": "Invalid-Hard",
+    "root_cause": "10000Å + vector + pattern",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Distance 7.89Å outside [9000-11000]",
+    "llm_tool": null,
+    "llm_args": null,
+    "llm_time_ms": 4470,
+    "mcp_time_ms": 10043,
+    "atom_count": 104
+  },
+  {
+    "id": 51,
+    "prompt": "stack 4 benzene along imaginary axis at 5 angstrom",
+    "category": "Invalid-Hard",
+    "root_cause": "'imaginary axis' invalid",
+    "status": "PASSED",
+    "test_details": "✓ 4 molecules",
+    "llm_tool": null,
+    "llm_args": null,
+    "llm_time_ms": 4442,
+    "mcp_time_ms": 10048,
+    "atom_count": 104
+  },
+  {
+    "id": 52,
+    "prompt": "generate 2 benzene along axis 4",
+    "category": "Invalid-Axis",
+    "root_cause": "'axis 4' invalid",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 2 molecules, got 4",
+    "llm_tool": null,
+    "llm_args": null,
+    "llm_time_ms": 4790,
+    "mcp_time_ms": 10049,
+    "atom_count": 104
+  },
+  {
+    "id": 53,
+    "prompt": "create 4 benzene along [0,0,0] in zigzag at 5 angstrom",
+    "category": "Invalid-Hard",
+    "root_cause": "[0,0,0] + pattern",
+    "status": "PASSED",
+    "test_details": "✓ 4 molecules",
+    "llm_tool": null,
+    "llm_args": null,
+    "llm_time_ms": 4909,
+    "mcp_time_ms": 10047,
+    "atom_count": 104
+  },
+  {
+    "id": 54,
+    "prompt": "stack benzene at NaN angstrom",
+    "category": "Invalid-NaN",
+    "root_cause": "NaN distance",
+    "status": "PASSED",
+    "test_details": "✓ 4 molecules",
+    "llm_tool": null,
+    "llm_args": null,
+    "llm_time_ms": 4679,
+    "mcp_time_ms": 10056,
+    "atom_count": 104
+  },
+  {
+    "id": 55,
+    "prompt": "generate 2 benzene at infinity angstrom",
+    "category": "Invalid-Inf",
+    "root_cause": "'infinity' distance",
+    "status": "PASSED",
+    "test_details": "✓ 4 molecules",
+    "llm_tool": null,
+    "llm_args": null,
+    "llm_time_ms": 4641,
+    "mcp_time_ms": 10047,
+    "atom_count": 104
+  },
+  {
+    "id": 56,
+    "prompt": "create helical stack of 5 benzene with 3.4 pitch",
+    "category": "Pattern-Helix",
+    "root_cause": "Helix",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 5 molecules, got 4",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "intermolecular_distance": 3.4,
+      "molecules": [
+        {
+          "count": 5,
+          "identifier": "benzene"
+        }
+      ],
+      "offset_x": 0,
+      "offset_y": 0,
+      "stacking": "helical",
+      "vacuum": 10
+    },
+    "llm_time_ms": 5889,
+    "mcp_time_ms": 10001,
+    "atom_count": 104
+  },
+  {
+    "id": 57,
+    "prompt": "generate 6 naphthalene in zigzag chain along [1,0,1] at 3.5 angstrom",
+    "category": "Pattern-Hard",
+    "root_cause": "zigzag + vector",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 6 molecules, got 4",
+    "llm_tool": null,
+    "llm_args": null,
+    "llm_time_ms": 7656,
+    "mcp_time_ms": 10044,
+    "atom_count": 104
+  },
+  {
+    "id": 58,
+    "prompt": "create tetrahedral arrangement of 4 benzene",
+    "category": "Pattern-Tetrahedral",
+    "root_cause": "3D polyhedra",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 4 molecules, got 6",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "intermolecular_distance": 3.5,
+      "molecules": [
+        {
+          "count": 6,
+          "identifier": "naphthalene"
+        }
+      ],
+      "offset_x": 0,
+      "offset_y": 0,
+      "offset_z": 0,
+      "positions": [
+        {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        {
+          "x": 3.5,
+          "y": 0,
+          "z": 3.5
+        },
+        {
+          "x": -1.75,
+          "y": 3.5,
+          "z": -1.75
+        },
+        {
+          "x": -3.5,
+          "y": -3.5,
+          "z": 1.75
+        },
+        {
+          "x": 1.75,
+          "y": -3.5,
+          "z": -1.75
+        }
+      ],
+      "rotation_x": 0,
+      "rotation_y": 0,
+      "rotation_z": 0,
+      "stacking": "zigzag",
+      "use_solver": false,
+      "vacuum": 20
+    },
+    "llm_time_ms": 12461,
+    "mcp_time_ms": 10003,
+    "atom_count": 108
+  },
+  {
+    "id": 59,
+    "prompt": "generate dodecahedral arrangement of 12 water molecules 3 angstrom",
+    "category": "Pattern-Hard",
+    "root_cause": "dodecahedra = 12 vertices",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 12 molecules, got 6",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "intermolecular_distance": 3,
+      "molecules": [
+        {
+          "count": 12,
+          "identifier": "water"
+        }
+      ],
+      "positions": [
+        {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        {
+          "x": 2.598,
+          "y": -1.5,
+          "z": -1.307
+        },
+        {
+          "x": 4.33,
+          "y": -1.5,
+          "z": 0.307
+        },
+        {
+          "x": 5.236,
+          "y": 0,
+          "z": 2.236
+        },
+        {
+          "x": 5.236,
+          "y": 1.932,
+          "z": -2.236
+        },
+        {
+          "x": 4.33,
+          "y": 3.864,
+          "z": -0.307
+        },
+        {
+          "x": 2.598,
+          "y": 4.899,
+          "z": -1.307
+        },
+        {
+          "x": 0,
+          "y": 4.899,
+          "z": -2.618
+        },
+        {
+          "x": -2.598,
+          "y": 3.864,
+          "z": -3.915
+        },
+        {
+          "x": -4.33,
+          "y": 2.764,
+          "z": -4.236
+        },
+        {
+          "x": -5.236,
+          "y": 0,
+          "z": -3.864
+        },
+        {
+          "x": -5.236,
+          "y": -1.932,
+          "z": -2.764
+        }
+      ],
+      "stacking": "custom"
+    },
+    "llm_time_ms": 14345,
+    "mcp_time_ms": 10002,
+    "atom_count": 108
+  },
+  {
+    "id": 60,
+    "prompt": "create T-shaped trimer of pyrene along [1,1,0]",
+    "category": "Pattern-Hard",
+    "root_cause": "T-shaped + trimer + vector",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 3 molecules, got 6",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "axis": "z",
+      "direction_vector": [
+        1,
+        1,
+        0
+      ],
+      "formulas": {
+        "x": "i*3.4",
+        "y": "i*3.4",
+        "z": "0"
+      },
+      "molecules": [
+        {
+          "count": 3,
+          "identifier": "pyrene"
+        }
+      ],
+      "stacking": "t_shaped",
+      "vacuum": 10
+    },
+    "llm_time_ms": 5741,
+    "mcp_time_ms": 10003,
+    "atom_count": 108
+  },
+  {
+    "id": 61,
+    "prompt": "generate herringbone pattern of 8 naphthalene at 3.5 angstrom along z",
+    "category": "Pattern-Hard",
+    "root_cause": "herringbone + 8 + axis",
+    "status": "PASSED",
+    "test_details": "✓ 8 molecules",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "axis": "z",
+      "intermolecular_distance": 3.5,
+      "molecules": [
+        {
+          "count": 8,
+          "identifier": "naphthalene"
+        }
+      ],
+      "stacking": "herringbone"
+    },
+    "llm_time_ms": 1839,
+    "mcp_time_ms": 10002,
+    "atom_count": 144
   },
   {
     "id": 62,
-    "category": "Pattern-Sandwich",
-    "root_cause": "3-layer A-B-A structure",
     "prompt": "create sandwich structure with benzene around ferrocene",
-    "llm_tool": "build_molecule",
-    "llm_args": {
-      "query": "benzene"
-    },
-    "mcp_success": false,
-    "atom_count": 0,
-    "metadata": null,
-    "test_valid": false,
-    "test_details": "No atoms",
-    "measurements": {},
-    "position_info": null,
-    "timing": {
-      "start": 1768325708283,
-      "sent": 1768325715681,
-      "llm_done": 1768325715681,
-      "mcp_done": 1768325715681,
-      "total_ms": 7901,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "MCP_FAIL",
-    "timestamp": "2026-01-13T17:35:16.184Z"
-  },
-  {
-    "id": 63,
-    "category": "Pattern-SlippedParallel",
-    "root_cause": "Offset parallel stacking",
-    "prompt": "generate slipped-parallel benzene dimer",
+    "category": "Pattern-Sandwich",
+    "root_cause": "3-layer A-B-A",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 3 molecules, got 7",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
+      "axis": "z",
+      "intermolecular_distance": 3.5,
       "molecules": [
         {
           "count": 6,
           "identifier": "benzene"
         },
         {
+          "count": 1,
           "identifier": "ferrocene"
         }
-      ],
-      "offset_x": 3.4,
-      "stacking": "slip_stacked",
-      "vacuum": 10
+      ]
     },
-    "mcp_success": true,
-    "atom_count": 93,
-    "metadata": {
-      "formula": "C6H6+C6H6+C6H6+C6H6+C6H6+C6H6+C10H10Fe",
-      "natoms": 93,
-      "n_molecules": 7,
-      "stacking_type": "pi_pi_offset",
-      "intermolecular_distance": 3.4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": false,
-    "test_details": "Expected 2 molecules, got 7",
-    "measurements": {
-      "molecule_count": 7,
-      "total_atoms": 93,
-      "actual_distance": 4.654684904176464
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325716185,
-      "sent": 1768325722266,
-      "llm_done": 1768325722266,
-      "mcp_done": 1768325722267,
-      "total_ms": 6587,
-      "llm_ms": 0,
-      "mcp_ms": 1
-    },
+    "llm_time_ms": 1981,
+    "mcp_time_ms": 10002,
+    "atom_count": 93
+  },
+  {
+    "id": 63,
+    "prompt": "generate 4 slipped-parallel anthracene along [1,0,1] at 3.6 angstrom",
+    "category": "Pattern-Hard",
+    "root_cause": "slipped + 4 + vector",
     "status": "SEMANTIC_FAIL",
-    "timestamp": "2026-01-13T17:35:22.772Z"
+    "test_details": "Expected 4 molecules, got 7",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "axis": "z",
+      "formulas": {
+        "x": "i*3.6",
+        "y": "0",
+        "z": "0"
+      },
+      "intermolecular_distance": 3.6,
+      "molecules": [
+        {
+          "count": 4,
+          "identifier": "anthracene"
+        }
+      ],
+      "stacking": "slip_stacked"
+    },
+    "llm_time_ms": 2669,
+    "mcp_time_ms": 10002,
+    "atom_count": 93
   },
   {
     "id": 64,
-    "category": "Pattern-FaceEdge",
-    "root_cause": "Mixed orientation",
-    "prompt": "create face-to-edge benzene arrangement",
+    "prompt": "create 6 face-to-edge pyrene molecules in alternating pattern",
+    "category": "Pattern-Hard",
+    "root_cause": "face-edge + 6 + alternating",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 6 molecules, got 7",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
+      "axis": "z",
+      "intermolecular_distance": 3.6,
       "molecules": [
         {
-          "count": 2,
-          "identifier": "benzene"
-        }
-      ],
-      "optimize": true,
-      "stacking": "slip_stacked",
-      "vacuum": 10
-    },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_offset",
-      "intermolecular_distance": 3.4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 3.7161941498086515
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325722773,
-      "sent": 1768325728385,
-      "llm_done": 1768325728385,
-      "mcp_done": 1768325728385,
-      "total_ms": 6118,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:35:28.891Z"
-  },
-  {
-    "id": 65,
-    "category": "Pattern-Antiparallel",
-    "root_cause": "180° rotated stacking",
-    "prompt": "generate antiparallel benzene dimer",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "benzene"
+          "count": 6,
+          "identifier": "pyrene"
         }
       ],
       "stacking": "edge_to_face"
     },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "t_shaped",
-      "intermolecular_distance": 3.4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 4.4999999999999964
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325728892,
-      "sent": 1768325734317,
-      "llm_done": 1768325734317,
-      "mcp_done": 1768325734317,
-      "total_ms": 5929,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
+    "llm_time_ms": 1846,
+    "mcp_time_ms": 10003,
+    "atom_count": 93
+  },
+  {
+    "id": 65,
+    "prompt": "generate antiparallel hexamer of benzene along [0,1,1]",
+    "category": "Pattern-Hard",
+    "root_cause": "antiparallel + 6 + vector",
     "status": "PASSED",
-    "timestamp": "2026-01-13T17:35:34.821Z"
-  },
-  {
-    "id": 66,
-    "category": "Pattern-Ring",
-    "root_cause": "Molecules in a circle",
-    "prompt": "create circular ring of 6 benzene",
+    "test_details": "✓ 6 molecules",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "benzene"
-        }
-      ],
-      "optimize": true,
-      "stacking": "antiparallel",
-      "vacuum": 10
-    },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_antiparallel",
-      "intermolecular_distance": 3.4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": false,
-    "test_details": "Expected 6 molecules, got 2",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 3.400014552773568
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325734822,
-      "sent": 1768325740700,
-      "llm_done": 1768325740700,
-      "mcp_done": 1768325740700,
-      "total_ms": 6380,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "SEMANTIC_FAIL",
-    "timestamp": "2026-01-13T17:35:41.202Z"
-  },
-  {
-    "id": 67,
-    "category": "Pattern-Grid",
-    "root_cause": "2D grid arrangement",
-    "prompt": "generate 3x3 grid of benzene",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
+      "axis": "z",
+      "intermolecular_distance": 3.6,
       "molecules": [
         {
           "count": 6,
           "identifier": "benzene"
         }
       ],
-      "natural_language": "create circular ring of 6 benzene",
-      "stacking": "circular"
+      "stacking": "antiparallel"
     },
-    "mcp_success": false,
-    "atom_count": 0,
-    "metadata": null,
-    "test_valid": false,
-    "test_details": "No atoms",
-    "measurements": {},
-    "position_info": null,
-    "timing": {
-      "start": 1768325741203,
-      "sent": 1768325747113,
-      "llm_done": 1768325747113,
-      "mcp_done": 1768325747113,
-      "total_ms": 6413,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "MCP_FAIL",
-    "timestamp": "2026-01-13T17:35:47.616Z"
+    "llm_time_ms": 1934,
+    "mcp_time_ms": 10002,
+    "atom_count": 72
   },
   {
-    "id": 68,
-    "category": "Pattern-Cubic",
-    "root_cause": "Molecules at cube vertices",
-    "prompt": "create cubic arrangement of 8 benzene",
+    "id": 66,
+    "prompt": "create circular ring of 6 benzene",
+    "category": "Pattern-Ring",
+    "root_cause": "Ring",
+    "status": "PASSED",
+    "test_details": "✓ 6 molecules",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
+      "axis": "z",
       "formulas": {
-        "x": "(i%3)*7.0",
-        "y": "floor(i/3)*7.0",
+        "x": "5*cos(2*pi*i/6)",
+        "y": "5*sin(2*pi*i/6)",
         "z": "0"
       },
-      "intermolecular_distance": 3.5,
+      "intermolecular_distance": 3.4,
+      "molecules": [
+        {
+          "count": 6,
+          "identifier": "benzene"
+        }
+      ],
+      "vacuum": 10
+    },
+    "llm_time_ms": 2941,
+    "mcp_time_ms": 10002,
+    "atom_count": 72
+  },
+  {
+    "id": 67,
+    "prompt": "generate 3x3 grid of benzene",
+    "category": "Pattern-Grid",
+    "root_cause": "2D grid",
+    "status": "PASSED",
+    "test_details": "✓ 9 molecules",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "axis": "z",
+      "formulas": {
+        "x": "i*6.0",
+        "y": "j*6.0",
+        "z": "0"
+      },
+      "intermolecular_distance": 3.4,
       "molecules": [
         {
           "count": 9,
           "identifier": "benzene"
         }
       ],
-      "vacuum": 20
+      "vacuum": 15
     },
-    "mcp_success": true,
-    "atom_count": 108,
-    "metadata": {
-      "formula": "C6H6+C6H6+C6H6+C6H6+C6H6+C6H6+C6H6+C6H6+C6H6",
-      "natoms": 108,
-      "n_molecules": 9,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 3.5,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": false,
-    "test_details": "Expected 8 molecules, got 9",
-    "measurements": {
-      "molecule_count": 9,
-      "total_atoms": 108,
-      "actual_distance": 6.9999999999999964
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325747617,
-      "sent": 1768325754214,
-      "llm_done": 1768325754214,
-      "mcp_done": 1768325754214,
-      "total_ms": 7102,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
+    "llm_time_ms": 2831,
+    "mcp_time_ms": 10002,
+    "atom_count": 108
+  },
+  {
+    "id": 68,
+    "prompt": "create cubic arrangement of 8 benzene",
+    "category": "Pattern-Cubic",
+    "root_cause": "Cube vertices",
     "status": "SEMANTIC_FAIL",
-    "timestamp": "2026-01-13T17:35:54.719Z"
+    "test_details": "Expected 8 molecules, got 9",
+    "llm_tool": null,
+    "llm_args": null,
+    "llm_time_ms": 1201,
+    "mcp_time_ms": 10060,
+    "atom_count": 108
   },
   {
     "id": 69,
-    "category": "Pattern-Alternating",
-    "root_cause": "Alternating orientations",
-    "prompt": "generate alternating up-down benzene chain",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "molecules": [
-        {
-          "count": 8,
-          "identifier": "benzene"
-        }
-      ],
-      "natural_language": "cubic arrangement of 8 benzene",
-      "stacking": "grid"
-    },
-    "mcp_success": false,
-    "atom_count": 0,
-    "metadata": null,
-    "test_valid": false,
-    "test_details": "No atoms",
-    "measurements": {},
-    "position_info": null,
-    "timing": {
-      "start": 1768325754720,
-      "sent": 1768325760200,
-      "llm_done": 1768325760200,
-      "mcp_done": 1768325760201,
-      "total_ms": 5985,
-      "llm_ms": 0,
-      "mcp_ms": 1
-    },
-    "status": "MCP_FAIL",
-    "timestamp": "2026-01-13T17:36:00.705Z"
+    "prompt": "generate alternating tetramer of naphthalene at 3.5 angstrom along [1,1,1]",
+    "category": "Pattern-Hard",
+    "root_cause": "alternating + 4 + vector",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 4 molecules, got 9",
+    "llm_tool": null,
+    "llm_args": null,
+    "llm_time_ms": 1250,
+    "mcp_time_ms": 10071,
+    "atom_count": 108
   },
   {
     "id": 70,
-    "category": "Pattern-Star",
-    "root_cause": "Central + surrounding pattern",
     "prompt": "create star arrangement of 5 benzene around 1 center",
+    "category": "Pattern-Star",
+    "root_cause": "Star",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 6 molecules, got 9",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
+      "axis": "z",
+      "formulas": {
+        "x": "3*sin(2*pi*i/5)",
+        "y": "3*cos(2*pi*i/5)",
+        "z": "0"
+      },
       "intermolecular_distance": 3.5,
       "molecules": [
         {
-          "count": 2,
+          "count": 5,
           "identifier": "benzene"
         }
-      ],
-      "natural_language": "alternating up-down benzene chain",
-      "stacking": "offset",
-      "vacuum": 10
+      ]
     },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_offset",
-      "intermolecular_distance": 3.5,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": false,
-    "test_details": "Expected 6 molecules, got 2",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 3.8078865529319543
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325760706,
-      "sent": 1768325766710,
-      "llm_done": 1768325766710,
-      "mcp_done": 1768325766710,
-      "total_ms": 6507,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "SEMANTIC_FAIL",
-    "timestamp": "2026-01-13T17:36:07.213Z"
+    "llm_time_ms": 2797,
+    "mcp_time_ms": 10002,
+    "atom_count": 108
   },
   {
     "id": 71,
-    "category": "Direction-UnitX",
-    "root_cause": "[1,0,0] should work like axis='x'",
-    "prompt": "stack 2 benzene along direction [1,0,0]",
+    "prompt": "stack 4 pyrene along direction [1,0,0] in herringbone at 3.5 angstrom",
+    "category": "Direction-Hard",
+    "root_cause": "[1,0,0] + 4 + pattern",
+    "status": "PASSED",
+    "test_details": "✓ 4 molecules",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "direction": "[1,0,0]",
+      "intermolecular_distance": 3.5,
+      "molecules": [
+        {
+          "count": 4,
+          "identifier": "pyrene"
+        }
+      ],
+      "offset_x": 3.5,
+      "rotation_z": -45,
+      "stacking": "herringbone"
+    },
+    "llm_time_ms": 5934,
+    "mcp_time_ms": 10001,
+    "atom_count": 104
+  },
+  {
+    "id": 72,
+    "prompt": "generate 5 naphthalene along direction [0,1,0] in zigzag at 3.5 angstrom",
+    "category": "Direction-Hard",
+    "root_cause": "[0,1,0] + 5 + zigzag",
+    "status": "PASSED",
+    "test_details": "✓ 5 molecules",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "axis": "x",
+      "formulas": {
+        "x": "i*7",
+        "y": "(i%2)*6",
+        "z": "0"
+      },
+      "intermolecular_distance": 3.5,
+      "molecules": [
+        {
+          "count": 5,
+          "identifier": "naphthalene"
+        }
+      ]
+    },
+    "llm_time_ms": 5976,
+    "mcp_time_ms": 10002,
+    "atom_count": 90
+  },
+  {
+    "id": 73,
+    "prompt": "create 6 anthracene along direction [0,0,1] antiparallel at 3.6 angstrom",
+    "category": "Direction-Hard",
+    "root_cause": "[0,0,1] + 6 + antiparallel",
+    "status": "PASSED",
+    "test_details": "✓ 6 molecules",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "direction": [
+        0,
+        0,
+        1
+      ],
+      "intermolecular_distance": 3.6,
+      "molecules": [
+        {
+          "count": 6,
+          "identifier": "anthracene"
+        }
+      ],
+      "offset_z": -3.6,
+      "stacking": "antiparallel"
+    },
+    "llm_time_ms": 5862,
+    "mcp_time_ms": 10004,
+    "atom_count": 144
+  },
+  {
+    "id": 74,
+    "prompt": "stack 4 coronene along [1,1,0] direction in slipped-parallel 4 angstrom",
+    "category": "Direction-Hard",
+    "root_cause": "[1,1,0] + 4 + slipped",
+    "status": "PASSED",
+    "test_details": "✓ 4 molecules",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "direction": "[1,1,0]",
+      "intermolecular_distance": 4,
+      "molecules": [
+        {
+          "count": 4,
+          "identifier": "coronene"
+        }
+      ],
+      "stacking": "slip_stacked"
+    },
+    "llm_time_ms": 5609,
+    "mcp_time_ms": 10002,
+    "atom_count": 144
+  },
+  {
+    "id": 75,
+    "prompt": "generate 5 perylene along [1,1,1] direction in T-shape 4 angstrom",
+    "category": "Direction-Hard",
+    "root_cause": "[1,1,1] + 5 + T-shape",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 5 molecules, got 4",
+    "llm_tool": null,
+    "llm_args": null,
+    "llm_time_ms": 4927,
+    "mcp_time_ms": 10066,
+    "atom_count": 144
+  },
+  {
+    "id": 76,
+    "prompt": "create 3 benzene along [1,0,1] with alternating rotation 5 angstrom",
+    "category": "Direction-Hard",
+    "root_cause": "[1,0,1] + 3 + rotation",
+    "status": "PASSED",
+    "test_details": "✓ 3 molecules",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "intermolecular_distance": 5,
+      "molecules": [
+        {
+          "count": 3,
+          "identifier": "benzene"
+        }
+      ],
+      "offset_x": 0,
+      "offset_y": 0,
+      "rotation_per_molecule": 120,
+      "stacking": "linear",
+      "vacuum": 10
+    },
+    "llm_time_ms": 6045,
+    "mcp_time_ms": 10003,
+    "atom_count": 36
+  },
+  {
+    "id": 77,
+    "prompt": "stack 4 pyrene along [0,1,1] in face-to-edge pattern 4 angstrom",
+    "category": "Direction-Hard",
+    "root_cause": "[0,1,1] + 4 + face-edge",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 4 molecules, got 3",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "intermolecular_distance": 4,
+      "molecules": [
+        {
+          "count": 4,
+          "identifier": "C18H12"
+        }
+      ],
+      "positions": [
+        {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        {
+          "x": 4,
+          "y": 0,
+          "z": 4
+        },
+        {
+          "x": 8,
+          "y": 0,
+          "z": 8
+        },
+        {
+          "x": 12,
+          "y": 0,
+          "z": 12
+        }
+      ],
+      "stacking": "face_to_edge",
+      "vacuum": 10
+    },
+    "llm_time_ms": 8414,
+    "mcp_time_ms": 10003,
+    "atom_count": 36
+  },
+  {
+    "id": 78,
+    "prompt": "generate 5 molecules at 45 degrees with herringbone pattern 3.5 angstrom",
+    "category": "Direction-Hard",
+    "root_cause": "45° + 5 + herringbone",
+    "status": "PASSED",
+    "test_details": "✓ 5 molecules",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
       "intermolecular_distance": 3.5,
@@ -2996,414 +1797,46 @@
           "identifier": "benzene"
         }
       ],
-      "positions": [
-        {
-          "x": 0,
-          "y": 0,
-          "z": 0
-        },
-        {
-          "x": 3.4,
-          "y": 3.4,
-          "z": 0
-        },
-        {
-          "x": -3.4,
-          "y": 3.4,
-          "z": 0
-        },
-        {
-          "x": -3.4,
-          "y": -3.4,
-          "z": 0
-        },
-        {
-          "x": 3.4,
-          "y": -3.4,
-          "z": 0
-        }
-      ],
-      "stacking": "custom",
-      "vacuum": 10
+      "rotation_per_molecule": 45,
+      "stacking": "herringbone"
     },
-    "mcp_success": false,
-    "atom_count": 0,
-    "metadata": null,
-    "test_valid": false,
-    "test_details": "No atoms",
-    "measurements": {},
-    "position_info": null,
-    "timing": {
-      "start": 1768325767214,
-      "sent": 1768325776183,
-      "llm_done": 1768325776183,
-      "mcp_done": 1768325776183,
-      "total_ms": 9476,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "MCP_FAIL",
-    "timestamp": "2026-01-13T17:36:16.690Z"
-  },
-  {
-    "id": 72,
-    "category": "Direction-UnitY",
-    "root_cause": "[0,1,0] should work like axis='y'",
-    "prompt": "generate 2 benzene along direction [0,1,0]",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "axis": "x",
-      "direction_vector": [
-        1,
-        0,
-        0
-      ],
-      "intermolecular_distance": 3.4,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "benzene"
-        }
-      ]
-    },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 3.4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 7.766874590720498
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325776691,
-      "sent": 1768325782478,
-      "llm_done": 1768325782478,
-      "mcp_done": 1768325782478,
-      "total_ms": 6290,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:36:22.981Z"
-  },
-  {
-    "id": 73,
-    "category": "Direction-UnitZ",
-    "root_cause": "[0,0,1] should work like axis='z'",
-    "prompt": "create 2 benzene along direction [0,0,1]",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "axis": "y",
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "benzene"
-        }
-      ],
-      "vacuum": 10
-    },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 3.4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 7.601152339353554
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325782982,
-      "sent": 1768325784901,
-      "llm_done": 1768325784901,
-      "mcp_done": 1768325784901,
-      "total_ms": 2423,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:36:25.405Z"
-  },
-  {
-    "id": 74,
-    "category": "Direction-Diagonal",
-    "root_cause": "Diagonal in XY plane",
-    "prompt": "stack 2 benzene along [1,1,0] direction 5 angstrom apart",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "axis": "z",
-      "intermolecular_distance": 3.56,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "benzene"
-        }
-      ],
-      "offset_x": 0,
-      "offset_y": 0
-    },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 3.56,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 3.5600000000000005
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325785406,
-      "sent": 1768325787790,
-      "llm_done": 1768325787790,
-      "mcp_done": 1768325787790,
-      "total_ms": 2890,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:36:28.296Z"
-  },
-  {
-    "id": 75,
-    "category": "Direction-BodyDiag",
-    "root_cause": "Body diagonal direction",
-    "prompt": "generate 2 benzene along [1,1,1] direction 5 angstrom apart",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "axis": "z",
-      "direction_vector": [
-        1,
-        1,
-        0
-      ],
-      "intermolecular_distance": 5,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "benzene"
-        }
-      ]
-    },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 5,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 5.000000000000002
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325788297,
-      "sent": 1768325790856,
-      "llm_done": 1768325790856,
-      "mcp_done": 1768325790856,
-      "total_ms": 3062,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:36:31.359Z"
-  },
-  {
-    "id": 76,
-    "category": "Direction-FaceDiag",
-    "root_cause": "Face diagonal XZ",
-    "prompt": "create 2 benzene along [1,0,1] direction 5 angstrom apart",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "direction": {
-        "x": 1,
-        "y": 1,
-        "z": 1
-      },
-      "intermolecular_distance": 5,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "benzene"
-        }
-      ],
-      "natural_language": "generate 2 benzene along [1,1,1] direction 5 angstrom apart",
-      "offset_x": 0,
-      "offset_y": 0,
-      "vacuum": 30
-    },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 5,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 4.999999999999993
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325791360,
-      "sent": 1768325798960,
-      "llm_done": 1768325798960,
-      "mcp_done": 1768325798960,
-      "total_ms": 8102,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:36:39.462Z"
-  },
-  {
-    "id": 77,
-    "category": "Direction-FaceDiag",
-    "root_cause": "Face diagonal YZ",
-    "prompt": "stack 2 benzene along [0,1,1] direction 5 angstrom apart",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "direction": {
-        "x": 1,
-        "y": 0,
-        "z": 1
-      },
-      "intermolecular_distance": 5,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "benzene"
-        }
-      ]
-    },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 5,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 5.000000000000002
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325799464,
-      "sent": 1768325805530,
-      "llm_done": 1768325805530,
-      "mcp_done": 1768325805530,
-      "total_ms": 6570,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:36:46.034Z"
-  },
-  {
-    "id": 78,
-    "category": "Direction-AngleXY",
-    "root_cause": "Angle-based direction",
-    "prompt": "generate 2 benzene at 45 degrees in xy plane",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 5,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "benzene"
-        }
-      ],
-      "natural_language": "stack 2 benzene along [0,1,1] direction 5 angstrom apart",
-      "offset_x": 0,
-      "offset_y": 0,
-      "offset_z": 0,
-      "positions": [],
-      "rotation_per_molecule": 0,
-      "stacking": "linear",
-      "use_solver": false,
-      "vacuum": 10
-    },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "linear",
-      "intermolecular_distance": 5,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 5
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325806036,
-      "sent": 1768325813573,
-      "llm_done": 1768325813573,
-      "mcp_done": 1768325813573,
-      "total_ms": 8040,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:36:54.076Z"
+    "llm_time_ms": 5611,
+    "mcp_time_ms": 10002,
+    "atom_count": 60
   },
   {
     "id": 79,
-    "category": "Direction-AngleZ",
-    "root_cause": "Elevation angle from z",
-    "prompt": "create 2 benzene at 30 degrees from z axis",
+    "prompt": "create 4 benzene at 30 degrees from z in zigzag at 3.5 angstrom",
+    "category": "Direction-Hard",
+    "root_cause": "30° + 4 + zigzag",
+    "status": "PASSED",
+    "test_details": "✓ 4 molecules",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "axis": "z",
+      "intermolecular_distance": 3.5,
+      "molecules": [
+        {
+          "count": 4,
+          "identifier": "benzene"
+        }
+      ],
+      "offset_x": 0,
+      "offset_y": 0,
+      "rotation_z": 30,
+      "stacking": "zigzag"
+    },
+    "llm_time_ms": 6021,
+    "mcp_time_ms": 10003,
+    "atom_count": 48
+  },
+  {
+    "id": 80,
+    "prompt": "stack 2 benzene perpendicular to x axis",
+    "category": "Direction-Perp",
+    "root_cause": "Perpendicular = yz",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 2 molecules, got 4",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
       "intermolecular_distance": 3.5,
@@ -3413,9 +1846,6 @@
           "identifier": "benzene"
         }
       ],
-      "natural_language": "generate 2 benzene at 45 degrees in xy plane",
-      "offset_x": 0,
-      "offset_y": 0,
       "positions": [
         {
           "x": 0,
@@ -3423,100 +1853,25 @@
           "z": 0
         },
         {
-          "x": 4.949747468305832,
-          "y": 4.949747468305832,
+          "x": 3.4641016151377544,
+          "y": -1.9999999999999998,
           "z": 0
         }
       ],
-      "stacking": "linear",
-      "vacuum": 10
+      "stacking": "perpendicular",
+      "vacuum": 20
     },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "linear",
-      "intermolecular_distance": 3.5,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 10.821632644226277
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325814077,
-      "sent": 1768325822737,
-      "llm_done": 1768325822737,
-      "mcp_done": 1768325822737,
-      "total_ms": 9162,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:37:03.239Z"
-  },
-  {
-    "id": 80,
-    "category": "Direction-Perp",
-    "root_cause": "Perpendicular = yz plane",
-    "prompt": "stack 2 benzene perpendicular to x axis",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 4.5,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "benzene"
-        }
-      ],
-      "natural_language": "create 2 benzene at 30 degrees from z axis",
-      "offset_x": 0,
-      "offset_y": 0,
-      "rotation_per_molecule": 30,
-      "stacking": "linear",
-      "vacuum": 10
-    },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "linear",
-      "intermolecular_distance": 4.5,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 4.5
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325823241,
-      "sent": 1768325830235,
-      "llm_done": 1768325830235,
-      "mcp_done": 1768325830235,
-      "total_ms": 7497,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:37:10.738Z"
+    "llm_time_ms": 7517,
+    "mcp_time_ms": 10003,
+    "atom_count": 48
   },
   {
     "id": 81,
-    "category": "Direction-Perp",
-    "root_cause": "Perpendicular = xz plane",
     "prompt": "generate 2 benzene perpendicular to y axis",
+    "category": "Direction-Perp",
+    "root_cause": "Perpendicular = xz",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 2 molecules, got 4",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
       "intermolecular_distance": 3.5,
@@ -3526,477 +1881,227 @@
           "identifier": "benzene"
         }
       ],
-      "natural_language": "stack 2 benzene perpendicular to x axis",
-      "offset_x": 0,
-      "offset_y": 0,
-      "offset_z": 0,
-      "stacking": "van_der_waals",
-      "vacuum": 10
+      "offset_y": -3.5,
+      "rotation_y": 90,
+      "stacking": "van_der_waals"
     },
-    "mcp_success": false,
-    "atom_count": 0,
-    "metadata": null,
-    "test_valid": false,
-    "test_details": "No atoms",
-    "measurements": {},
-    "position_info": null,
-    "timing": {
-      "start": 1768325830739,
-      "sent": 1768325837637,
-      "llm_done": 1768325837637,
-      "mcp_done": 1768325837637,
-      "total_ms": 7399,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "MCP_FAIL",
-    "timestamp": "2026-01-13T17:37:18.138Z"
+    "llm_time_ms": 5866,
+    "mcp_time_ms": 10003,
+    "atom_count": 48
   },
   {
     "id": 82,
-    "category": "Direction-Perp",
-    "root_cause": "Perpendicular = xy plane",
     "prompt": "create 2 benzene perpendicular to z axis",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "axis": "y",
-      "intermolecular_distance": 3.5,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "benzene"
-        }
-      ],
-      "stacking": "van_der_waals"
-    },
-    "mcp_success": false,
-    "atom_count": 0,
-    "metadata": null,
-    "test_valid": false,
-    "test_details": "No atoms",
-    "measurements": {},
-    "position_info": null,
-    "timing": {
-      "start": 1768325838139,
-      "sent": 1768325843568,
-      "llm_done": 1768325843568,
-      "mcp_done": 1768325843568,
-      "total_ms": 5933,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "MCP_FAIL",
-    "timestamp": "2026-01-13T17:37:24.072Z"
-  },
-  {
-    "id": 83,
-    "category": "Direction-Natural",
-    "root_cause": "'Horizontally' = x or y",
-    "prompt": "stack 2 benzene horizontally 5 angstrom apart",
+    "category": "Direction-Perp",
+    "root_cause": "Perpendicular = xy",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 2 molecules, got 4",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
       "axis": "z",
-      "intermolecular_distance": 3.5,
+      "intermolecular_distance": 10,
       "molecules": [
         {
           "count": 2,
           "identifier": "benzene"
         }
       ],
-      "stacking": "van_der_waals"
+      "stacking": "perpendicular"
     },
-    "mcp_success": false,
-    "atom_count": 0,
-    "metadata": null,
-    "test_valid": false,
-    "test_details": "No atoms",
-    "measurements": {},
-    "position_info": null,
-    "timing": {
-      "start": 1768325844073,
-      "sent": 1768325846054,
-      "llm_done": 1768325846054,
-      "mcp_done": 1768325846054,
-      "total_ms": 2483,
-      "llm_ms": 0,
-      "mcp_ms": 0
+    "llm_time_ms": 4649,
+    "mcp_time_ms": 10004,
+    "atom_count": 48
+  },
+  {
+    "id": 83,
+    "prompt": "stack 5 naphthalene horizontally with alternating tilt 3.5 angstrom",
+    "category": "Direction-Hard",
+    "root_cause": "horizontal + 5 + tilt",
+    "status": "PASSED",
+    "test_details": "✓ 5 molecules",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "axis": "x",
+      "intermolecular_distance": 3.5,
+      "molecules": [
+        {
+          "count": 5,
+          "identifier": "naphthalene"
+        }
+      ],
+      "rotation_x": [
+        0,
+        -3.5,
+        0,
+        3.5,
+        0
+      ]
     },
-    "status": "MCP_FAIL",
-    "timestamp": "2026-01-13T17:37:26.556Z"
+    "llm_time_ms": 2348,
+    "mcp_time_ms": 10002,
+    "atom_count": 90
   },
   {
     "id": 84,
-    "category": "Direction-Natural",
-    "root_cause": "'Vertically' = z",
-    "prompt": "generate 2 benzene vertically 5 angstrom apart",
+    "prompt": "generate 4 pyrene vertically in slipped-parallel 4 angstrom",
+    "category": "Direction-Hard",
+    "root_cause": "vertical + 4 + slipped",
+    "status": "PASSED",
+    "test_details": "✓ 4 molecules",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
-      "axis": "x",
-      "intermolecular_distance": 5,
+      "axis": "z",
+      "intermolecular_distance": 4,
       "molecules": [
         {
-          "count": 2,
-          "identifier": "benzene"
+          "count": 4,
+          "identifier": "pyrene"
         }
-      ]
+      ],
+      "stacking": "slip_stacked"
     },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 5,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 7.766874590720498
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325846557,
-      "sent": 1768325848455,
-      "llm_done": 1768325848455,
-      "mcp_done": 1768325848455,
-      "total_ms": 2401,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:37:28.958Z"
+    "llm_time_ms": 1864,
+    "mcp_time_ms": 10002,
+    "atom_count": 104
   },
   {
     "id": 85,
-    "category": "Direction-Natural",
-    "root_cause": "'Sideways' = x or y",
-    "prompt": "create 2 benzene sideways 5 angstrom apart",
+    "prompt": "create 3 benzene sideways with T-shaped arrangement 5 angstrom",
+    "category": "Direction-Hard",
+    "root_cause": "sideways + 3 + T-shape",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 3 molecules, got 4",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
-      "axis": "y",
       "intermolecular_distance": 5,
       "molecules": [
         {
-          "count": 2,
+          "count": 3,
           "identifier": "benzene"
         }
-      ]
+      ],
+      "stacking": "t_shaped"
     },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 5,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 7.601152339353554
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325848959,
-      "sent": 1768325850870,
-      "llm_done": 1768325850870,
-      "mcp_done": 1768325850870,
-      "total_ms": 2413,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:37:31.372Z"
+    "llm_time_ms": 1743,
+    "mcp_time_ms": 10002,
+    "atom_count": 104
   },
   {
     "id": 86,
-    "category": "SMILES-Benzene",
-    "root_cause": "Benzene SMILES should work",
-    "prompt": "generate 2 c1ccccc1 molecules stacked",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "axis": "x",
-      "intermolecular_distance": 5,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "benzene"
-        }
-      ]
-    },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 5,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 7.766874590720498
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325851375,
-      "sent": 1768325853279,
-      "llm_done": 1768325853279,
-      "mcp_done": 1768325853279,
-      "total_ms": 2408,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
+    "prompt": "generate 4 c1ccccc1 molecules in herringbone pattern 3.4 angstrom",
+    "category": "SMILES-Hard",
+    "root_cause": "benzene SMILES + 4 + pattern",
     "status": "PASSED",
-    "timestamp": "2026-01-13T17:37:33.783Z"
-  },
-  {
-    "id": 87,
-    "category": "SMILES-Naphthalene",
-    "root_cause": "Naphthalene SMILES",
-    "prompt": "create 2 c1ccc2ccccc2c1 molecules 3.5 angstrom apart",
+    "test_details": "✓ 4 molecules",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
-      "intermolecular_distance": 5,
+      "intermolecular_distance": 3.4,
       "molecules": [
         {
-          "count": 2,
+          "count": 4,
           "identifier": "c1ccccc1"
         }
       ],
-      "stacking": "pi_pi_parallel"
+      "stacking": "herringbone"
     },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 5,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 5.000000000000002
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325853784,
-      "sent": 1768325855930,
-      "llm_done": 1768325855930,
-      "mcp_done": 1768325855931,
-      "total_ms": 2650,
-      "llm_ms": 0,
-      "mcp_ms": 1
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:37:36.434Z"
+    "llm_time_ms": 1821,
+    "mcp_time_ms": 10002,
+    "atom_count": 48
   },
   {
-    "id": 88,
-    "category": "SMILES-AceticAcid",
-    "root_cause": "Acetic acid SMILES",
-    "prompt": "stack 2 CC(=O)O molecules 4 angstrom apart",
+    "id": 87,
+    "prompt": "create 5 c1ccc2ccccc2c1 molecules in zigzag at 3.5 angstrom",
+    "category": "SMILES-Hard",
+    "root_cause": "naphthalene SMILES + 5 + zigzag",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 5 molecules, got 4",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
+      "axis": "x",
+      "formulas": {
+        "x": "i*3.4",
+        "y": "(i%2)*3.5",
+        "z": "0"
+      },
       "intermolecular_distance": 3.5,
       "molecules": [
         {
-          "count": 2,
-          "identifier": "benzene"
+          "count": 5,
+          "identifier": "c1ccccc1"
         }
       ],
       "vacuum": 10
     },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 3.5,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 3.5
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325856435,
-      "sent": 1768325858448,
-      "llm_done": 1768325858448,
-      "mcp_done": 1768325858448,
-      "total_ms": 2519,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
+    "llm_time_ms": 2860,
+    "mcp_time_ms": 10002,
+    "atom_count": 48
+  },
+  {
+    "id": 88,
+    "prompt": "stack 3 CC(=O)O molecules along [1,1,0] at 4 angstrom",
+    "category": "SMILES-Hard",
+    "root_cause": "acetic acid + 3 + vector",
     "status": "PASSED",
-    "timestamp": "2026-01-13T17:37:38.954Z"
+    "test_details": "✓ 3 molecules",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "axis": "z",
+      "formulas": {
+        "x": "i*4",
+        "y": "0",
+        "z": "0"
+      },
+      "intermolecular_distance": 4,
+      "molecules": [
+        {
+          "count": 3,
+          "identifier": "CC(=O)O"
+        }
+      ],
+      "offset_x": 4,
+      "offset_y": 0,
+      "vacuum": 15
+    },
+    "llm_time_ms": 3069,
+    "mcp_time_ms": 10003,
+    "atom_count": 24
   },
   {
     "id": 89,
-    "category": "SMILES-Ethanol",
-    "root_cause": "Ethanol SMILES",
-    "prompt": "generate 2 CCO molecules 4 angstrom apart",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 4,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "CC(=O)O"
-        }
-      ]
-    },
-    "mcp_success": true,
-    "atom_count": 16,
-    "metadata": {
-      "formula": "C2H4O2+C2H4O2",
-      "natoms": 16,
-      "n_molecules": 2,
-      "stacking_type": "linear",
-      "intermolecular_distance": 4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 16,
-      "actual_distance": 5.506985454321734
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325858955,
-      "sent": 1768325864374,
-      "llm_done": 1768325864374,
-      "mcp_done": 1768325864374,
-      "total_ms": 5921,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:37:44.876Z"
+    "prompt": "generate 4 CCO molecules in alternating pattern 4 angstrom",
+    "category": "SMILES-Hard",
+    "root_cause": "ethanol + 4 + alternating",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 4 molecules, got 3",
+    "llm_tool": null,
+    "llm_args": null,
+    "llm_time_ms": 1210,
+    "mcp_time_ms": 10084,
+    "atom_count": 24
   },
   {
     "id": 90,
-    "category": "SMILES-Pyridine",
-    "root_cause": "Pyridine SMILES",
-    "prompt": "create 2 c1ccncc1 molecules stacked",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 4,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "CCO"
-        }
-      ]
-    },
-    "mcp_success": true,
-    "atom_count": 18,
-    "metadata": {
-      "formula": "C2H6O+C2H6O",
-      "natoms": 18,
-      "n_molecules": 2,
-      "stacking_type": "linear",
-      "intermolecular_distance": 4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 18,
-      "actual_distance": 5.41986149814478
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325864877,
-      "sent": 1768325870049,
-      "llm_done": 1768325870049,
-      "mcp_done": 1768325870049,
-      "total_ms": 5675,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:37:50.552Z"
+    "prompt": "create 6 c1ccncc1 molecules along [0,1,1] in T-shape 3.5 angstrom",
+    "category": "SMILES-Hard",
+    "root_cause": "pyridine + 6 + vector + T",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 6 molecules, got 3",
+    "llm_tool": null,
+    "llm_args": null,
+    "llm_time_ms": 1655,
+    "mcp_time_ms": 10074,
+    "atom_count": 24
   },
   {
     "id": 91,
+    "prompt": "generate 2 CID:241 molecules 3.4 angstrom apart",
     "category": "CID-Benzene",
     "root_cause": "CID 241 = benzene",
-    "prompt": "generate 2 CID:241 molecules 3.4 angstrom apart",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 2 molecules, got 3",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
-      "intermolecular_distance": 4,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "c1ccncc1"
-        }
-      ],
-      "stacking": "auto"
-    },
-    "mcp_success": true,
-    "atom_count": 22,
-    "metadata": {
-      "formula": "C5H5N+C5H5N",
-      "natoms": 22,
-      "n_molecules": 2,
-      "stacking_type": "linear",
-      "intermolecular_distance": 4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 22,
-      "actual_distance": 11.336603093859964
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325870553,
-      "sent": 1768325876148,
-      "llm_done": 1768325876148,
-      "mcp_done": 1768325876148,
-      "total_ms": 6099,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:37:56.652Z"
-  },
-  {
-    "id": 92,
-    "category": "CID-PubChem",
-    "root_cause": "PubChem:CID format",
-    "prompt": "stack 2 PubChem:241 molecules",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
+      "axis": "z",
       "intermolecular_distance": 3.4,
       "molecules": [
         {
@@ -4005,352 +2110,192 @@
         }
       ]
     },
-    "mcp_success": false,
-    "atom_count": 0,
-    "metadata": null,
-    "test_valid": false,
-    "test_details": "No atoms",
-    "measurements": {},
-    "position_info": null,
-    "timing": {
-      "start": 1768325876653,
-      "sent": 1768325883081,
-      "llm_done": 1768325883081,
-      "mcp_done": 1768325883081,
-      "total_ms": 6930,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "MCP_FAIL",
-    "timestamp": "2026-01-13T17:38:03.583Z"
+    "llm_time_ms": 1878,
+    "mcp_time_ms": 10001,
+    "atom_count": 24
   },
   {
-    "id": 93,
-    "category": "SMILES-Explicit",
-    "root_cause": "Explicit carbon SMILES",
-    "prompt": "create 2 [C]1[C][C][C][C][C]1 molecules stacked",
-    "llm_tool": "build_molecule",
-    "llm_args": {
-      "cid": 241
-    },
-    "mcp_success": false,
-    "atom_count": 0,
-    "metadata": null,
-    "test_valid": false,
-    "test_details": "No atoms",
-    "measurements": {},
-    "position_info": null,
-    "timing": {
-      "start": 1768325883584,
-      "sent": 1768325890037,
-      "llm_done": 1768325890037,
-      "mcp_done": 1768325890037,
-      "total_ms": 6957,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "MCP_FAIL",
-    "timestamp": "2026-01-13T17:38:10.541Z"
-  },
-  {
-    "id": 94,
-    "category": "InChI-Benzene",
-    "root_cause": "InChI input format",
-    "prompt": "generate 2 InChI=1S/C6H6/c1-2-4-6-5-3-1/h1-6H molecules",
+    "id": 92,
+    "prompt": "stack 2 PubChem:241 molecules",
+    "category": "CID-PubChem",
+    "root_cause": "PubChem:CID",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 2 molecules, got 3",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
+      "axis": "z",
       "intermolecular_distance": 3.4,
       "molecules": [
         {
           "count": 2,
+          "identifier": "PubChem:241"
+        }
+      ]
+    },
+    "llm_time_ms": 1902,
+    "mcp_time_ms": 10001,
+    "atom_count": 24
+  },
+  {
+    "id": 93,
+    "prompt": "create 4 [C]1[C][C][C][C][C]1 along [1,0,1] in herringbone 4 angstrom",
+    "category": "SMILES-Hard",
+    "root_cause": "explicit C + 4 + vector + pattern",
+    "status": "PASSED",
+    "test_details": "✓ 4 molecules",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "axis": "z",
+      "formulas": {
+        "x": "i*4",
+        "y": "0",
+        "z": "0"
+      },
+      "intermolecular_distance": 4,
+      "molecules": [
+        {
+          "count": 4,
           "identifier": "[C]1[C][C][C][C][C]1"
         }
       ]
     },
-    "mcp_success": true,
-    "atom_count": 12,
-    "metadata": {
-      "formula": "C6+C6",
-      "natoms": 12,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 3.4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 12,
-      "actual_distance": 3.9000081919427796
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325890542,
-      "sent": 1768325896241,
-      "llm_done": 1768325896241,
-      "mcp_done": 1768325896241,
-      "total_ms": 6201,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
+    "llm_time_ms": 2791,
+    "mcp_time_ms": 10002,
+    "atom_count": 24
+  },
+  {
+    "id": 94,
+    "prompt": "generate 3 InChI=1S/C6H6/c1-2-4-6-5-3-1/h1-6H molecules in zigzag 3.5 angstrom",
+    "category": "SMILES-Hard",
+    "root_cause": "InChI + 3 + zigzag",
     "status": "PASSED",
-    "timestamp": "2026-01-13T17:38:16.743Z"
+    "test_details": "✓ 3 molecules",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "intermolecular_distance": 3.5,
+      "molecules": [
+        {
+          "count": 3,
+          "identifier": "InChI=1S/C6H6/c1-2-4-6-5-3-1/h1-6H"
+        }
+      ],
+      "positions": [
+        {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        {
+          "x": 3.5,
+          "y": 0,
+          "z": 3.5
+        },
+        {
+          "x": 7,
+          "y": 0,
+          "z": 7
+        }
+      ]
+    },
+    "llm_time_ms": 7396,
+    "mcp_time_ms": 10002,
+    "atom_count": 36
   },
   {
     "id": 95,
-    "category": "SMILES-CO2",
-    "root_cause": "CO2 SMILES",
-    "prompt": "stack 2 O=C=O molecules 4 angstrom apart",
+    "prompt": "stack 5 O=C=O molecules along [1,1,1] in slipped-parallel 4 angstrom",
+    "category": "SMILES-Hard",
+    "root_cause": "CO2 + 5 + vector + slipped",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 5 molecules, got 3",
     "llm_tool": "build_molecular_cluster",
     "llm_args": {
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "InChI=1S/C6H6/c1-2-4-6-5-3-1/h1-6H"
-        }
-      ]
-    },
-    "mcp_success": true,
-    "atom_count": 24,
-    "metadata": {
-      "formula": "C6H6+C6H6",
-      "natoms": 24,
-      "n_molecules": 2,
-      "stacking_type": "pi_pi_parallel",
-      "intermolecular_distance": 3.4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 24,
-      "actual_distance": 3.400014552773568
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325896745,
-      "sent": 1768325902717,
-      "llm_done": 1768325902717,
-      "mcp_done": 1768325902717,
-      "total_ms": 6475,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:38:23.220Z"
-  },
-  {
-    "id": 96,
-    "category": "LLM-H2",
-    "root_cause": "H2 is dimer of H, needs cluster tool",
-    "prompt": "generate 2 H2 molecules 3 angstrom apart",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
+      "axis": "1,1,1",
       "intermolecular_distance": 4,
       "molecules": [
         {
-          "count": 2,
+          "count": 5,
           "identifier": "O=C=O"
         }
       ],
-      "vacuum": 10
+      "stacking": "slip_stacked"
     },
-    "mcp_success": true,
-    "atom_count": 6,
-    "metadata": {
-      "formula": "CO2+CO2",
-      "natoms": 6,
-      "n_molecules": 2,
-      "stacking_type": "linear",
-      "intermolecular_distance": 4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 6,
-      "actual_distance": 4.000000000000002
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325903221,
-      "sent": 1768325908735,
-      "llm_done": 1768325908735,
-      "mcp_done": 1768325908735,
-      "total_ms": 6017,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
+    "llm_time_ms": 5670,
+    "mcp_time_ms": 10001,
+    "atom_count": 36
+  },
+  {
+    "id": 96,
+    "prompt": "generate 2 H2 molecules 3 angstrom apart",
+    "category": "LLM-H2",
+    "root_cause": "H2 dimer",
     "status": "PASSED",
-    "timestamp": "2026-01-13T17:38:29.238Z"
+    "test_details": "✓ 2 molecules",
+    "llm_tool": "build_molecular_cluster",
+    "llm_args": {
+      "axis": "z",
+      "intermolecular_distance": 3,
+      "molecules": [
+        {
+          "count": 2,
+          "identifier": "H2"
+        }
+      ]
+    },
+    "llm_time_ms": 5228,
+    "mcp_time_ms": 10002,
+    "atom_count": 4
   },
   {
     "id": 97,
-    "category": "LLM-N2",
-    "root_cause": "N2 diatomic dimer",
-    "prompt": "create 2 N2 molecules 4 angstrom apart",
-    "llm_tool": "build_molecule",
-    "llm_args": {
-      "molecule": {
-        "identifier": "H2",
-        "input_type": "iupac"
-      },
-      "vacuum": 10
-    },
-    "mcp_success": false,
-    "atom_count": 0,
-    "metadata": null,
-    "test_valid": false,
-    "test_details": "No atoms",
-    "measurements": {},
-    "position_info": null,
-    "timing": {
-      "start": 1768325909239,
-      "sent": 1768325915226,
-      "llm_done": 1768325915226,
-      "mcp_done": 1768325915226,
-      "total_ms": 6489,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "MCP_FAIL",
-    "timestamp": "2026-01-13T17:38:35.728Z"
+    "prompt": "create 5 N2 molecules in alternating pattern 4 angstrom",
+    "category": "LLM-Hard",
+    "root_cause": "N2 + 5 + alternating",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 5 molecules, got 2",
+    "llm_tool": null,
+    "llm_args": null,
+    "llm_time_ms": 4926,
+    "mcp_time_ms": 10088,
+    "atom_count": 4
   },
   {
     "id": 98,
-    "category": "LLM-O2",
-    "root_cause": "O2 diatomic dimer",
-    "prompt": "stack 2 O2 molecules 4 angstrom apart",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 4,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "N2"
-        }
-      ]
-    },
-    "mcp_success": true,
-    "atom_count": 4,
-    "metadata": {
-      "formula": "N2+N2",
-      "natoms": 4,
-      "n_molecules": 2,
-      "stacking_type": "linear",
-      "intermolecular_distance": 4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 4,
-      "actual_distance": 4
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325915729,
-      "sent": 1768325921006,
-      "llm_done": 1768325921006,
-      "mcp_done": 1768325921006,
-      "total_ms": 5779,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:38:41.508Z"
+    "prompt": "stack 4 O2 molecules along [1,0,1] at 4 angstrom",
+    "category": "LLM-Hard",
+    "root_cause": "O2 + 4 + vector",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 4 molecules, got 2",
+    "llm_tool": null,
+    "llm_args": null,
+    "llm_time_ms": 4493,
+    "mcp_time_ms": 10086,
+    "atom_count": 4
   },
   {
     "id": 99,
-    "category": "LLM-CO",
-    "root_cause": "CO diatomic 'dimer' = 2 CO molecules",
-    "prompt": "generate molecular dimer of CO",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "intermolecular_distance": 4,
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "O2"
-        }
-      ]
-    },
-    "mcp_success": true,
-    "atom_count": 4,
-    "metadata": {
-      "formula": "O2+O2",
-      "natoms": 4,
-      "n_molecules": 2,
-      "stacking_type": "linear",
-      "intermolecular_distance": 4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 4,
-      "actual_distance": 4
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325921509,
-      "sent": 1768325926668,
-      "llm_done": 1768325926668,
-      "mcp_done": 1768325926668,
-      "total_ms": 5661,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:38:47.170Z"
+    "prompt": "generate 3 CO molecules in T-shaped arrangement 4 angstrom",
+    "category": "LLM-Hard",
+    "root_cause": "CO + 3 + T-shape",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 3 molecules, got 2",
+    "llm_tool": null,
+    "llm_args": null,
+    "llm_time_ms": 5131,
+    "mcp_time_ms": 10080,
+    "atom_count": 4
   },
   {
     "id": 100,
-    "category": "LLM-Cl2",
-    "root_cause": "Cl2 diatomic pair",
-    "prompt": "create stacked pair of chlorine molecules",
-    "llm_tool": "build_molecular_cluster",
-    "llm_args": {
-      "molecules": [
-        {
-          "count": 2,
-          "identifier": "CO"
-        }
-      ]
-    },
-    "mcp_success": true,
-    "atom_count": 4,
-    "metadata": {
-      "formula": "CO+CO",
-      "natoms": 4,
-      "n_molecules": 2,
-      "stacking_type": "linear",
-      "intermolecular_distance": 3.4,
-      "engine": "molecular_arrangement"
-    },
-    "test_valid": true,
-    "test_details": "✓ 2 molecules",
-    "measurements": {
-      "molecule_count": 2,
-      "total_atoms": 4,
-      "actual_distance": 3.9000000000000004
-    },
-    "position_info": null,
-    "timing": {
-      "start": 1768325927171,
-      "sent": 1768325932227,
-      "llm_done": 1768325932227,
-      "mcp_done": 1768325932227,
-      "total_ms": 5558,
-      "llm_ms": 0,
-      "mcp_ms": 0
-    },
-    "status": "PASSED",
-    "timestamp": "2026-01-13T17:38:52.729Z"
+    "prompt": "create 6 Cl2 molecules in zigzag chain 4 angstrom",
+    "category": "LLM-Hard",
+    "root_cause": "Cl2 + 6 + zigzag",
+    "status": "SEMANTIC_FAIL",
+    "test_details": "Expected 6 molecules, got 2",
+    "llm_tool": null,
+    "llm_args": null,
+    "llm_time_ms": 6232,
+    "mcp_time_ms": 10074,
+    "atom_count": 4
   }
 ]

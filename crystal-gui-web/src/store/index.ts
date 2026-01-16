@@ -22,6 +22,14 @@ export const store = configureStore({
         }),
 });
 
+// Expose Redux state to window for E2E testing
+if (typeof window !== 'undefined') {
+    Object.defineProperty(window, '__REDUX_STATE__', {
+        get: () => store.getState(),
+        configurable: true
+    });
+}
+
 // Infer types from store
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;

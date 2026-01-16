@@ -158,6 +158,19 @@ class ChemicalNameNormalizer:
         'furane': 'furan',
         'thiophene': 'thiophene',
         'thiophen': 'thiophene',
+        # Typo aliases
+        'peryne': 'perylene',  # Common typo
+        # Formula aliases for common PAHs (Polycyclic Aromatic Hydrocarbons)
+        'c6h6': 'benzene',
+        'c10h8': 'naphthalene',
+        'c14h10': 'anthracene',
+        'c16h10': 'pyrene',
+        'c18h12': 'triphenylene',  # or chrysene
+        'c20h12': 'perylene',
+        'c24h12': 'coronene',
+        'c8h8': 'cubane',  # or styrene
+        'c20h20': 'dodecahedrane',
+        'c60': 'fullerene',
     }
 
     # Greek letter mappings (for IUPAC names)

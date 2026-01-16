@@ -723,27 +723,23 @@ export const EditMoleculeSchema = z.object({
   // Operations: Natural language OR structured array
   operations: z.union([
     z.string()
-      .describe("Natural language edit instruction, e.g., " +
-        "'Hydroxylate at C-7 with axial orientation', " +
-        "'Add methyl group to the nitrogen', " +
-        "'Epimerize the stereocenter from R to S'"),
+      .describe("Natural language edit instruction, e.g., 'Hydroxylate at C-7', 'Add methyl group'. DO NOT use for stacking/arrangement (use build_molecular_cluster instead)."),
     z.array(EditOperationSchema)
-      .describe("Structured edit operations array for precise control")
-  ]).describe("Edit instruction(s) - either natural language string or structured operations array"),
+      .describe("Structured edit operations array")
+  ]).describe("Edit instruction(s). STRICTLY for chemical modifications (bonds/atoms). For arranging multiple molecules (dimers, stacking), use build_molecular_cluster."),
 
   // Options
   validate: z.boolean().default(true).optional()
-    .describe("Run validation pipeline after edit (default: true). " +
-      "Checks valence, aromaticity, ring strain, stereochemistry, and steric clashes."),
+    .describe("Run validation pipeline after edit"),
 
   optimize_geometry: z.boolean().default(true).optional()
-    .describe("Re-optimize 3D geometry after edit using MMFF94/UFF (default: true)"),
+    .describe("Re-optimize 3D geometry after edit"),
 
   return_3d: z.boolean().default(true).optional()
-    .describe("Include 3D coordinates in response (default: true)"),
+    .describe("Include 3D coordinates in response"),
 
   vacuum: z.number().default(10.0).optional()
-    .describe("Vacuum padding around molecule in Angstroms (default: 10.0)")
+    .describe("Vacuum padding around molecule")
 });
 
 export type EditMoleculeInput = z.infer<typeof EditMoleculeSchema>;
@@ -752,19 +748,17 @@ export type EditMoleculeInput = z.infer<typeof EditMoleculeSchema>;
 /**
  * Schema for build_molecular_cluster tool
  * 
- * Generate molecular clusters for quantum chemistry:
- * - Homo/hetero dimers, trimers, n-mers
- * - π-π stacking (parallel, antiparallel, offset)
- * - T-shaped (edge-to-face) arrangements
- * - H-bonded clusters
- * - Custom arrangements with full rotation control
+ * PRIMARY TOOL for generating multi-molecule arrangements:
+ * - Dimers, trimers, clusters
+ * - Stacking (pi-stacking, T-shaped)
+ * - Spatial relationships (distance, orientation)
  */
 
 const MoleculeSpecSchema = z.object({
   identifier: z.string()
     .describe("Molecule identifier (name, SMILES, IUPAC, CID, ChEMBL ID)"),
   count: z.number().int().min(1).default(1).optional()
-    .describe("Number of copies of this molecule (default: 1)"),
+    .describe("Number of copies of this molecule"),
   input_type: z.enum(["auto", "name", "smiles", "iupac", "cid"]).default("auto").optional()
     .describe("Input type hint")
 });
@@ -784,18 +778,14 @@ const Rotation3DSchema = z.object({
 export const BuildMolecularClusterSchema = z.object({
   // Molecules list - REQUIRED
   molecules: z.array(MoleculeSpecSchema).min(1)
-    .describe(`REQUIRED: List of molecules to arrange. You MUST provide this parameter.
+    .describe(`REQUIRED: List of molecules to arrange.
     
 FORMAT: [{"identifier": "name", "count": N}]
 
-IMPORTANT: Always use the "identifier" key (NOT "type", "formula", "name", or "label")
-
 Examples:
-- Benzene dimer: [{"identifier": "benzene", "count": 2}]
-- Water trimer: [{"identifier": "water", "count": 3}]
-- Hetero-dimer: [{"identifier": "benzene"}, {"identifier": "naphthalene"}]
-
-The identifier can be: common name (benzene, water, PTCDA), SMILES, IUPAC, or PubChem CID.`),
+- "Benzene dimer" -> [{"identifier": "benzene", "count": 2}]
+- "Water trimer" -> [{"identifier": "water", "count": 3}]
+- "Stack of 3 benzenes" -> [{"identifier": "benzene", "count": 3}]`),
 
   // Stacking/arrangement type  
   stacking: z.enum([
@@ -810,7 +800,9 @@ The identifier can be: common name (benzene, water, PTCDA), SMILES, IUPAC, or Pu
     "slip_stacked",      // Alias for pi_pi_offset
     "t_shaped",          // Edge-to-face perpendicular
     "edge_to_face",      // Alias for t_shaped
+    "perpendicular",     // Alias for t_shaped
     "herringbone",       // Alternating tilted (organic crystals)
+    "zigzag",            // Alias for herringbone (common term)
     "h_bonded",          // Hydrogen bonded (2.8Å)
     "hydrogen_bonded",   // Alias for h_bonded
     "van_der_waals",     // General vdW contact
@@ -830,27 +822,25 @@ The identifier can be: common name (benzene, water, PTCDA), SMILES, IUPAC, or Pu
   ]).default("auto").optional()
     .describe("Arrangement type. IMPORTANT: Use 'linear' if user specifies a direction (e.g. 'along x') or distance. Use 'auto' only for general stacking."),
 
-  // Natural language query pass-through
-  natural_language: z.string().optional()
-    .describe("Original natural language query for complex arrangements (e.g. 'stack 5 benzene with alternating offset')"),
+
 
   // Distance control
   intermolecular_distance: z.number().positive().optional()
-    .describe("Distance between molecule centers in Angstroms. Defaults: π-stacking=3.4Å, H-bonded=2.8Å, vdW=3.5Å"),
+    .describe("PRIMARY spacing parameter. Required for linear/stacking arrangements. Specifies distance between molecule centers (e.g., 'separated by 20Å' -> 20.0)."),
 
   // Offsets for stacking
   offset_x: z.number().default(0).optional()
-    .describe("Lateral offset in x-direction (Angstroms)"),
+    .describe("LATERAL/GLOBAL shift in x-direction. DO NOT use this for spacing/separation. Use intermolecular_distance for spacing."),
   offset_y: z.number().default(0).optional()
-    .describe("Lateral offset in y-direction (Angstroms)"),
+    .describe("LATERAL/GLOBAL shift in y-direction. DO NOT use this for spacing/separation. Use intermolecular_distance for spacing."),
 
-  // Global rotation (applied to entire cluster)
-  rotation_x: z.number().default(0).optional()
-    .describe("Rotate entire cluster around x-axis (degrees)"),
-  rotation_y: z.number().default(0).optional()
-    .describe("Rotate entire cluster around y-axis (degrees)"),
-  rotation_z: z.number().default(0).optional()
-    .describe("Rotate entire cluster around z-axis (degrees)"),
+  // Global rotation (applied to entire cluster) OR per-molecule if array
+  rotation_x: z.union([z.number(), z.array(z.number())]).default(0).optional()
+    .describe("Rotate entire cluster around x-axis (number) OR per-molecule (array of numbers)."),
+  rotation_y: z.union([z.number(), z.array(z.number())]).default(0).optional()
+    .describe("Rotate entire cluster around y-axis (number) OR per-molecule (array of numbers)."),
+  rotation_z: z.union([z.number(), z.array(z.number())]).default(0).optional()
+    .describe("Rotate entire cluster around z-axis (number) OR per-molecule (array of numbers)."),
 
   // Per-molecule rotation increment (for stacking)
   rotation_per_molecule: z.number().default(0).optional()
@@ -858,7 +848,7 @@ The identifier can be: common name (benzene, water, PTCDA), SMILES, IUPAC, or Pu
 
   // Axis for linear arrangement
   axis: z.enum(["x", "y", "z"]).default("z").optional()
-    .describe("Axis for linear arrangement (default: z). Use direction_vector for arbitrary directions."),
+    .describe("Axis for linear arrangement (default: z). REQUIRED if user says 'along x/y/z'."),
 
   // Generic direction vector (for ANY direction, not just x/y/z)
   direction_vector: z.tuple([z.number(), z.number(), z.number()]).optional()
@@ -876,7 +866,7 @@ The identifier can be: common name (benzene, water, PTCDA), SMILES, IUPAC, or Pu
 
   // Custom rotations (for 'custom' stacking)
   rotations: z.array(Rotation3DSchema).optional()
-    .describe("Custom rotations for each molecule when stacking='custom'"),
+    .describe("Custom rotations for EACH molecule. Use this for specific per-molecule rotations (e.g., 'middle one rotated 90 deg')."),
 
   // Optimization
   optimize: z.boolean().default(false).optional()
@@ -1201,6 +1191,7 @@ export const TOOL_DEFINITIONS: readonly ToolMetadata[] = [
       openWorldHint: true
     }
   },
+  /*
   {
     name: "edit_molecule",
     description: "Modify an existing molecule using natural language or structured operations. " +
@@ -1222,6 +1213,7 @@ export const TOOL_DEFINITIONS: readonly ToolMetadata[] = [
       openWorldHint: true
     }
   }
+  */
   // },
   // {
   //   name: "explore_symmetry_relations",

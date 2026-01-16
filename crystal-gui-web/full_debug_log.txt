@@ -1,0 +1,2120 @@
+INFO:__main__:[Bridge] RDKit available: True
+/home/niel/git/crystal-mcp-server/crystal-gui-web/bridge/server.py:439: DeprecationWarning: 
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+        
+  @app.on_event("startup")
+/home/niel/git/crystal-mcp-server/crystal-gui-web/bridge/server.py:445: DeprecationWarning: 
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+        
+  @app.on_event("shutdown")
+INFO:     Started server process [858773]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
+INFO:     127.0.0.1:60450 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60458 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60472 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60472 - "POST /mcp/initialize HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60472 - "GET /mcp/tools HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "x",
+  "intermolecular_distance": 3.4,
+  "molecules": [
+    {
+      "count": 3,
+      "identifier": "benzene"
+    }
+  ],
+  "stacking": "zigzag"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C6H6 + C6H6 + C6H6\n\n- **Molecules**: 3\n- **Total Atoms**: 36\n- **Stacking**: herringbone\n- **Distance**: 3.40 Å\n- **Box Size**: 47.56 × 23.32 × 23.32 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:58458 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "formulas": {
+    "x": "i*3.5",
+    "y": "i*3.5",
+    "z": "0"
+  },
+  "intermolecular_distance": 3.5,
+  "molecules": [
+    {
+      "count": 4,
+      "identifier": "benzene"
+    }
+  ],
+  "offset_x": 1.75,
+  "offset_y": 1.75,
+  "vacuum": 20
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C6H6 + C6H6 + C6H6 + C6H6\n\n- **Molecules**: 4\n- **Total Atoms**: 48\n- **Stacking**: pi_pi_parallel\n- **Distance**: 3.50 Å\n- **Box Size**: 44.87 × 44.70 × 61.30 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:37642 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "intermolecular_distance": 3.5,
+  "molecules": [
+    {
+      "count": 5,
+      "identifier": "C14H10"
+    }
+  ],
+  "stacking": "herringbone"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "**Molecular Cluster Generation Failed**\n\nNo molecules could be generated from specifications"
+    }
+  ],
+  "isError": true
+}
+INFO:     127.0.0.1:34684 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "intermolecular_distance": 3.5,
+  "molecules": [
+    {
+      "count": 2,
+      "identifier": "C16H10"
+    }
+  ],
+  "stacking": "auto"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "**Molecular Cluster Generation Failed**\n\nNo molecules could be generated from specifications"
+    }
+  ],
+  "isError": true
+}
+INFO:     127.0.0.1:47318 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "intermolecular_distance": 3.5,
+  "molecules": [
+    {
+      "count": 4,
+      "identifier": "C18H12"
+    }
+  ],
+  "stacking": "antiparallel"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "**Molecular Cluster Generation Failed**\n\nNo molecules could be generated from specifications"
+    }
+  ],
+  "isError": true
+}
+INFO:     127.0.0.1:46430 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "intermolecular_distance": 3.5,
+  "molecules": [
+    {
+      "count": 2,
+      "identifier": "C20H12"
+    }
+  ]
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "**Molecular Cluster Generation Failed**\n\nNo molecules could be generated from specifications"
+    }
+  ],
+  "isError": true
+}
+INFO:     127.0.0.1:48484 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "formulas": {
+    "x": "i*4",
+    "y": "0",
+    "z": "0"
+  },
+  "intermolecular_distance": 4,
+  "molecules": [
+    {
+      "count": 3,
+      "identifier": "C24H12"
+    }
+  ],
+  "vacuum": 15
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "**Molecular Cluster Generation Failed**\n\nAtoms overlapping: Severe clash: mol0:atom0 - mol1:atom20 = 1.30Å"
+    }
+  ],
+  "isError": true
+}
+INFO:     127.0.0.1:57534 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "intermolecular_distance": 7,
+  "molecules": [
+    {
+      "count": 3,
+      "identifier": "C8H8"
+    }
+  ],
+  "stacking": "t_shaped"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "**Molecular Cluster Generation Failed**\n\nt_shaped pattern is a dimer (exactly 2 molecules). Requested 3. Use 'herringbone' for alternating tilts or 'linear' for simple stacking."
+    }
+  ],
+  "isError": true
+}
+INFO:     127.0.0.1:47536 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "formulas": {
+    "x": "5*cos(2*pi*i/3)",
+    "y": "5*sin(2*pi*i/3)",
+    "z": "12*(i-1)"
+  },
+  "intermolecular_distance": 7,
+  "molecules": [
+    {
+      "count": 4,
+      "identifier": "c20h20"
+    }
+  ],
+  "optimize": true,
+  "vacuum": 10
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C20H20 + C20H20 + C20H20 + C20H20\n\n- **Molecules**: 4\n- **Total Atoms**: 160\n- **Stacking**: pi_pi_parallel\n- **Distance**: 7.00 Å\n- **Box Size**: 38.34 × 35.04 × 60.35 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:50390 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "formulas": {
+    "x": "3*cos(2*pi*i/5)",
+    "y": "3*sin(2*pi*i/5)",
+    "z": "0"
+  },
+  "intermolecular_distance": 3,
+  "molecules": [
+    {
+      "count": 5,
+      "identifier": "water"
+    }
+  ]
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: H2O + H2O + H2O + H2O + H2O\n\n- **Molecules**: 5\n- **Total Atoms**: 15\n- **Stacking**: h_bonded_circular\n- **Distance**: 3.00 Å\n- **Box Size**: 26.04 × 26.43 × 21.33 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:60522 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "intermolecular_distance": 3.4,
+  "molecules": [
+    {
+      "count": 2,
+      "identifier": "tetracene"
+    }
+  ]
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C18H12 + C18H12\n\n- **Molecules**: 2\n- **Total Atoms**: 60\n- **Stacking**: pi_pi_parallel\n- **Distance**: 3.40 Å\n- **Box Size**: 31.65 × 24.96 × 28.16 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:48700 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "intermolecular_distance": 3.5,
+  "molecules": [
+    {
+      "count": 3,
+      "identifier": "peryne"
+    }
+  ],
+  "stacking": "slip_stacked"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "**Molecular Cluster Generation Failed**\n\nNo molecules could be generated from specifications"
+    }
+  ],
+  "isError": true
+}
+INFO:     127.0.0.1:40868 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "intermolecular_distance": 4,
+  "molecules": [
+    {
+      "count": 4,
+      "identifier": "triphenylene"
+    }
+  ]
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C18H12 + C18H12 + C18H12 + C18H12\n\n- **Molecules**: 4\n- **Total Atoms**: 120\n- **Stacking**: pi_pi_parallel\n- **Distance**: 4.00 Å\n- **Box Size**: 28.46 × 29.26 × 40.56 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:56632 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "intermolecular_distance": 4,
+  "molecules": [
+    {
+      "count": 4,
+      "identifier": "TTF"
+    }
+  ],
+  "stacking": "antiparallel"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C6H4S4 + C6H4S4 + C6H4S4 + C6H4S4\n\n- **Molecules**: 4\n- **Total Atoms**: 56\n- **Stacking**: pi_pi_antiparallel\n- **Distance**: 4.00 Å\n- **Box Size**: 28.03 × 22.98 × 39.21 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:48350 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "intermolecular_distance": 4,
+  "molecules": [
+    {
+      "count": 2,
+      "identifier": "TCNQ"
+    }
+  ]
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C12H4N4 + C12H4N4\n\n- **Molecules**: 2\n- **Total Atoms**: 40\n- **Stacking**: pi_pi_parallel\n- **Distance**: 4.00 Å\n- **Box Size**: 28.06 × 24.49 × 26.82 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:51722 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "intermolecular_distance": 15,
+  "molecules": [
+    {
+      "count": 3,
+      "identifier": "C60"
+    }
+  ],
+  "stacking": "t_trigonal_planar",
+  "vacuum": 20
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "**Molecular Cluster Generation Failed**\n\nInvalid input parameters for molecular cluster"
+    }
+  ],
+  "isError": true
+}
+INFO:     127.0.0.1:60940 - "POST /mcp/call HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60944 - "OPTIONS /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60944 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60944 - "OPTIONS /mcp/initialize HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60944 - "POST /mcp/initialize HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60944 - "OPTIONS /mcp/tools HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60944 - "GET /mcp/tools HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "intermolecular_distance": 3.4,
+  "molecules": [
+    {
+      "count": 6,
+      "identifier": "benzene"
+    }
+  ],
+  "stacking": "herringbone",
+  "vacuum": 15
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C6H6 + C6H6 + C6H6 + C6H6 + C6H6 + C6H6\n\n- **Molecules**: 6\n- **Total Atoms**: 72\n- **Stacking**: herringbone\n- **Distance**: 3.40 Å\n- **Box Size**: 34.87 × 33.32 × 64.45 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:39760 - "POST /mcp/call HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60290 - "OPTIONS /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "x",
+  "molecules": [
+    {
+      "count": 3,
+      "identifier": "ptcda"
+    }
+  ],
+  "rotation_z": [
+    0,
+    0,
+    90
+  ],
+  "vacuum": 15
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "**Molecular Cluster Generation Failed**\n\nAtoms overlapping: Severe clash: mol0:atom0 - mol1:atom32 = 1.43Å"
+    }
+  ],
+  "isError": true
+}
+INFO:     127.0.0.1:60290 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "intermolecular_distance": 3.5,
+  "molecules": [
+    {
+      "count": 5,
+      "identifier": "pyrene"
+    }
+  ],
+  "stacking": "herringbone"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C16H10 + C16H10 + C16H10 + C16H10 + C16H10\n\n- **Molecules**: 5\n- **Total Atoms**: 130\n- **Stacking**: herringbone\n- **Distance**: 3.50 Å\n- **Box Size**: 27.32 × 25.66 × 59.88 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:60306 - "POST /mcp/call HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55034 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55034 - "POST /mcp/initialize HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55034 - "GET /mcp/tools HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "intermolecular_distance": 3.5,
+  "molecules": [
+    {
+      "count": 5,
+      "identifier": "naphthalene"
+    }
+  ],
+  "stacking": "antiparallel"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C10H8 + C10H8 + C10H8 + C10H8 + C10H8\n\n- **Molecules**: 5\n- **Total Atoms**: 90\n- **Stacking**: pi_pi_antiparallel\n- **Distance**: 3.50 Å\n- **Box Size**: 26.57 × 26.48 × 43.18 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:55158 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "x",
+  "molecules": [
+    {
+      "count": 3,
+      "identifier": "ptcda"
+    }
+  ],
+  "rotation_z": [
+    0,
+    0,
+    90
+  ],
+  "vacuum": 15
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "**Molecular Cluster Generation Failed**\n\nAtoms overlapping: Severe clash: mol0:atom0 - mol1:atom32 = 1.43Å"
+    }
+  ],
+  "isError": true
+}
+INFO:     127.0.0.1:35412 - "POST /mcp/call HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35412 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35412 - "POST /mcp/initialize HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35412 - "GET /mcp/tools HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "intermolecular_distance": 8,
+  "molecules": [
+    {
+      "count": 7,
+      "identifier": "adamantane"
+    }
+  ],
+  "offset_x": 0,
+  "offset_y": 0,
+  "positions": null,
+  "rotation_per_molecule": 0,
+  "stacking": "linear",
+  "use_solver": false,
+  "vacuum": 15
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C10H16 + C10H16 + C10H16 + C10H16 + C10H16 + C10H16 + C10H16\n\n- **Molecules**: 7\n- **Total Atoms**: 182\n- **Stacking**: linear\n- **Distance**: 8.00 Å\n- **Box Size**: 34.94 × 34.89 × 82.91 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:59882 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "x",
+  "intermolecular_distance": 20,
+  "molecules": [
+    {
+      "count": 3,
+      "identifier": "ptcda"
+    }
+  ],
+  "rotation_x": [
+    0,
+    0,
+    90
+  ]
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C24H8O6 + C24H8O6 + C24H8O6\n\n- **Molecules**: 3\n- **Total Atoms**: 114\n- **Stacking**: h_bonded_circular\n- **Distance**: 20.00 Å\n- **Box Size**: 44.77 × 48.59 × 20.01 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:43372 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "intermolecular_distance": 3.4,
+  "molecules": [
+    {
+      "count": 15,
+      "identifier": "water"
+    }
+  ]
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: H2O + H2O + H2O + H2O + H2O + H2O + H2O + H2O + H2O + H2O + H2O + H2O + H2O + H2O + H2O\n\n- **Molecules**: 15\n- **Total Atoms**: 45\n- **Stacking**: linear\n- **Distance**: 3.40 Å\n- **Box Size**: 20.62 × 20.72 × 68.93 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:43384 - "POST /mcp/call HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33916 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33916 - "POST /mcp/initialize HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33916 - "GET /mcp/tools HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "intermolecular_distance": 4,
+  "molecules": [
+    {
+      "count": 20,
+      "identifier": "CH4"
+    }
+  ],
+  "stacking": "helical",
+  "vacuum": 10
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "**Molecular Cluster Generation Failed**\n\nSevere clash: mol0:atom0 - mol1:atom1 = 1.26Å"
+    }
+  ],
+  "isError": true
+}
+INFO:     127.0.0.1:35312 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "intermolecular_distance": 3.4,
+  "molecules": [
+    {
+      "count": 4,
+      "identifier": "benzene"
+    }
+  ],
+  "stacking": "t_shaped"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "**Molecular Cluster Generation Failed**\n\nt_shaped pattern is a dimer (exactly 2 molecules). Requested 4. Use 'herringbone' for alternating tilts or 'linear' for simple stacking."
+    }
+  ],
+  "isError": true
+}
+INFO:     127.0.0.1:54380 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "intermolecular_distance": 7,
+  "molecules": [
+    {
+      "count": 2,
+      "identifier": "cubane"
+    }
+  ],
+  "stacking": "linear"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C8H8 + C8H8\n\n- **Molecules**: 2\n- **Total Atoms**: 32\n- **Stacking**: linear\n- **Distance**: 7.00 Å\n- **Box Size**: 23.45 × 23.78 × 30.23 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:58416 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "molecules": [
+    {
+      "count": 8,
+      "identifier": "dodecahedrane"
+    }
+  ],
+  "positions": [
+    {
+      "x": 0,
+      "y": 0,
+      "z": 12
+    },
+    {
+      "x": 6,
+      "y": 6,
+      "z": 0
+    },
+    {
+      "x": -6,
+      "y": 6,
+      "z": 0
+    },
+    {
+      "x": 0,
+      "y": -12,
+      "z": 6
+    },
+    {
+      "x": 6,
+      "y": 0,
+      "z": -6
+    },
+    {
+      "x": -6,
+      "y": 0,
+      "z": -6
+    },
+    {
+      "x": 0,
+      "y": 6,
+      "z": -12
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    }
+  ],
+  "stacking": "custom"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "**Molecular Cluster Generation Failed**\n\nPython script execution failed: [DEBUG molecular_cluster_generator] Module availability check: adapter=True, cluster=True\n[DEBUG molecular_cluster_generator] U ... [TRUNCATED]"
+    }
+  ],
+  "isError": true
+}
+INFO:     127.0.0.1:51362 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "x",
+  "intermolecular_distance": 20,
+  "molecules": [
+    {
+      "count": 1,
+      "identifier": "benzene"
+    },
+    {
+      "count": 1,
+      "identifier": "naphthalene"
+    },
+    {
+      "count": 1,
+      "identifier": "anthracene"
+    },
+    {
+      "count": 1,
+      "identifier": "pyrene"
+    }
+  ]
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C6H6 + C10H8 + C14H10 + C16H10\n\n- **Molecules**: 4\n- **Total Atoms**: 80\n- **Stacking**: pi_pi_parallel\n- **Distance**: 20.00 Å\n- **Box Size**: 86.09 × 28.17 × 20.00 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:34038 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "intermolecular_distance": 3.4,
+  "molecules": [
+    {
+      "count": 2,
+      "identifier": "benzene"
+    }
+  ]
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C6H6 + C6H6\n\n- **Molecules**: 2\n- **Total Atoms**: 24\n- **Stacking**: pi_pi_parallel\n- **Distance**: 3.40 Å\n- **Box Size**: 24.87 × 24.70 × 24.68 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:45920 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "intermolecular_distance": 3.4,
+  "molecules": [
+    {
+      "count": 2,
+      "identifier": "benzene"
+    }
+  ]
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C6H6 + C6H6\n\n- **Molecules**: 2\n- **Total Atoms**: 24\n- **Stacking**: pi_pi_parallel\n- **Distance**: 3.40 Å\n- **Box Size**: 24.87 × 24.70 × 24.68 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:35020 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "intermolecular_distance": 3.4,
+  "molecules": [
+    {
+      "count": 4,
+      "identifier": "benzene"
+    }
+  ],
+  "stacking": "slip_stacked"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C6H6 + C6H6 + C6H6 + C6H6\n\n- **Molecules**: 4\n- **Total Atoms**: 48\n- **Stacking**: pi_pi_offset\n- **Distance**: 3.40 Å\n- **Box Size**: 26.37 × 24.70 × 34.04 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:56232 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "intermolecular_distance": 3.4,
+  "molecules": [
+    {
+      "count": 3,
+      "identifier": "pyrene"
+    }
+  ],
+  "rotation_per_molecule": 60,
+  "stacking": "slip_stacked"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C16H10 + C16H10 + C16H10\n\n- **Molecules**: 3\n- **Total Atoms**: 78\n- **Stacking**: pi_pi_offset\n- **Distance**: 3.40 Å\n- **Box Size**: 28.82 × 28.00 × 33.60 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:33168 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "x",
+  "intermolecular_distance": 3.4,
+  "molecules": [
+    {
+      "count": 5,
+      "identifier": "benzene"
+    }
+  ],
+  "stacking": "zigzag"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C6H6 + C6H6 + C6H6 + C6H6 + C6H6\n\n- **Molecules**: 5\n- **Total Atoms**: 60\n- **Stacking**: herringbone\n- **Distance**: 3.40 Å\n- **Box Size**: 70.25 × 23.32 × 23.32 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:51436 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "direction_vector": [
+    1,
+    1,
+    0
+  ],
+  "intermolecular_distance": 3.4,
+  "molecules": [
+    {
+      "count": 4,
+      "identifier": "benzene"
+    }
+  ]
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C6H6 + C6H6 + C6H6 + C6H6\n\n- **Molecules**: 4\n- **Total Atoms**: 48\n- **Stacking**: pi_pi_parallel\n- **Distance**: 3.40 Å\n- **Box Size**: 24.87 × 24.70 × 34.04 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:46584 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "intermolecular_distance": 0,
+  "molecules": [
+    {
+      "count": 2,
+      "identifier": "benzene"
+    }
+  ]
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "**Molecular Cluster Generation Failed**\n\nInvalid input parameters for molecular cluster"
+    }
+  ],
+  "isError": true
+}
+INFO:     127.0.0.1:50700 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "intermolecular_distance": 5,
+  "molecules": [
+    {
+      "count": 2,
+      "identifier": "pyrene"
+    }
+  ],
+  "offset_y": -5
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C16H10 + C16H10\n\n- **Molecules**: 2\n- **Total Atoms**: 52\n- **Stacking**: pi_pi_parallel\n- **Distance**: 5.00 Å\n- **Box Size**: 27.32 × 28.00 × 26.80 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:55806 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "intermolecular_distance": 0.1,
+  "molecules": [
+    {
+      "count": 3,
+      "identifier": "benzene"
+    }
+  ],
+  "offset_x": 0,
+  "offset_y": 0,
+  "vacuum": 10
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C6H6 + C6H6 + C6H6\n\n- **Molecules**: 3\n- **Total Atoms**: 36\n- **Stacking**: pi_pi_parallel\n- **Distance**: 0.10 Å\n- **Box Size**: 24.87 × 24.70 × 29.36 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:38556 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "intermolecular_distance": 1,
+  "molecules": [
+    {
+      "count": 4,
+      "identifier": "adamantane"
+    }
+  ],
+  "stacking": "herringbone"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C10H16 + C10H16 + C10H16 + C10H16\n\n- **Molecules**: 4\n- **Total Atoms**: 104\n- **Stacking**: herringbone\n- **Distance**: 1.00 Å\n- **Box Size**: 24.94 × 25.07 × 48.64 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:46948 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "intermolecular_distance": 0.5,
+  "molecules": [
+    {
+      "count": 5,
+      "identifier": "coronene"
+    }
+  ],
+  "stacking": "ring"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "**Molecular Cluster Generation Failed**\n\nAtoms overlapping: Severe clash: mol0:atom0 - mol1:atom2 = 0.72Å"
+    }
+  ],
+  "isError": true
+}
+INFO:     127.0.0.1:42828 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "intermolecular_distance": 3.4,
+  "molecules": [
+    {
+      "count": 5,
+      "identifier": "benzene"
+    }
+  ],
+  "offset_x": 0,
+  "offset_y": 0,
+  "stacking": "helical",
+  "vacuum": 10
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "**Molecular Cluster Generation Failed**\n\nSevere clash: mol0:atom1 - mol4:atom6 = 1.16Å"
+    }
+  ],
+  "isError": true
+}
+INFO:     127.0.0.1:46198 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "intermolecular_distance": 3.5,
+  "molecules": [
+    {
+      "count": 6,
+      "identifier": "naphthalene"
+    }
+  ],
+  "offset_x": 0,
+  "offset_y": 0,
+  "offset_z": 0,
+  "positions": [
+    {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    {
+      "x": 3.5,
+      "y": 0,
+      "z": 3.5
+    },
+    {
+      "x": -1.75,
+      "y": 3.5,
+      "z": -1.75
+    },
+    {
+      "x": -3.5,
+      "y": -3.5,
+      "z": 1.75
+    },
+    {
+      "x": 1.75,
+      "y": -3.5,
+      "z": -1.75
+    }
+  ],
+  "rotation_x": 0,
+  "rotation_y": 0,
+  "rotation_z": 0,
+  "stacking": "zigzag",
+  "use_solver": false,
+  "vacuum": 20
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C10H8 + C10H8 + C10H8 + C10H8 + C10H8 + C10H8\n\n- **Molecules**: 6\n- **Total Atoms**: 108\n- **Stacking**: herringbone\n- **Distance**: 3.50 Å\n- **Box Size**: 46.57 × 44.58 × 82.00 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:56086 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "intermolecular_distance": 3,
+  "molecules": [
+    {
+      "count": 12,
+      "identifier": "water"
+    }
+  ],
+  "positions": [
+    {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    {
+      "x": 2.598,
+      "y": -1.5,
+      "z": -1.307
+    },
+    {
+      "x": 4.33,
+      "y": -1.5,
+      "z": 0.307
+    },
+    {
+      "x": 5.236,
+      "y": 0,
+      "z": 2.236
+    },
+    {
+      "x": 5.236,
+      "y": 1.932,
+      "z": -2.236
+    },
+    {
+      "x": 4.33,
+      "y": 3.864,
+      "z": -0.307
+    },
+    {
+      "x": 2.598,
+      "y": 4.899,
+      "z": -1.307
+    },
+    {
+      "x": 0,
+      "y": 4.899,
+      "z": -2.618
+    },
+    {
+      "x": -2.598,
+      "y": 3.864,
+      "z": -3.915
+    },
+    {
+      "x": -4.33,
+      "y": 2.764,
+      "z": -4.236
+    },
+    {
+      "x": -5.236,
+      "y": 0,
+      "z": -3.864
+    },
+    {
+      "x": -5.236,
+      "y": -1.932,
+      "z": -2.764
+    }
+  ],
+  "stacking": "custom"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "**Molecular Cluster Generation Failed**\n\nPython script execution failed: [DEBUG molecular_cluster_generator] Module availability check: adapter=True, cluster=True\n[DEBUG molecular_cluster_generator] U ... [TRUNCATED]"
+    }
+  ],
+  "isError": true
+}
+INFO:     127.0.0.1:40350 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "direction_vector": [
+    1,
+    1,
+    0
+  ],
+  "formulas": {
+    "x": "i*3.4",
+    "y": "i*3.4",
+    "z": "0"
+  },
+  "molecules": [
+    {
+      "count": 3,
+      "identifier": "pyrene"
+    }
+  ],
+  "stacking": "t_shaped",
+  "vacuum": 10
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "**Molecular Cluster Generation Failed**\n\nAtoms overlapping: Severe clash: mol0:atom4 - mol1:atom17 = 1.38Å"
+    }
+  ],
+  "isError": true
+}
+INFO:     127.0.0.1:36246 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "intermolecular_distance": 3.5,
+  "molecules": [
+    {
+      "count": 8,
+      "identifier": "naphthalene"
+    }
+  ],
+  "stacking": "herringbone"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C10H8 + C10H8 + C10H8 + C10H8 + C10H8 + C10H8 + C10H8 + C10H8\n\n- **Molecules**: 8\n- **Total Atoms**: 144\n- **Stacking**: herringbone\n- **Distance**: 3.50 Å\n- **Box Size**: 26.57 × 24.58 × 76.97 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:53124 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "intermolecular_distance": 3.5,
+  "molecules": [
+    {
+      "count": 6,
+      "identifier": "benzene"
+    },
+    {
+      "count": 1,
+      "identifier": "ferrocene"
+    }
+  ]
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C6H6 + C6H6 + C6H6 + C6H6 + C6H6 + C6H6 + C10H10Fe\n\n- **Molecules**: 7\n- **Total Atoms**: 93\n- **Stacking**: pi_pi_parallel\n- **Distance**: 3.50 Å\n- **Box Size**: 28.62 × 24.70 × 59.81 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:49256 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "formulas": {
+    "x": "i*3.6",
+    "y": "0",
+    "z": "0"
+  },
+  "intermolecular_distance": 3.6,
+  "molecules": [
+    {
+      "count": 4,
+      "identifier": "anthracene"
+    }
+  ],
+  "stacking": "slip_stacked"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "**Molecular Cluster Generation Failed**\n\nAtoms overlapping: Severe clash: mol0:atom4 - mol1:atom16 = 1.42Å"
+    }
+  ],
+  "isError": true
+}
+INFO:     127.0.0.1:60726 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "intermolecular_distance": 3.6,
+  "molecules": [
+    {
+      "count": 6,
+      "identifier": "pyrene"
+    }
+  ],
+  "stacking": "edge_to_face"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "**Molecular Cluster Generation Failed**\n\nt_shaped pattern is a dimer (exactly 2 molecules). Requested 6. Use 'herringbone' for alternating tilts or 'linear' for simple stacking."
+    }
+  ],
+  "isError": true
+}
+INFO:     127.0.0.1:38344 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "intermolecular_distance": 3.6,
+  "molecules": [
+    {
+      "count": 6,
+      "identifier": "benzene"
+    }
+  ],
+  "stacking": "antiparallel"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C6H6 + C6H6 + C6H6 + C6H6 + C6H6 + C6H6\n\n- **Molecules**: 6\n- **Total Atoms**: 72\n- **Stacking**: pi_pi_antiparallel\n- **Distance**: 3.60 Å\n- **Box Size**: 24.87 × 24.70 × 43.41 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:42064 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "formulas": {
+    "x": "5*cos(2*pi*i/6)",
+    "y": "5*sin(2*pi*i/6)",
+    "z": "0"
+  },
+  "intermolecular_distance": 3.4,
+  "molecules": [
+    {
+      "count": 6,
+      "identifier": "benzene"
+    }
+  ],
+  "vacuum": 10
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C6H6 + C6H6 + C6H6 + C6H6 + C6H6 + C6H6\n\n- **Molecules**: 6\n- **Total Atoms**: 72\n- **Stacking**: pi_pi_parallel\n- **Distance**: 3.40 Å\n- **Box Size**: 24.87 × 24.70 × 54.90 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:44620 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "formulas": {
+    "x": "i*6.0",
+    "y": "j*6.0",
+    "z": "0"
+  },
+  "intermolecular_distance": 3.4,
+  "molecules": [
+    {
+      "count": 9,
+      "identifier": "benzene"
+    }
+  ],
+  "vacuum": 15
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C6H6 + C6H6 + C6H6 + C6H6 + C6H6 + C6H6 + C6H6 + C6H6 + C6H6\n\n- **Molecules**: 9\n- **Total Atoms**: 108\n- **Stacking**: pi_pi_parallel\n- **Distance**: 3.40 Å\n- **Box Size**: 34.87 × 34.70 × 85.84 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:38378 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "formulas": {
+    "x": "3*sin(2*pi*i/5)",
+    "y": "3*cos(2*pi*i/5)",
+    "z": "0"
+  },
+  "intermolecular_distance": 3.5,
+  "molecules": [
+    {
+      "count": 5,
+      "identifier": "benzene"
+    }
+  ]
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "**Molecular Cluster Generation Failed**\n\nAtoms overlapping: Severe clash: mol0:atom3 - mol1:atom0 = 1.01Å"
+    }
+  ],
+  "isError": true
+}
+INFO:     127.0.0.1:36342 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "direction": "[1,0,0]",
+  "intermolecular_distance": 3.5,
+  "molecules": [
+    {
+      "count": 4,
+      "identifier": "pyrene"
+    }
+  ],
+  "offset_x": 3.5,
+  "rotation_z": -45,
+  "stacking": "herringbone"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C16H10 + C16H10 + C16H10 + C16H10\n\n- **Molecules**: 4\n- **Total Atoms**: 104\n- **Stacking**: herringbone\n- **Distance**: 3.50 Å\n- **Box Size**: 27.32 × 25.66 × 51.32 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:46462 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "x",
+  "formulas": {
+    "x": "i*7",
+    "y": "(i%2)*6",
+    "z": "0"
+  },
+  "intermolecular_distance": 3.5,
+  "molecules": [
+    {
+      "count": 5,
+      "identifier": "naphthalene"
+    }
+  ]
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C10H8 + C10H8 + C10H8 + C10H8 + C10H8\n\n- **Molecules**: 5\n- **Total Atoms**: 90\n- **Stacking**: pi_pi_parallel\n- **Distance**: 3.50 Å\n- **Box Size**: 54.57 × 32.48 × 20.00 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:42772 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "direction": [
+    0,
+    0,
+    1
+  ],
+  "intermolecular_distance": 3.6,
+  "molecules": [
+    {
+      "count": 6,
+      "identifier": "anthracene"
+    }
+  ],
+  "offset_z": -3.6,
+  "stacking": "antiparallel"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C14H10 + C14H10 + C14H10 + C14H10 + C14H10 + C14H10\n\n- **Molecules**: 6\n- **Total Atoms**: 144\n- **Stacking**: pi_pi_antiparallel\n- **Distance**: 3.60 Å\n- **Box Size**: 28.34 × 28.17 × 54.82 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:59250 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "direction": "[1,1,0]",
+  "intermolecular_distance": 4,
+  "molecules": [
+    {
+      "count": 4,
+      "identifier": "coronene"
+    }
+  ],
+  "stacking": "slip_stacked"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C24H12 + C24H12 + C24H12 + C24H12\n\n- **Molecules**: 4\n- **Total Atoms**: 144\n- **Stacking**: pi_pi_offset\n- **Distance**: 4.00 Å\n- **Box Size**: 30.98 × 29.48 × 40.90 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:40482 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "intermolecular_distance": 5,
+  "molecules": [
+    {
+      "count": 3,
+      "identifier": "benzene"
+    }
+  ],
+  "offset_x": 0,
+  "offset_y": 0,
+  "rotation_per_molecule": 120,
+  "stacking": "linear",
+  "vacuum": 10
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C6H6 + C6H6 + C6H6\n\n- **Molecules**: 3\n- **Total Atoms**: 36\n- **Stacking**: linear\n- **Distance**: 5.00 Å\n- **Box Size**: 24.82 × 22.20 × 34.22 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:42184 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "intermolecular_distance": 4,
+  "molecules": [
+    {
+      "count": 4,
+      "identifier": "C18H12"
+    }
+  ],
+  "positions": [
+    {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    {
+      "x": 4,
+      "y": 0,
+      "z": 4
+    },
+    {
+      "x": 8,
+      "y": 0,
+      "z": 8
+    },
+    {
+      "x": 12,
+      "y": 0,
+      "z": 12
+    }
+  ],
+  "stacking": "face_to_edge",
+  "vacuum": 10
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "**Molecular Cluster Generation Failed**\n\nInvalid input parameters for molecular cluster"
+    }
+  ],
+  "isError": true
+}
+INFO:     127.0.0.1:41900 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "intermolecular_distance": 3.5,
+  "molecules": [
+    {
+      "count": 5,
+      "identifier": "benzene"
+    }
+  ],
+  "rotation_per_molecule": 45,
+  "stacking": "herringbone"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C6H6 + C6H6 + C6H6 + C6H6 + C6H6\n\n- **Molecules**: 5\n- **Total Atoms**: 60\n- **Stacking**: herringbone\n- **Distance**: 3.50 Å\n- **Box Size**: 24.87 × 23.32 × 48.22 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:34688 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "intermolecular_distance": 3.5,
+  "molecules": [
+    {
+      "count": 4,
+      "identifier": "benzene"
+    }
+  ],
+  "offset_x": 0,
+  "offset_y": 0,
+  "rotation_z": 30,
+  "stacking": "zigzag"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C6H6 + C6H6 + C6H6 + C6H6\n\n- **Molecules**: 4\n- **Total Atoms**: 48\n- **Stacking**: herringbone\n- **Distance**: 3.50 Å\n- **Box Size**: 24.87 × 23.32 × 42.00 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:44156 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "intermolecular_distance": 3.5,
+  "molecules": [
+    {
+      "count": 2,
+      "identifier": "benzene"
+    }
+  ],
+  "positions": [
+    {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    {
+      "x": 3.4641016151377544,
+      "y": -1.9999999999999998,
+      "z": 0
+    }
+  ],
+  "stacking": "perpendicular",
+  "vacuum": 20
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "**Molecular Cluster Generation Failed**\n\nInvalid input parameters for molecular cluster"
+    }
+  ],
+  "isError": true
+}
+INFO:     127.0.0.1:58776 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "intermolecular_distance": 3.5,
+  "molecules": [
+    {
+      "count": 2,
+      "identifier": "benzene"
+    }
+  ],
+  "offset_y": -3.5,
+  "rotation_y": 90,
+  "stacking": "van_der_waals"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "**Molecular Cluster Generation Failed**\n\nPython script execution failed: [DEBUG molecular_cluster_generator] Module availability check: adapter=True, cluster=True\n[DEBUG molecular_cluster_generator] U ... [TRUNCATED]"
+    }
+  ],
+  "isError": true
+}
+INFO:     127.0.0.1:44556 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "intermolecular_distance": 10,
+  "molecules": [
+    {
+      "count": 2,
+      "identifier": "benzene"
+    }
+  ],
+  "stacking": "perpendicular"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "**Molecular Cluster Generation Failed**\n\nInvalid input parameters for molecular cluster"
+    }
+  ],
+  "isError": true
+}
+INFO:     127.0.0.1:58468 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "x",
+  "intermolecular_distance": 3.5,
+  "molecules": [
+    {
+      "count": 5,
+      "identifier": "naphthalene"
+    }
+  ],
+  "rotation_x": [
+    0,
+    -3.5,
+    0,
+    3.5,
+    0
+  ]
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C10H8 + C10H8 + C10H8 + C10H8 + C10H8\n\n- **Molecules**: 5\n- **Total Atoms**: 90\n- **Stacking**: pi_pi_parallel\n- **Distance**: 3.50 Å\n- **Box Size**: 79.25 × 26.48 × 20.00 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:55426 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "intermolecular_distance": 4,
+  "molecules": [
+    {
+      "count": 4,
+      "identifier": "pyrene"
+    }
+  ],
+  "stacking": "slip_stacked"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C16H10 + C16H10 + C16H10 + C16H10\n\n- **Molecules**: 4\n- **Total Atoms**: 104\n- **Stacking**: pi_pi_offset\n- **Distance**: 4.00 Å\n- **Box Size**: 28.82 × 28.00 × 40.40 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:52284 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "intermolecular_distance": 5,
+  "molecules": [
+    {
+      "count": 3,
+      "identifier": "benzene"
+    }
+  ],
+  "stacking": "t_shaped"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "**Molecular Cluster Generation Failed**\n\nt_shaped pattern is a dimer (exactly 2 molecules). Requested 3. Use 'herringbone' for alternating tilts or 'linear' for simple stacking."
+    }
+  ],
+  "isError": true
+}
+INFO:     127.0.0.1:58640 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "intermolecular_distance": 3.4,
+  "molecules": [
+    {
+      "count": 4,
+      "identifier": "c1ccccc1"
+    }
+  ],
+  "stacking": "herringbone"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C6H6 + C6H6 + C6H6 + C6H6\n\n- **Molecules**: 4\n- **Total Atoms**: 48\n- **Stacking**: herringbone\n- **Distance**: 3.40 Å\n- **Box Size**: 24.87 × 23.32 × 42.00 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:40300 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "x",
+  "formulas": {
+    "x": "i*3.4",
+    "y": "(i%2)*3.5",
+    "z": "0"
+  },
+  "intermolecular_distance": 3.5,
+  "molecules": [
+    {
+      "count": 5,
+      "identifier": "c1ccccc1"
+    }
+  ],
+  "vacuum": 10
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "**Molecular Cluster Generation Failed**\n\nAtoms overlapping: Severe clash: mol0:atom10 - mol1:atom8 = 0.68Å"
+    }
+  ],
+  "isError": true
+}
+INFO:     127.0.0.1:44502 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "formulas": {
+    "x": "i*4",
+    "y": "0",
+    "z": "0"
+  },
+  "intermolecular_distance": 4,
+  "molecules": [
+    {
+      "count": 3,
+      "identifier": "CC(=O)O"
+    }
+  ],
+  "offset_x": 4,
+  "offset_y": 0,
+  "vacuum": 15
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C2H4O2 + C2H4O2 + C2H4O2\n\n- **Molecules**: 3\n- **Total Atoms**: 24\n- **Stacking**: h_bonded_circular\n- **Distance**: 4.00 Å\n- **Box Size**: 40.73 × 33.41 × 32.29 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:59668 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "intermolecular_distance": 3.4,
+  "molecules": [
+    {
+      "count": 2,
+      "identifier": "CID:241"
+    }
+  ]
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "**Molecular Cluster Generation Failed**\n\nNo molecules could be generated from specifications"
+    }
+  ],
+  "isError": true
+}
+INFO:     127.0.0.1:36352 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "intermolecular_distance": 3.4,
+  "molecules": [
+    {
+      "count": 2,
+      "identifier": "PubChem:241"
+    }
+  ]
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "**Molecular Cluster Generation Failed**\n\nNo molecules could be generated from specifications"
+    }
+  ],
+  "isError": true
+}
+INFO:     127.0.0.1:60038 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "formulas": {
+    "x": "i*4",
+    "y": "0",
+    "z": "0"
+  },
+  "intermolecular_distance": 4,
+  "molecules": [
+    {
+      "count": 4,
+      "identifier": "[C]1[C][C][C][C][C]1"
+    }
+  ]
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C6 + C6 + C6 + C6\n\n- **Molecules**: 4\n- **Total Atoms**: 24\n- **Stacking**: pi_pi_parallel\n- **Distance**: 4.00 Å\n- **Box Size**: 22.78 × 23.09 × 44.60 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:50876 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "intermolecular_distance": 3.5,
+  "molecules": [
+    {
+      "count": 3,
+      "identifier": "InChI=1S/C6H6/c1-2-4-6-5-3-1/h1-6H"
+    }
+  ],
+  "positions": [
+    {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    {
+      "x": 3.5,
+      "y": 0,
+      "z": 3.5
+    },
+    {
+      "x": 7,
+      "y": 0,
+      "z": 7
+    }
+  ]
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: C6H6 + C6H6 + C6H6\n\n- **Molecules**: 3\n- **Total Atoms**: 36\n- **Stacking**: pi_pi_parallel\n- **Distance**: 3.50 Å\n- **Box Size**: 24.87 × 24.70 × 29.36 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:39730 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "1,1,1",
+  "intermolecular_distance": 4,
+  "molecules": [
+    {
+      "count": 5,
+      "identifier": "O=C=O"
+    }
+  ],
+  "stacking": "slip_stacked"
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "**Molecular Cluster Generation Failed**\n\nInvalid input parameters for molecular cluster"
+    }
+  ],
+  "isError": true
+}
+INFO:     127.0.0.1:38504 - "POST /mcp/call HTTP/1.1" 200 OK
+[MCP DEBUG] 📞 Request received: Tool='build_molecular_cluster'
+[MCP DEBUG] 📦 Arguments: {
+  "axis": "z",
+  "intermolecular_distance": 3,
+  "molecules": [
+    {
+      "count": 2,
+      "identifier": "H2"
+    }
+  ]
+}
+[MCP DEBUG] 🏁 Response: {
+  "content": [
+    {
+      "type": "text",
+      "text": "### Molecular Cluster Built: H2 + H2\n\n- **Molecules**: 2\n- **Total Atoms**: 4\n- **Stacking**: linear\n- **Distance**: 3.00 Å\n- **Box Size**: 20.74 × 20.00 × 23.00 Å\n\n\n*Cluster structure data is available in the response.*"
+    },
+    {
+      "type": "text",
+      "text": "\n\n<json-data> ... [TRUNCATED FOR LOGS] ... </json-data>"
+    }
+  ]
+}
+INFO:     127.0.0.1:33318 - "POST /mcp/call HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [858773]
