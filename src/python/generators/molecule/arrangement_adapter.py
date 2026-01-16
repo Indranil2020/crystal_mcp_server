@@ -292,6 +292,10 @@ def _build_response(
 
     metadata = engine_result.get("metadata", {})
     pattern = metadata.get("pattern", stacking)
+    
+    # Get actual calculated distance (may differ from requested when auto-adjusted)
+    position_info = metadata.get("position_info", {})
+    actual_distance = position_info.get("actual_distance", distance)
 
     structure = {
         "atoms": sites,
@@ -320,8 +324,9 @@ def _build_response(
             "natoms": len(atoms),
             "n_molecules": engine_result.get("n_molecules", 1),
             "stacking_type": pattern,
-            "intermolecular_distance": distance,
-            "engine": "molecular_arrangement"
+            "intermolecular_distance": actual_distance,
+            "engine": "molecular_arrangement",
+            "warnings": metadata.get("warnings", [])
         }
     }
 
@@ -333,7 +338,7 @@ def _build_response(
         "coords": coords,
         "formulas": [m.get("formula", "") for m in engine_result.get("molecules", [])],
         "stacking_type": pattern,
-        "intermolecular_distance": distance,
+        "intermolecular_distance": actual_distance,
         "cell": lattice,
         "structure": structure,
         "source": "molecular_arrangement",
