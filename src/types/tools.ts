@@ -21,9 +21,9 @@ export interface ToolAnnotations {
 /**
  * Common schema components
  */
-const Vector3Schema = z.tuple([z.number(), z.number(), z.number()]);
-const IntVector3Schema = z.tuple([z.number().int(), z.number().int(), z.number().int()]);
-const Matrix3x3Schema = z.tuple([Vector3Schema, Vector3Schema, Vector3Schema]);
+const Vector3Schema = z.array(z.number()).min(3).max(3);
+const IntVector3Schema = z.array(z.number().int()).min(3).max(3);
+const Matrix3x3Schema = z.array(Vector3Schema).min(3).max(3);
 
 const ElementSymbolSchema = z.string().regex(/^[A-Z][a-z]?$/, "Invalid element symbol");
 const ElementPairKeySchema = z.string().regex(
@@ -194,10 +194,7 @@ export const SpaceGroupScanSchema = z.object({
   space_groups: z.array(z.number().int().min(1).max(230)).optional()
     .describe("Specific space groups to test, or all 230 if not provided"),
 
-  space_group_range: z.tuple([
-    z.number().int().min(1).max(230),
-    z.number().int().min(1).max(230)
-  ]).optional()
+  space_group_range: z.array(z.number().int().min(1).max(230)).min(2).max(2).optional()
     .describe("Range of space groups to test, e.g., [1, 230]"),
 
   crystal_systems: z.array(CrystalSystemSchema).optional()
@@ -851,7 +848,7 @@ Examples:
     .describe("Axis for linear arrangement (default: z). REQUIRED if user says 'along x/y/z'."),
 
   // Generic direction vector (for ANY direction, not just x/y/z)
-  direction_vector: z.tuple([z.number(), z.number(), z.number()]).optional()
+  direction_vector: z.array(z.number()).min(3).max(3).optional()
     .describe("Direction vector [x, y, z] for placement. Example: [1, 1, 0] for 45° in XY plane. Overrides 'axis' if provided."),
 
   // Direction from angles (natural language friendly)
