@@ -71,7 +71,7 @@ def generate_html(atoms: Atoms, output_file: str, style: str = "ball-stick"):
             let data = `{xyz_data}`;
             viewer.addModel(data, "xyz");
 
-            viewer.setStyle({{}}, {{stick: {{radius: 0.15}}, sphere: {{scale: 0.25}}}});
+            viewer.setStyle({{}}, {{stick: {{radius: 0.15, colorscheme: "Jmol"}}, sphere: {{scale: 0.25, colorscheme: "Jmol"}}}});
             viewer.addUnitCell(viewer.getModel());
 
             viewer.zoomTo();
