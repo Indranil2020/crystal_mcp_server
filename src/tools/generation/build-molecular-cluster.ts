@@ -124,6 +124,11 @@ export async function handleBuildMolecularCluster(args: unknown): Promise<any> {
                 `*Cluster structure data is available in the response.*`
         }, {
             type: "text",
+            text: `\n\n**To visualize this structure:**\n` +
+                `Use the \`generate_visualization\` tool with:\n` +
+                `\`structure_file: "${data.auto_saved_path || data.output_file || 'STRUCTURE_FILE_PATH'}"\``
+        }, {
+            type: "text",
             text: `\n\n<json-data>\n${jsonData}\n</json-data>`
         }]
     };

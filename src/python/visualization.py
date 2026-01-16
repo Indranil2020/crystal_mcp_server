@@ -12,8 +12,7 @@ from typing import Dict, Any, Optional
 from ase import Atoms
 from ase.io import write
 from ase.build import make_supercell
-import matplotlib.pyplot as plt
-from ase.visualize.plot import plot_atoms
+
 
 def dict_to_atoms(structure_dict: Dict[str, Any]) -> Optional[Atoms]:
     """Convert structure dictionary to ASE Atoms object."""
@@ -90,6 +89,9 @@ def generate_html(atoms: Atoms, output_file: str, style: str = "ball-stick"):
 
 def generate_image(atoms: Atoms, output_file: str, rotation: str = '10x,10y,10z'):
     """Generate static PNG using ASE/Matplotlib."""
+    import matplotlib.pyplot as plt
+    from ase.visualize.plot import plot_atoms
+    
     fig, ax = plt.subplots(figsize=(8, 8))
     
     # Clean up axes
@@ -115,8 +117,32 @@ def main():
         params = json.load(f)
         
     structure = params.get("structure")
+    structure_file = params.get("structure_file")
     output_file = params.get("output_file", "visualization.html")
     fmt = params.get("format", "html").lower()
+    
+    # Load structure from file if provided
+    if structure_file:
+        try:
+            with open(structure_file, 'r') as f:
+                file_data = json.load(f)
+                # Handle different JSON structures:
+                # 1. Direct structure object
+                # 2. Wrapped in "structure" key (from molecular_cluster_generator)
+                # 3. Wrapped in "result" -> "structure" (if nested)
+                if "structure" in file_data:
+                    structure = file_data["structure"]
+                elif "result" in file_data and "structure" in file_data["result"]:
+                    structure = file_data["result"]["structure"]
+                else:
+                    structure = file_data
+        except Exception as e:
+            print(json.dumps({"success": False, "error": f"Failed to read structure file: {e}"}))
+            sys.exit(1)
+    
+    if not structure:
+        print(json.dumps({"success": False, "error": "No structure data provided (neither 'structure' nor 'structure_file')"}))
+        sys.exit(1)
     
     atoms = dict_to_atoms(structure)
     if atoms is None:

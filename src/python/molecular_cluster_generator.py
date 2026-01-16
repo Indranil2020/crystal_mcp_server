@@ -12,7 +12,10 @@ UPDATED: Now routes through arrangement_adapter to enable advanced features:
 """
 
 import os
+import os
 import sys
+import tempfile
+import time
 
 # Robustness: Ensure src/python is in path
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -60,6 +63,7 @@ def generate_cluster(
     rotations: Optional[List[Dict[str, float]]] = None,
     optimize: bool = False,
     vacuum: float = 10.0,
+    output_file: Optional[str] = None,
     # NEW: Advanced engine parameters
     formulas: Optional[Dict[str, str]] = None,
     constraints: Optional[List[str]] = None,
@@ -220,6 +224,39 @@ def generate_cluster(
         debug(f"Validation result: valid={validation.get('valid')}, warnings={validation.get('warnings')}, errors={validation.get('errors')}")
     
     debug("generate_cluster completed successfully")
+    
+    # Universal Auto-Save Logic
+    # Always save to a file to ensure robust chaining, even if not requested
+    saved_file_path = output_file
+    
+    if not saved_file_path and result.get("success"):
+        # Auto-generate temp file
+        timestamp = int(time.time())
+        temp_dir = tempfile.gettempdir()
+        temp_filename = f"molecular_cluster_{timestamp}_{os.getpid()}.json"
+        saved_file_path = os.path.join(temp_dir, temp_filename)
+        debug(f"Auto-offloading result to temp file: {saved_file_path}")
+
+    # Save to file (either requested or auto-generated)
+    if saved_file_path and result.get("success"):
+        with open(saved_file_path, 'w') as f:
+            json.dump(result, f, indent=2)
+        debug(f"Saved result to {saved_file_path}")
+        result["output_file"] = saved_file_path
+        result["auto_saved_path"] = saved_file_path # Explicitly mark as auto-saved
+
+    
+    # Context Management / Frontend Compatibility
+    # If the structure is extremely large (> 500 atoms), remove it from the direct JSON output
+    # to prevent crashing the LLM context. Otherwise, keep it for the Frontend.
+    n_atoms = result.get("n_atoms", 0)
+    if n_atoms > 500:
+        debug(f"Structure is large ({n_atoms} atoms). Truncating from response payload to save context.")
+        if "structure" in result:
+            del result["structure"]
+        result["truncated"] = True
+        result["message"] = f"Structure ({n_atoms} atoms) too large for chat. Saved to {saved_file_path}"
+            
     return result
 
 

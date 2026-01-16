@@ -463,9 +463,10 @@ export interface ToolMetadata {
  * Schema for generate_visualization tool
  */
 export const VisualizationSchema = z.object({
-  structure: StructureInputSchema.describe("Structure object returned by generate_crystal"),
+  structure: StructureInputSchema.describe("Structure object returned by generate_crystal").optional(),
   format: z.enum(["html", "png"]).optional().default("html").describe("Output format: 'html' for interactive 3D, 'png' for static image"),
-  output_file: z.string().optional().describe("Path to save the visualization file")
+  output_file: z.string().optional().describe("Path to save the visualization file"),
+  structure_file: z.string().optional().describe("Path to a JSON file containing the structure data (alternative to passing 'structure' object)")
 });
 
 export type VisualizationInput = z.infer<typeof VisualizationSchema>;
@@ -933,7 +934,11 @@ EXAMPLES:
 
   // Constraint solver
   use_solver: z.boolean().default(false).optional()
-    .describe("Enable constraint solver to optimize arrangement. Required when using constraints.")
+    .describe("Enable constraint solver to optimize arrangement. Required when using constraints."),
+
+  // Output control
+  output_file: z.string().optional()
+    .describe("Path to save the generated structure JSON. Use this for large structures to avoid context window limits.")
 });
 
 export type BuildMolecularClusterInput = z.infer<typeof BuildMolecularClusterSchema>;
@@ -1410,17 +1415,17 @@ export const TOOL_DEFINITIONS: readonly ToolMetadata[] = [
   //     openWorldHint: false
   //   }
   // },
-  // {
-  //   name: "generate_visualization",
-  //   description: "Generate interactive HTML (3Dmol.js) or static PNG visualization of a crystal structure",
-  //   inputSchema: VisualizationSchema,
-  //   annotations: {
-  //     readOnlyHint: false,
-  //     destructiveHint: false,
-  //     idempotentHint: true,
-  //     openWorldHint: false
-  //   }
-  // },
+  {
+    name: "generate_visualization",
+    description: "Generate interactive HTML (3Dmol.js) or static PNG visualization of a crystal structure",
+    inputSchema: VisualizationSchema,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    }
+  },
   // Advanced structure tools
   // {
   //   name: "generate_prototype",
