@@ -1,0 +1,15 @@
+{
+    "mcpServers": {
+        "crystal-structure-generator": {
+            "command": "node",
+            "args": [
+                "/home/indranil/git/crystal_mcp_server/dist/index.js"
+            ],
+            "env": {
+                "PYTHON_PATH": "python"
+            },
+            "disabledTools": [],
+            "disabled": false
+        }
+    }
+}
