@@ -13,7 +13,8 @@ structural parameter validation against DFT/RPA/LMP2 data.
 import subprocess, sys
 subprocess.check_call([sys.executable, "-m", "pip", "install", "numpy", "ase", "pymatgen", "--break-system-packages"])
 
-# Imports
+################## Keep the above two lines for first time setup. After that, you can comment them out to avoid unnecessary re-installation of packages. ##################
+
 import numpy as np
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
@@ -45,7 +46,7 @@ class MaterialParameters:
     name: str
     a: float          # Hexagonal lattice constant
     b_MX: float       # M-X bond length
-    b_XX: float       # X-X bond length (intralayer)
+    b_XX: float       # X-X vertical separation within monolayer (layer thickness)
     delta: float      # X-M-X bond angle
     d0_AA_prime: float  # Optimal interlayer distance for AA' (from RPA)
     d0_AB: float      # Optimal interlayer distance for AB (from RPA)
@@ -70,6 +71,15 @@ class MaterialParameters:
                     if abs(current - val) > 0.05:  # 0.05 Å tolerance
                         warnings.warn(f"{self.name}.{key} = {current} deviates from "
                                     f"reference value {val} from PRB 89, 075409")
+
+        # Internal consistency check: b_XX should match the layer thickness
+        # implied by (b_MX, delta) for the trigonal prismatic geometry used here.
+        derived_b_XX = 2.0 * self.b_MX * np.sin(np.radians(self.delta) / 2.0)
+        if abs(derived_b_XX - self.b_XX) > 0.05:
+            warnings.warn(
+                f"{self.name}.b_XX = {self.b_XX} is inconsistent with "
+                f"2*b_MX*sin(delta/2) = {derived_b_XX:.3f} Å"
+            )
 
 
 # Pre-defined validated parameters from PRB 89, 075409 (2014)
@@ -239,17 +249,21 @@ class BilayerGenerator:
         
         return M_pos, X_top_avg, X_bot_avg
 
-    def _rotate_z(self, positions: np.ndarray, angle_deg: float) -> np.ndarray:
-        """Rotate Cartesian positions about the z-axis around the origin."""
+    def _rotate_z(self, positions: np.ndarray, angle_deg: float, origin=None) -> np.ndarray:
+        """Rotate Cartesian positions about the z-axis around `origin` (default: (0, 0, 0))."""
         if abs(angle_deg) < 1e-12:
             return positions
+        if origin is None:
+            origin = np.zeros(3)
+        origin = np.asarray(origin, dtype=float)
         theta = np.radians(angle_deg)
         rot = np.array([
             [np.cos(theta), -np.sin(theta), 0.0],
             [np.sin(theta),  np.cos(theta), 0.0],
             [0.0,            0.0,           1.0],
         ])
-        return (rot @ positions.T).T
+        shifted = positions - origin
+        return (rot @ shifted.T).T + origin
     
     def _get_displacement_vector(self, stacking: StackingType) -> np.ndarray:
         """Convert fractional stacking vector to Cartesian"""
@@ -333,7 +347,11 @@ class BilayerGenerator:
         
         # Layer 2 (top) - displaced by tau and elevated by d0
         layer2_cart = ml['positions_cart'].copy()
-        layer2_cart = self._rotate_z(layer2_cart, self.top_layer_rotation_deg[stacking])
+        metal_index = ml['symbols'].index('M')
+        rotation_origin = layer2_cart[metal_index].copy()  # rotate about the top-layer metal site
+        layer2_cart = self._rotate_z(
+            layer2_cart, self.top_layer_rotation_deg[stacking], origin=rotation_origin
+        )
         layer2_cart[:, :2] += tau[:2]  # In-plane displacement
         layer2_cart[:, 2] += d0        # Interlayer distance
         
