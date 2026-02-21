@@ -10,13 +10,13 @@ structural parameter validation against DFT/RPA/LMP2 data.
 """
 
 # Dependencies: `ase`, `pymatgen` (see `requirements.txt`).
-import subprocess, sys
-subprocess.check_call([sys.executable, "-m", "pip", "install", "numpy", "ase", "pymatgen", "--break-system-packages"])
+# import subprocess, sys
+# subprocess.check_call([sys.executable, "-m", "pip", "install", "numpy", "ase", "pymatgen", "--break-system-packages"])
 
 ################## Keep the above two lines for first time setup. After that, you can comment them out to avoid unnecessary re-installation of packages. ##################
 
 import numpy as np
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, List, Tuple
 from enum import Enum
 import warnings
@@ -50,6 +50,8 @@ class MaterialParameters:
     delta: float      # X-M-X bond angle
     d0_AA_prime: float  # Optimal interlayer distance for AA' (from RPA)
     d0_AB: float      # Optimal interlayer distance for AB (from RPA)
+    # Optional: full RPA interlayer distances for all five stackings (PRB 89, 075409 (2014), Table III).
+    d0_rpa_by_stacking: Dict[StackingType, float] = field(default_factory=dict)
     
     def __post_init__(self):
         # Validate against known experimental data
@@ -91,7 +93,14 @@ MATERIALS = {
         b_XX=3.17,
         delta=82.00,
         d0_AA_prime=6.27,
-        d0_AB=6.17
+        d0_AB=6.17,
+        d0_rpa_by_stacking={
+            StackingType.AA: 6.77,
+            StackingType.AA_PRIME: 6.27,
+            StackingType.A_PRIME_B: 6.78,
+            StackingType.AB: 6.17,
+            StackingType.AB_PRIME: 6.26,
+        },
     ),
     'MoSe2': MaterialParameters(
         name='MoSe2',
@@ -100,7 +109,14 @@ MATERIALS = {
         b_XX=3.33,
         delta=82.48,
         d0_AA_prime=6.48,
-        d0_AB=6.47
+        d0_AB=6.47,
+        d0_rpa_by_stacking={
+            StackingType.AA: 7.18,
+            StackingType.AA_PRIME: 6.48,
+            StackingType.A_PRIME_B: 7.12,
+            StackingType.AB: 6.47,
+            StackingType.AB_PRIME: 6.53,
+        },
     ),
     'WS2': MaterialParameters(
         name='WS2',
@@ -109,7 +125,14 @@ MATERIALS = {
         b_XX=3.14,
         delta=81.60,
         d0_AA_prime=6.24,
-        d0_AB=6.24
+        d0_AB=6.24,
+        d0_rpa_by_stacking={
+            StackingType.AA: 6.84,
+            StackingType.AA_PRIME: 6.24,
+            StackingType.A_PRIME_B: 6.78,
+            StackingType.AB: 6.24,
+            StackingType.AB_PRIME: 6.27,
+        },
     ),
     'WSe2': MaterialParameters(
         name='WSe2',
@@ -118,7 +141,14 @@ MATERIALS = {
         b_XX=3.34,
         delta=82.80,
         d0_AA_prime=6.50,
-        d0_AB=6.54
+        d0_AB=6.54,
+        d0_rpa_by_stacking={
+            StackingType.AA: 7.24,
+            StackingType.AA_PRIME: 6.50,
+            StackingType.A_PRIME_B: 7.24,
+            StackingType.AB: 6.54,
+            StackingType.AB_PRIME: 6.62,
+        },
     ),
     # h-BN parameters from PRL 111, 036104 (2013)
     'h-BN': MaterialParameters(
@@ -128,7 +158,11 @@ MATERIALS = {
         b_XX=2.50,   # Not applicable for h-BN
         delta=120.0, # Planar
         d0_AA_prime=3.34,  # AA' stacking (B over N)
-        d0_AB=3.34   # AB stacking
+        d0_AB=3.34,  # AB stacking
+        d0_rpa_by_stacking={
+            StackingType.AA_PRIME: 3.34,
+            StackingType.AB: 3.34,
+        },
     )
 }
 
@@ -271,19 +305,17 @@ class BilayerGenerator:
         return frac[0] * self.a1 + frac[1] * self.a2
     
     def _get_interlayer_distance(self, stacking: StackingType) -> float:
-        """Get optimized interlayer distance from RPA data (P.R.B 89, 075409 (2014))"""
+        """Get optimized interlayer distance from published data."""
+        d0_rpa = self.mat.d0_rpa_by_stacking.get(stacking)
+        if d0_rpa is not None:
+            return float(d0_rpa)
+
+        # Fallback (legacy): only AA' and AB are explicitly provided.
         if stacking == StackingType.AA_PRIME:
-            return self.mat.d0_AA_prime
-        elif stacking == StackingType.AB:
-            return self.mat.d0_AB
-        else:
-            # For other stackings, interpolate based on stability trend
-            # "Good" stackings (AA', AB, AB') have d0 ≈ 6.2-6.3 Å for sulfides
-            # "Bad" stackings (AA, A'B) have d0 larger by ~0.5 Å
-            if stacking in [StackingType.AB_PRIME]:
-                return self.mat.d0_AA_prime  # Similar to AA'
-            else:  # AA, A'B
-                return self.mat.d0_AA_prime + 0.5  # Larger distance due to Pauli repulsion
+            return float(self.mat.d0_AA_prime)
+        if stacking == StackingType.AB:
+            return float(self.mat.d0_AB)
+        return float(self.mat.d0_AA_prime + 0.5)
     
     def generate_monolayer(self) -> Dict[str, np.ndarray]:
         """
